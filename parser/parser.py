@@ -495,8 +495,8 @@ class Parser():
             print("Error at the end of input")
 
     precedence = (
-    ('left', 'PLUS'),
-    ('left', 'TIMES')
-    ) #TODO are there others?
+    ('left', 'PLUS', 'MINUS'),
+    ('left', 'TIMES', 'DIVIDE', 'MOD'),
+    )
 
     parser = yacc.yacc(write_tables=False)
