@@ -163,7 +163,3 @@ if __name__ == '__main__':
     m.build()  # Build the lexer
     m.scan(open(sys.argv[1]).read())  # print tokens
 
-# CHECAR:
-# t_CHAR_CONST
-
-
