@@ -1,5 +1,4 @@
 import ply.yacc as yacc
-from lexer.py import Lexer
 
 class Parser():
 
@@ -10,18 +9,13 @@ class Parser():
             print('Lexical error: %s at %d:%d' %(msg,x,y))
         self.lexer = Lexer(print_error)
         self.parser = yacc.yacc(module=self)
+        
+    def parse(self, data):
+        self.parser.parse(data)
     
-    def p_empty(p):
-        """
-        empty:
-        """
+    def p_empty(self, p):
+        """empty :"""
         p[0] = None
-
-    def p_program(self, p):
-        """ 
-        program : global_declaration_list
-        """
-        p[0] = p[1]
 
     def p_global_declaration_list(self, p):
         """ 
@@ -43,7 +37,7 @@ class Parser():
     def p_declaration_list(self, p):
         """
         declaration_list : declaration
-                         | delcaration_list declaration
+                         | declaration_list declaration
         """
         if len(p)==2:
             p[0] = [p[1]]
@@ -59,14 +53,44 @@ class Parser():
 
     def p_function_definition(self, p):
         """
-        function_definition : type_specifier declarator declaration_list_opt compound-statement
-                            | declarator declaration_list_opt compound-statement
+        function_definition : type_specifier declarator declaration_list_opt compound_statement
+                            | declarator declaration_list_opt compound_statement
         """
         if len(p)==5:
             p[0] = (p[1],p[2],p[3],p[4])
         else:
-            p[0] = (p[1],p[2],p[3])        
+            p[0] = (p[1],p[2],p[3])
+            
+    def p_identifier(self, p):
+        """
+        identifier : ID
+        """
+        p[0] = p[1]
+        
+    def p_string(self, p):
+        """
+        string : STRING_LITERAL
+        """
+        p[0] = p[1]
 
+    def p_integer_constant(self, p):
+        """
+        integer_constant : INT_CONST
+        """
+        p[0]= p[1]
+        
+    def p_character_constant(self, p):
+        """
+        character_constant : CHAR_CONST
+        """
+        p[0]= p[1]
+        
+    def p_floating_constant(self, p):
+        """
+        floating_constant : FLOAT_CONST
+        """
+        p[0]= p[1]
+        
     def p_type_specifier(self, p):
         """
         type_specifier : VOID
@@ -253,7 +277,7 @@ class Parser():
                             | TIMESEQUAL
                             | DIVEQUAL
                             | MODEQUAL
-                            | PLUEQUAL
+                            | PLUSEQUAL
                             | MINUSEQUAL
         """
         p[0] = p[1]
@@ -458,7 +482,7 @@ class Parser():
         """
         p[0] = (p[1],p[3])
     
-    def p_error(p):
+    def p_error(self, p):
         if p:
             print("Error near the symbol %s" % p.value)
         else:
@@ -468,4 +492,3 @@ class Parser():
     ('left', 'PLUS', 'MINUS'),
     ('left', 'TIMES', 'DIVIDE', 'MOD'),
     )
-
