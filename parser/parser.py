@@ -3,10 +3,16 @@ import ply.yacc as yacc
 from calclex import tokens
 
 class Parser():
+    
+    def p_empty(p):
+        """
+        empty:
+        """
+        p[0] = None
 
     def p_program(self, p):
         """ 
-        program  : global_declaration_list
+        program : global_declaration_list
         """
         p[0] = p[1]
 
@@ -36,27 +42,23 @@ class Parser():
             p[0] = [p[1]]
         else:
             p[0] = p[1] + [p[2]]
-
-    def p_function_definition_wts(self, p):
+    
+    def p_declaration_list_opt(self, p):
         """
-        function_definition : type_specifier declarator declaration_list compound-statement
-                            | type_specifier declarator compound-statement
+        declaration_list_opt : declaration_list
+                             | empty
+        """
+        p[0] = p[1]
+
+    def p_function_definition(self, p):
+        """
+        function_definition : type_specifier declarator declaration_list_opt compound-statement
+                            | declarator declaration_list_opt compound-statement
         """
         if len(p)==5:
             p[0] = (p[1],p[2],p[3],p[4])
         else:
-            p[0] = (p[1],p[2],p[3])
-
-    def p_function_definition(self, p):
-        """
-        function_definition : declarator declaration_list compound-statement
-                            | declarator compound-statement
-        """
-        if len(p)==4:
-            p[0] = (p[1],p[2],p[3])
-        else:
-            p[0] = (p[1],p[2])
-        
+            p[0] = (p[1],p[2],p[3])        
 
     def p_type_specifier(self, p):
         """
@@ -70,32 +72,26 @@ class Parser():
     def p_declarator(self, p):
         """
         declarator : identifier
+                   | LPAREN declarator RPAREN
+                   | declarator LBRACKET constant_expression RBRACKET
+
         """
-        p[0] = p[1]
+        if len(p)==2:
+            p[0] = p[1]
+        elif len(p)==4:
+            p[0] = p[2]
+        elif len(p)==5:
+            p[0] = p[1]+p[2]+p[3]+p[4] 
 
     def p_declarator2(self, p):
         """
-        declarator : LPAREN declarator RPAREN
-        """
-        p[0] = p[2]
-
-    def p_declarator3(self, p):
-        """
-        declarator : declarator LBRACKET constant_expression RBRACKET
-        """
-        p[0] = p[1]+p[2]+p[3]+p[4]
-
-    def p_declarator4(self, p):
-        """
         declarator : declarator LBRACKET RBRACKET
+                   | declarator LPAREN parameter_list RPAREN
         """
-        p[0] = p[1]+p[2]+p[3]
-
-    def p_declarator5(self, p):
-        """
-        declarator : declarator LPAREN parameter_list RPAREN
-        """
-        p[0] = (p[1],p[3])
+        if len(p)==4:
+            p[0] = p[1]+p[2]+p[3]
+        elif len(p)==5:
+            p[0] = (p[1],p[3])
 
     def p_identifier_list(self, p):
         """
@@ -107,15 +103,18 @@ class Parser():
         else:
             p[0] = p[1]+[p[2]]
 
-    def p_declarator6(self, p):
+    def p_identifier_list_opt(self, p):
         """
-        declarator : declarator LPAREN identifier_list RPAREN
-                   | declarator LPAREN RPAREN
+        identifier_list_opt : empty
+                            | identifier_list
         """
-        if len(p)==5:
-            p[0] = (p[1],p[3])
-        else:
-            p[0] = p[1]
+        p[0] = p[1]
+
+    def p_declarator3(self, p):
+        """
+        declarator : declarator LPAREN identifier_list_opt RPAREN
+        """
+        p[0] = (p[1],p[3])
 
     def p_constant_expression(self, p):
         """
@@ -167,14 +166,16 @@ class Parser():
     def p_postfix_expression(self, p):
         """
         postfix_expression : primary_expression
+                           | postfix_expression PLUSPLUS
+                           | postfix_expression MINUSMINUS
+                           | postfix_expression LBRACKET expression RBRACKET
         """
-        p[0] = p[1]
-
-    def p_postfix_expression2(self, p):
-        """
-        postfix_expression : postfix_expression LBRACKET expression RBRACKET
-        """
-        p[0] = (p[1],p[3])
+        if len(p)==2:
+            p[0] = p[1]
+        if len(p)==3:
+            p[0] = (p[1],p[2])
+        else:
+            p[0] = (p[1],p[3])
 
     def p_assignment_expression_list(self, p):
         """
@@ -185,23 +186,19 @@ class Parser():
             p[0] = [p[1]]
         else:
             p[0] = p[1]+[p[2]]
+    
+    def p_assignment_expression_list_opt(self, p):
+        """
+        assignment_expression_list_opt : empty
+                                       | assignment_expression_list
+        """
+        p[0] = p[1]
 
-    def p_postfix_expression3(self, p):
+    def p_postfix_expression2(self, p):
         """
-        postfix_expression : postfix_expression LPAREN assignment_expression_list RPAREN
-                           | postfix_expression LPAREN RPAREN
+        postfix_expression : postfix_expression LPAREN assignment_expression_list_opt RPAREN
         """
-        if len(p)==5:
-            p[0] = (p[1],p[3])
-        else:
-            p[0] = p[1]
-
-    def p_postfix_expression4(self, p):
-        """
-        postfix_expression : postfix_expression PLUSPLUS
-                           | postfix_expression MINUSMINUS
-        """
-        p[0] = (p[1],p[2])
+        p[0] = (p[1],p[3])
 
     def p_primary_expression(self, p):
         """
@@ -290,15 +287,18 @@ class Parser():
         else:
             p[0] = p[1] + [p[2]]
 
+    def p_init_declarator_list_opt(self, p):
+        """
+        init_declarator_list_opt : empty
+                                 | init_declarator_list
+        """
+        p[0] = p[1]
+
     def p_declaration(self, p):
         """
-        declaration : type_specifier init_declarator_list SEMI
-                    | type_specifier SEMI
+        declaration : type_specifier init_declarator_list_opt SEMI
         """
-        if len(p)==4:
-            p[0] = (p[1],p[2])
-        else:
-            p[0] = p[1]
+        p[0] = (p[1],p[2])
 
     def p_init_declarator(self, p):
         """
@@ -341,24 +341,17 @@ class Parser():
         else:
             p[0] = p[1] + [p[2]]
 
-    def p_compound_statement_d(self, p):
+    def p_statement_list_opt(self, p):
         """
-        compound_statement : LBRACE declaration_list statement_list RBRACE
-                           | LBRACE declaration_list RBRACE
-                           | LBRACE RBRACE
+        statement_list_opt : empty
+                           | statement_list
         """
-        if len(p)==5:
-            p[0] = (p[2],p[3])
-        elif len(p)==4:
-            p[0] = p[2]
-        else:
-            p[0] = ()
 
-    def p_compound_statement_s(self, p):
+    def p_compound_statement(self, p):
         """
-        compound_statement : LBRACE statement_list RBRACE
+        compound_statement : LBRACE declaration_list_opt statement_list_opt RBRACE
         """
-        p[0] = p[2]
+        p[0] = (p[2],p[3])
 
     def p_statement(self, p):
         """
@@ -373,15 +366,17 @@ class Parser():
         """
         p[0] = p[1]
 
+    def p_expression_opt(self, p):
+        """
+        expression_opt : expression
+                       | empty
+        """
+
     def p_expression_statement(self, p):
         """
-        expression_statement : expression SEMI
-                             | SEMI
+        expression_statement : expression_opt SEMI
         """
-        if len(p)==3:
-            p[0] = p[1]
-        else:
-            p[0] = ()
+        p[0] = p[1]
 
     def p_selection_statement(self, p):
         """
@@ -397,49 +392,17 @@ class Parser():
     def p_iteration_statement(self, p):
         """
         iteration_statement : WHILE LPAREN expression RPAREN statement
-                            | FOR LPAREN expression SEMI expression SEMI expression RPAREN statement
-                            | FOR LPAREN expression SEMI expression SEMI RPAREN statement
-                            | FOR LPAREN expression SEMI SEMI RPAREN statement
-                            | FOR LPAREN SEMI SEMI RPAREN statement
+                            | FOR LPAREN expression_opt SEMI expression_opt SEMI expression_opt RPAREN statement
         """
         if len(p)==6: # while
             p[0] = (p[1],p[3],p[5])
-        elif len(p)==7:
-            p[0] = (p[1],p[6])
-        elif len(p)==8:
-            p[0] = (p[1],p[3],p[7])
-        elif len(p)==9:
-            p[0] = (p[1],p[3],p[5],p[8])
-        elif len(p)==10:
+        else: # for
             p[0] = (p[1],p[3],p[5],p[7],p[9])
-
-    def p_iteration_statement1(self, p):
-        """
-        iteration_statement : FOR LPAREN expression SEMI SEMI expression RPAREN statement
-        """
-        p[0] = (p[1],p[3],p[6],p[8])
-
-    def p_itaration_statement2(self, p):
-        """
-        iteration_statement : FOR LPAREN SEMI expression SEMI expression RPAREN statement
-                            | FOR LPAREN SEMI expression SEMI RPAREN statement
-        """
-        if len(p)==9:
-            p[0] = (p[1],p[4],p[6],p[8])
-        else:
-            p[0] = (p[1],p[4],p[7])
-
-    def p_iteration_statement3(self, p):
-        """
-        iteration_statement : FOR LPAREN SEMI SEMI expression RPAREN statement
-        """
-        p[0] = (p[1],p[5],p[7])
 
     def p_jump_statement(self, p):
         """
         jump_statement : BREAK SEMI
-                       | RETURN expression SEMI
-                       | RETURN SEMI
+                       | RETURN expression_opt SEMI
         """
         if len(p)==3:
             p[0] = p[1]
