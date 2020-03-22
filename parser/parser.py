@@ -1,8 +1,15 @@
 import ply.yacc as yacc
-# Get the token map from the lexer.
-from calclex import tokens
+from lexer.py import Lexer
 
 class Parser():
+
+    tokens = Lexer.tokens
+
+    def __init__(self):
+        def print_error(msg, x, y):
+            print('Lexical error: %s at %d:%d' %(msg,x,y))
+        self.lexer = Lexer(print_error)
+        self.parser = yacc.yacc(module=self)
     
     def p_empty(p):
         """
@@ -462,4 +469,3 @@ class Parser():
     ('left', 'TIMES', 'DIVIDE', 'MOD'),
     )
 
-    parser = yacc.yacc(write_tables=False)
