@@ -1,0 +1,6 @@
+LexToken(INT,'int',1,0)
+LexToken(ID,'v',1,4)
+LexToken(EQUALS,'=',1,6)
+LexToken(MINUS,'-',1,8)
+LexToken(INT_CONST,'3',1,9)
+LexToken(SEMI,';',1,10)

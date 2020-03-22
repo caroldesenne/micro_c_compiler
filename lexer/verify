@@ -1,0 +1,8 @@
+#!/bin/bash
+for (( t=1; t<=7; t++ ))
+do
+echo "Test $t"
+python3 lexer.py test$t.c > test$t\_output
+diff test$t\_output test$t\_result
+done
+printf "\n"
