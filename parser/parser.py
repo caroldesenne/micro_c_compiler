@@ -1,24 +1,31 @@
 import ply.yacc as yacc
+from lexer import Lexer
 
 class Parser():
 
-    tokens = Lexer.tokens
+    def print_error(msg, x, y):
+        print('Lexical error: %s at %d:%d' %(msg,x,y))
 
     def __init__(self):
-        def print_error(msg, x, y):
-            print('Lexical error: %s at %d:%d' %(msg,x,y))
-        self.lexer = Lexer(print_error)
-        self.parser = yacc.yacc(module=self)
-        
+        self.lexer = Lexer(error_func=self.print_error)
+        self.lexer.build()
+        self.tokens = self.lexer.tokens
+        self.parser = yacc.yacc(module=self, start='program')
+
     def parse(self, data):
-        self.parser.parse(data)
-    
+        return self.parser.parse(input=data, lexer=self.lexer)
+
     def p_empty(self, p):
-        """empty :"""
+        """empty : """
         p[0] = None
 
+    def p_program(self, p):
+        """ program  : global_declaration_list
+        """
+        p[0] = ('Program', p[1])
+
     def p_global_declaration_list(self, p):
-        """ 
+        """
         global_declaration_list : global_declaration
                                 | global_declaration_list global_declaration
         """
@@ -43,7 +50,7 @@ class Parser():
             p[0] = [p[1]]
         else:
             p[0] = p[1] + [p[2]]
-    
+
     def p_declaration_list_opt(self, p):
         """
         declaration_list_opt : declaration_list
@@ -57,16 +64,16 @@ class Parser():
                             | declarator declaration_list_opt compound_statement
         """
         if len(p)==5:
-            p[0] = (p[1],p[2],p[3],p[4])
+            p[0] = ('function', p[1], p[2], p[3], p[4])
         else:
-            p[0] = (p[1],p[2],p[3])
-            
+            p[0] = ('function', 'void', p[1],p[2],p[3])
+
     def p_identifier(self, p):
         """
         identifier : ID
         """
-        p[0] = p[1]
-        
+        p[0] = ('Id', p[1])
+
     def p_string(self, p):
         """
         string : STRING_LITERAL
@@ -78,19 +85,19 @@ class Parser():
         integer_constant : INT_CONST
         """
         p[0]= p[1]
-        
+
     def p_character_constant(self, p):
         """
         character_constant : CHAR_CONST
         """
         p[0]= p[1]
-        
+
     def p_floating_constant(self, p):
         """
         floating_constant : FLOAT_CONST
         """
         p[0]= p[1]
-        
+
     def p_type_specifier(self, p):
         """
         type_specifier : VOID
@@ -112,7 +119,7 @@ class Parser():
         elif len(p)==4:
             p[0] = p[2]
         elif len(p)==5:
-            p[0] = p[1]+p[2]+p[3]+p[4] 
+            p[0] = p[1]+p[2]+p[3]+p[4]
 
     def p_declarator2(self, p):
         """
@@ -217,7 +224,7 @@ class Parser():
             p[0] = [p[1]]
         else:
             p[0] = p[1]+[p[2]]
-    
+
     def p_assignment_expression_list_opt(self, p):
         """
         assignment_expression_list_opt : empty
@@ -254,7 +261,7 @@ class Parser():
     def p_expression(self, p):
         """
         expression : assignment_expression
-                   | expression COMMA assignment_expression 
+                   | expression COMMA assignment_expression
         """
         if len(p)==2:
             p[0] = p[1]
@@ -481,7 +488,7 @@ class Parser():
         read_statement : READ LPAREN declarator_list RPAREN SEMI
         """
         p[0] = (p[1],p[3])
-    
+
     def p_error(self, p):
         if p:
             print("Error near the symbol %s" % p.value)
@@ -492,3 +499,12 @@ class Parser():
     ('left', 'PLUS', 'MINUS'),
     ('left', 'TIMES', 'DIVIDE', 'MOD'),
     )
+
+if __name__ == '__main__':
+
+    import sys
+
+    p = Parser()
+    code = open(sys.argv[1]).read()
+    ast = p.parse(code)
+    print(ast)
