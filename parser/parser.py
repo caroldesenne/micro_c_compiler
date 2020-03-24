@@ -496,8 +496,13 @@ class Parser():
             print("Error at the end of input")
 
     precedence = (
+    ('left', 'OR'),
+    ('left', 'AND'),
+    ('left', 'EQ', 'NE'),
+    ('left', 'LT', 'LE', 'GT', 'GE'),
     ('left', 'PLUS', 'MINUS'),
     ('left', 'TIMES', 'DIVIDE', 'MOD'),
+    ('left', 'ADDRESS', 'NOT'),
     )
 
 if __name__ == '__main__':
