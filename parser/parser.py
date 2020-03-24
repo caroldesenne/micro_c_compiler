@@ -15,10 +15,6 @@ class Parser():
     def parse(self, data):
         return self.parser.parse(input=data, lexer=self.lexer)
 
-    def p_empty(self, p):
-        """empty : """
-        p[0] = None
-
     def p_program(self, p):
         """ program  : global_declaration_list
         """
@@ -39,7 +35,7 @@ class Parser():
         global_declaration : function_definition
                            | declaration
         """
-        p[0] = p[1]
+        p[0] = ('global', p[1])
 
     def p_declaration_list(self, p):
         """
@@ -194,7 +190,7 @@ class Parser():
         unary_expression : postfix_expression
                          | PLUSPLUS unary_expression
                          | MINUSMINUS unary_expression
-                         | unary_expression cast_expression
+                         | unary_operator cast_expression
         """
         if len(p)==2:
             p[0] = p[1]
@@ -213,7 +209,7 @@ class Parser():
         if len(p)==3:
             p[0] = (p[1],p[2])
         else:
-            p[0] = (p[1],p[3])
+            p[0] = ('array', p[1],p[3])
 
     def p_assignment_expression_list(self, p):
         """
@@ -236,7 +232,7 @@ class Parser():
         """
         postfix_expression : postfix_expression LPAREN assignment_expression_list_opt RPAREN
         """
-        p[0] = (p[1],p[3])
+        p[0] = ('function', p[1],p[3])
 
     def p_primary_expression(self, p):
         """
@@ -488,6 +484,10 @@ class Parser():
         read_statement : READ LPAREN declarator_list RPAREN SEMI
         """
         p[0] = (p[1],p[3])
+
+    def p_empty(self, p):
+        """empty : """
+        p[0] = None
 
     def p_error(self, p):
         if p:
