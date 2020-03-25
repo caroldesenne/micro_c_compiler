@@ -173,7 +173,10 @@ class Parser():
                           | binary_expression AND binary_expression
                           | binary_expression OR binary_expression
         """
-        p[0] = (p[2], p[1], p[3])
+        if len(p)==2:
+            p[0] = p[1]
+        else:
+            p[0] = (p[2], p[1], p[3])
 
     def p_cast_expression(self, p):
         """
@@ -183,7 +186,7 @@ class Parser():
         if len(p)==2:
             p[0] = p[1]
         else:
-            p[0] = ('cast',p[1],p[2])
+            p[0] = ('cast',p[2],p[4])
 
     def p_unary_expression(self, p):
         """
