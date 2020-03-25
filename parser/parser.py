@@ -209,7 +209,7 @@ class Parser():
         """
         if len(p)==2:
             p[0] = p[1]
-        if len(p)==3:
+        elif len(p)==3:
             p[0] = (p[1],p[2])
         else:
             p[0] = ('array', p[1],p[3])
