@@ -1,4 +1,8 @@
 .ipynb_checkpoints
 .DS_Store
 *.swp
-
+parsetab.py
+*.out
+__pycache__*
+*.ipynb
+test
