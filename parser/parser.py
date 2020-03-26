@@ -103,30 +103,6 @@ class Parser():
         """
         p[0] = p[1]
 
-    def p_declarator(self, p):
-        """
-        declarator : identifier
-                   | LPAREN declarator RPAREN
-                   | declarator LBRACKET constant_expression RBRACKET
-
-        """
-        if len(p)==2:
-            p[0] = p[1]
-        elif len(p)==4:
-            p[0] = p[2]
-        elif len(p)==5:
-            p[0] = p[1]+p[2]+p[3]+p[4]
-
-    def p_declarator2(self, p):
-        """
-        declarator : declarator LBRACKET RBRACKET
-                   | declarator LPAREN parameter_list RPAREN
-        """
-        if len(p)==4:
-            p[0] = p[1]+p[2]+p[3]
-        elif len(p)==5:
-            p[0] = (p[1],p[3])
-
     def p_identifier_list(self, p):
         """
         identifier_list : identifier
@@ -139,16 +115,45 @@ class Parser():
 
     def p_identifier_list_opt(self, p):
         """
-        identifier_list_opt : empty
-                            | identifier_list
+        identifier_list_opt : identifier_list
+                            | empty
         """
         p[0] = p[1]
 
-    def p_declarator3(self, p):
+    def p_direct_declarator(self, p):
         """
-        declarator : declarator LPAREN identifier_list_opt RPAREN
+        direct_declarator : identifier
+                          | LPAREN declarator RPAREN
+                          | direct_declarator LBRACKET constant_expression RBRACKET
+        """
+        if len(p)==2:
+            p[0] = p[1]
+        elif len(p)==4:
+            p[0] = p[2]
+        elif len(p)==5:
+            p[0] = p[1]+p[2]+p[3]+p[4]
+
+    def p_direct_declarator2(self, p):
+        """
+        direct_declarator : direct_declarator LBRACKET RBRACKET
+                          | direct_declarator LPAREN parameter_list RPAREN
+        """
+        if len(p)==4:
+            p[0] = p[1]+p[2]+p[3]
+        elif len(p)==5:
+            p[0] = (p[1],p[3])
+
+    def p_direct_declarator3(self, p):
+        """
+        direct_declarator : direct_declarator LPAREN identifier_list_opt RPAREN
         """
         p[0] = (p[1],p[3])
+
+    def p_declarator(self, p):
+        """
+        declarator : direct_declarator
+        """
+        p[0] = p[1]
 
     def p_constant_expression(self, p):
         """
@@ -173,7 +178,10 @@ class Parser():
                           | binary_expression AND binary_expression
                           | binary_expression OR binary_expression
         """
-        p[0] = (p[2], p[1], p[3])
+        if len(p) == 2:
+            p[0] = p[1]
+        else:
+            p[0] = (p[2], p[1], p[3])
 
     def p_cast_expression(self, p):
         """
@@ -197,19 +205,6 @@ class Parser():
         else:
             p[0] = (p[1],p[2])
 
-    def p_postfix_expression(self, p):
-        """
-        postfix_expression : primary_expression
-                           | postfix_expression PLUSPLUS
-                           | postfix_expression MINUSMINUS
-                           | postfix_expression LBRACKET expression RBRACKET
-        """
-        if len(p)==2:
-            p[0] = p[1]
-        if len(p)==3:
-            p[0] = (p[1],p[2])
-        else:
-            p[0] = ('array', p[1],p[3])
 
     def p_assignment_expression_list(self, p):
         """
@@ -223,10 +218,24 @@ class Parser():
 
     def p_assignment_expression_list_opt(self, p):
         """
-        assignment_expression_list_opt : empty
-                                       | assignment_expression_list
+        assignment_expression_list_opt : assignment_expression_list
+                                       | empty
         """
         p[0] = p[1]
+
+    def p_postfix_expression(self, p):
+        """
+        postfix_expression : primary_expression
+                           | postfix_expression PLUSPLUS
+                           | postfix_expression MINUSMINUS
+                           | postfix_expression LBRACKET expression RBRACKET
+        """
+        if len(p)==2:
+            p[0] = p[1]
+        if len(p)==3:
+            p[0] = (p[1],p[2])
+        else:
+            p[0] = ('array', p[1],p[3])
 
     def p_postfix_expression2(self, p):
         """
@@ -323,8 +332,8 @@ class Parser():
 
     def p_init_declarator_list_opt(self, p):
         """
-        init_declarator_list_opt : empty
-                                 | init_declarator_list
+        init_declarator_list_opt : init_declarator_list
+                                 | empty
         """
         p[0] = p[1]
 
@@ -377,8 +386,8 @@ class Parser():
 
     def p_statement_list_opt(self, p):
         """
-        statement_list_opt : empty
-                           | statement_list
+        statement_list_opt : statement_list
+                           | empty
         """
 
     def p_compound_statement(self, p):
