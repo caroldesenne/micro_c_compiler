@@ -228,19 +228,15 @@ class Parser():
                            | postfix_expression PLUSPLUS
                            | postfix_expression MINUSMINUS
                            | postfix_expression LBRACKET expression RBRACKET
+                           | postfix_expression LPAREN assignment_expression_list_opt RPAREN
         """
         if len(p)==2:
             p[0] = p[1]
         elif len(p)==3:
             p[0] = (p[1],p[2])
         else:
-            p[0] = ('array', p[1],p[3])
+            p[0] = (p[1],p[2],p[3],p[4])
 
-    def p_postfix_expression2(self, p):
-        """
-        postfix_expression : postfix_expression LPAREN assignment_expression_list_opt RPAREN
-        """
-        p[0] = ('function', p[1],p[3])
 
     def p_primary_expression(self, p):
         """
@@ -499,7 +495,7 @@ class Parser():
 
     def p_error(self, p):
         if p:
-            print("Error near the symbol %s" % p.value)
+            print("Error near the symbol %s at line %d" % (p.value, p.lineno))
         else:
             print("Error at the end of input")
 
