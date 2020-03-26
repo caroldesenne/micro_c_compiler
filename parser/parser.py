@@ -205,20 +205,6 @@ class Parser():
         else:
             p[0] = (p[1],p[2])
 
-    def p_postfix_expression(self, p):
-        """
-        postfix_expression : primary_expression
-                           | postfix_expression PLUSPLUS
-                           | postfix_expression MINUSMINUS
-                           | postfix_expression LBRACKET expression RBRACKET
-        """
-        if len(p)==2:
-            p[0] = p[1]
-        elif len(p)==3:
-            p[0] = (p[1],p[2])
-        else:
-            p[0] = ('array', p[1],p[3])
-
     def p_assignment_expression_list(self, p):
         """
         assignment_expression_list : assignment_expression
