@@ -418,14 +418,19 @@ class Parser():
 
     def p_selection_statement(self, p):
         """
-        selection_statement : IF LPAREN expression RPAREN statement
-                            | IF LPAREN expression RPAREN statement ELSE statement
-
+        selection_statement : IF LPAREN expression RPAREN statement else_opt
         """
-        if len(p)==6:
-            p[0] = (p[1],p[3],p[5])
+        p[0] = ('if',p[3],p[5],p[6])
+
+    def p_else_opt(self, p):
+        """
+        else_opt : empty
+                 | ELSE statement
+        """
+        if len(p)==3:
+            p[0] = ('else',p[2])
         else:
-            p[0] = (p[1],p[3],p[5],p[6],p[7])
+            p[0] = p[1]
 
     def p_iteration_statement(self, p):
         """
