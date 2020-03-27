@@ -1,3 +1,5 @@
 all:
-	rm parser.out parsetab.py
 	python3 parser.py test
+
+clean:
+	rm parser.out parsetab.py
