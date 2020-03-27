@@ -393,16 +393,22 @@ class Parser():
 
     def p_statement(self, p):
         """
-        statement : expression_statement
-                  | compound_statement
-                  | selection_statement
-                  | iteration_statement
-                  | jump_statement
-                  | assert_statement
-                  | print_statement
-                  | read_statement
+        statement : closed
+                  | open
         """
         p[0] = p[1]
+
+    def p_non_if(self, p):
+        """
+        non_if : expression_statement
+               | compound_statement
+               | jump_statement
+               | assert_statement
+               | print_statement
+               | read_statement
+        """
+        p[0] = p[1]
+
 
     def p_expression_opt(self, p):
         """
@@ -416,26 +422,42 @@ class Parser():
         """
         p[0] = p[1]
 
-    def p_selection_statement(self, p):
+    def p_open(self, p):
         """
-        selection_statement : IF LPAREN expression RPAREN statement
-                            | IF LPAREN expression RPAREN statement ELSE statement
+        open : IF LPAREN expression RPAREN statement
+             | IF LPAREN expression RPAREN closed ELSE open
+             | open_iteration
 
         """
         if len(p)==6:
             p[0] = (p[1],p[3],p[5])
-        else:
+        elif len(p)==8:
             p[0] = (p[1],p[3],p[5],p[6],p[7])
 
-    def p_iteration_statement(self, p):
+    def p_closed(self, p):
         """
-        iteration_statement : WHILE LPAREN expression RPAREN statement
-                            | FOR LPAREN expression_opt SEMI expression_opt SEMI expression_opt RPAREN statement
+        closed : IF LPAREN expression RPAREN closed ELSE closed
+               | closed_iteration
+               | non_if
+        """
+        self.p_open(p)
+
+    def p_closed_iteration(self, p):
+        """
+        closed_iteration : WHILE LPAREN expression RPAREN closed
+                         | FOR LPAREN expression_opt SEMI expression_opt SEMI expression_opt RPAREN closed
         """
         if len(p)==6: # while
             p[0] = (p[1],p[3],p[5])
         else: # for
             p[0] = (p[1],p[3],p[5],p[7],p[9])
+
+    def p_open_iteration(self, p):
+        """
+        open_iteration : WHILE LPAREN expression RPAREN open
+                        | FOR LPAREN expression_opt SEMI expression_opt SEMI expression_opt RPAREN open
+        """
+        self.p_closed_iteration(p)
 
     def p_jump_statement(self, p):
         """
