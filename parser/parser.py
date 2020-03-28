@@ -474,26 +474,9 @@ class Parser():
         """
         p[0] = ('assert',p[2])
 
-    def p_expression_list(self, p):
-        """
-        expression_list : expression
-                        | expression_list expression
-        """
-        if len(p)==2:
-            p[0] = [p[1]]
-        else:
-            p[0] = p[1] + [p[2]]
-
-    def p_expression_list_opt(self, p):
-        """
-        expression_list_opt : expression_list
-                            | empty
-        """
-        p[0] = p[1]
-
     def p_print_statement(self, p):
         """
-        print_statement : PRINT LPAREN expression_list_opt RPAREN SEMI
+        print_statement : PRINT LPAREN argument_expression RPAREN SEMI
                         | PRINT LPAREN RPAREN SEMI
         """
         if len(p)==6:
@@ -503,7 +486,7 @@ class Parser():
 
     def p_read_statement(self, p):
         """
-        read_statement : READ LPAREN argument_expression RPAREN SEMI
+        read_statement : READ LPAREN expression RPAREN SEMI
         """
         p[0] = ('read',p[3])
 
