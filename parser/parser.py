@@ -225,7 +225,7 @@ class Parser():
                            | postfix_expression PLUSPLUS
                            | postfix_expression MINUSMINUS
                            | postfix_expression LBRACKET expression RBRACKET
-                           | postfix_expression LPAREN argument_expression_opt RPAREN
+                           | postfix_expression LPAREN expression_opt RPAREN
         """
         if len(p)==2:
             p[0] = p[1]
@@ -263,22 +263,12 @@ class Parser():
         if len(p)==2:
             p[0] = p[1]
         else:
-            p[0] = p[1]+p[2]+p[3]
-
-    def p_argument_expression(self, p):
-        """
-        argument_expression : assignment_expression
-                            | argument_expression COMMA assignment_expression
-        """
-        if len(p)==2:
-            p[0] = [p[1]]
-        else:
             p[0] = p[1]+[p[3]]
 
-    def p_argument_expression_opt(self, p):
+    def p_expression_opt(self, p):
         """
-        argument_expression_opt : argument_expression
-                                | empty
+        expression_opt : expression
+                       | empty
         """
         p[0] = p[1]
 
@@ -419,13 +409,6 @@ class Parser():
         """
         p[0] = p[1]
 
-    def p_expression_opt(self, p):
-        """
-        expression_opt : expression
-                       | empty
-        """
-        p[0] = p[1]
-
     def p_expression_statement(self, p):
         """
         expression_statement : expression_opt SEMI
@@ -476,7 +459,7 @@ class Parser():
 
     def p_print_statement(self, p):
         """
-        print_statement : PRINT LPAREN argument_expression RPAREN SEMI
+        print_statement : PRINT LPAREN expression RPAREN SEMI
                         | PRINT LPAREN RPAREN SEMI
         """
         if len(p)==6:
