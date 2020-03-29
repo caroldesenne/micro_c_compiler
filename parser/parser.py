@@ -128,7 +128,7 @@ class Parser():
         if len(p)==2:
             p[0] = p[1]
         else:
-            p[0] = p[1]+p[2]
+            p[0] = (p[1],p[2])
 
     def p_pointer(self, p):
         """
@@ -151,7 +151,7 @@ class Parser():
         elif len(p)==4:
             p[0] = p[2]
         elif len(p)==5:
-            p[0] = p[1]+p[2]+p[3]+p[4]
+            p[0] = ('array',p[1],p[3])
 
     def p_direct_declarator2(self, p):
         """
@@ -159,7 +159,7 @@ class Parser():
                           | direct_declarator LPAREN parameter_list RPAREN
         """
         if len(p)==4:
-            p[0] = p[1]+p[2]+p[3]
+            p[0] = ('array',p[1])
         elif len(p)==5:
             p[0] = (p[1],p[3])
 
@@ -224,7 +224,6 @@ class Parser():
         postfix_expression : primary_expression
                            | postfix_expression PLUSPLUS
                            | postfix_expression MINUSMINUS
-                           | postfix_expression LBRACKET expression RBRACKET
                            | postfix_expression LPAREN expression_opt RPAREN
         """
         if len(p)==2:
@@ -232,7 +231,13 @@ class Parser():
         elif len(p)==3:
             p[0] = (p[1],p[2])
         else:
-            p[0] = (p[1],p[2],p[3],p[4])
+            p[0] = ('function',p[1],p[3])
+
+    def p_postfix_expression2(self, p):
+        """
+        postfix_expression : postfix_expression LBRACKET expression RBRACKET
+        """
+        p[0] = ('array_access',p[1],p[3])
 
 
     def p_primary_expression(self, p):
@@ -272,6 +277,12 @@ class Parser():
         """
         p[0] = p[1]
 
+    def p_expression_statement(self, p):
+        """
+        expression_statement : expression_opt SEMI
+        """
+        p[0] = p[1]
+
     def p_assignment_expression(self, p):
         """
         assignment_expression : binary_expression
@@ -280,7 +291,7 @@ class Parser():
         if len(p)==2:
             p[0] = p[1]
         else:
-            p[0] = p[1]+p[2]+p[3]
+            p[0] = (p[2],p[1],p[3])
 
     def p_assignment_operator(self, p):
         """
@@ -350,7 +361,8 @@ class Parser():
         if len(p)==2:
             p[0] = p[1]
         else:
-            p[0] = ('=',p[1],p[3])
+            p[0] = (p[1],p[3])
+            #p[0] = ('=',p[1],p[3])
 
     def p_initializer(self, p):
         """
@@ -398,36 +410,40 @@ class Parser():
 
     def p_statement(self, p):
         """
-        statement : expression_statement
-                  | compound_statement
-                  | selection_statement
-                  | iteration_statement
-                  | jump_statement
-                  | assert_statement
-                  | print_statement
-                  | read_statement
+        statement : closed
+                  | open
         """
         p[0] = p[1]
 
-    def p_expression_statement(self, p):
+    def p_non_if(self, p):
         """
-        expression_statement : expression_opt SEMI
+        non_if : expression_statement
+               | compound_statement
+               | jump_statement
+               | assert_statement
+               | print_statement
+               | read_statement
+               | iteration_statement
         """
         p[0] = p[1]
 
-    def p_selection_statement(self, p):
+    def p_open(self, p):
         """
-        selection_statement : IF LPAREN expression RPAREN statement else_opt
+        open : IF LPAREN expression RPAREN statement
+             | IF LPAREN expression RPAREN closed ELSE open
         """
-        p[0] = ('if',p[3],p[5],p[6])
+        if len(p)==6:
+            p[0] = (p[1],p[3],p[5])
+        else:
+            p[0] = (p[1],p[3],p[5],p[6],p[7])
 
-    def p_else_opt(self, p):
+    def p_closed(self, p):
         """
-        else_opt : empty
-                 | ELSE statement
+        closed : IF LPAREN expression RPAREN closed ELSE closed
+               | non_if
         """
-        if len(p)==3:
-            p[0] = ('else',p[2])
+        if len(p)==8:
+            p[0] = (p[1],p[3],p[5],p[6],p[7])
         else:
             p[0] = p[1]
 
