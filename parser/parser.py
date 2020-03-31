@@ -1,5 +1,6 @@
 import ply.yacc as yacc
-from uc_lexer import Lexer
+from lexer import Lexer
+from uc_ast import *
 
 class Parser():
 
@@ -18,7 +19,7 @@ class Parser():
     def p_program(self, p):
         """ program  : global_declaration_list
         """
-        p[0] = ('program',p[1])
+        p[0] = Program(p[1])
 
     def p_global_declaration_list(self, p):
         """
@@ -35,7 +36,7 @@ class Parser():
         global_declaration : function_definition
                            | declaration
         """
-        p[0] = p[1]
+        p[0] = GlobalDecl(p[1])
 
     def p_declaration_list(self, p):
         """
