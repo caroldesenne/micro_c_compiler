@@ -1,5 +1,5 @@
 import ply.yacc as yacc
-from lexer import Lexer
+from uc_lexer import Lexer
 
 class Parser():
 
@@ -18,7 +18,7 @@ class Parser():
     def p_program(self, p):
         """ program  : global_declaration_list
         """
-        p[0] = ('program', p[1])
+        p[0] = ('program',p[1])
 
     def p_global_declaration_list(self, p):
         """
@@ -410,42 +410,26 @@ class Parser():
 
     def p_statement(self, p):
         """
-        statement : closed
-                  | open
+        statement : expression_statement
+               	  | compound_statement
+               	  | selection_statement
+               	  | jump_statement
+                  | assert_statement
+                  | print_statement
+                  | read_statement
+                  | iteration_statement
         """
         p[0] = p[1]
 
-    def p_non_if(self, p):
+    def p_selection_statement(self, p):
         """
-        non_if : expression_statement
-               | compound_statement
-               | jump_statement
-               | assert_statement
-               | print_statement
-               | read_statement
-               | iteration_statement
-        """
-        p[0] = p[1]
-
-    def p_open(self, p):
-        """
-        open : IF LPAREN expression RPAREN statement
-             | IF LPAREN expression RPAREN closed ELSE open
+        selection_statement : IF LPAREN expression RPAREN statement
+        					| IF LPAREN expression RPAREN statement ELSE statement
         """
         if len(p)==6:
             p[0] = (p[1],p[3],p[5])
         else:
             p[0] = (p[1],p[3],p[5],p[6],p[7])
-
-    def p_closed(self, p):
-        """
-        closed : IF LPAREN expression RPAREN closed ELSE closed
-               | non_if
-        """
-        if len(p)==8:
-            p[0] = (p[1],p[3],p[5],p[6],p[7])
-        else:
-            p[0] = p[1]
 
     def p_iteration_statement(self, p):
         """
