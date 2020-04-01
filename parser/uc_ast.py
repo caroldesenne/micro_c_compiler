@@ -143,9 +143,9 @@ class NodeVisitor(object):
 
 '''
 TODO:
-ArrayDecl ( ), ArrayRef ( ), Assert ( ), Assignment (op), BinaryOp (op), Break ( ), 
+ArrayDecl ( ), ArrayRef ( ), Assert ( ), Assignment (op), Break ( ), 
 Cast ( ), Compound ( ), Decl (name), DeclList ( ), EmptyStatement ( ), 
-ExprList ( ), For ( ), FuncCall ( ), FuncDecl ( ), FuncDef ( ), 
+ExprList ( ), For ( ), FuncCall ( ), FuncDecl ( ), 
 ID (name), If ( ), InitList ( ), ParamList ( ), Print ( ), PtrDecl ( ), 
 Read ( ), Return ( ), Type (names), VarDecl (), UnaryOp (op), While ( )
 '''
@@ -154,6 +154,7 @@ Read ( ), Return ( ), Type (names), VarDecl (), UnaryOp (op), While ( )
 DONE:
 Program ( )
 GlobalDecl ( )
+FuncDef ( )
 
 BinaryOp (op)
 
@@ -185,6 +186,26 @@ class GlobalDecl(Node):
 	def children(self):
 		nodelist = []
 		nodelist.append(("decl", self.decl))
+		return tuple(nodelist)
+
+	attr_names = ()
+
+class FuncDef(Node):
+	__slots__ = ('type_spec','declarator','decl_list','compound_statement','coord')
+
+	def __init__(self, ts, d, dl, cs, coord=None):
+		self.type_spec = ts
+		self.declarator = d
+		self.decl_list = dl
+		self.compound_statement = cs
+		self.coord = coord
+
+	def children(self):
+		nodelist = []
+		if self.type_spec is not None: nodelist.append(("type_spec", self.type_spec))
+		for i, child in enumerate(self.decl_list or []):
+			nodelist.append(("declaration[%d]" % i, child))
+		nodelist.append(("compound_statement", self.compound_statement))
 		return tuple(nodelist)
 
 	attr_names = ()

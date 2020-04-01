@@ -13,7 +13,7 @@ class Parser():
         self.tokens = self.lexer.tokens
         self.parser = yacc.yacc(module=self, start='program')
 
-    def parse(self, data):
+    def parse(self, data, filename='', debugLevel=0):
         return self.parser.parse(input=data, lexer=self.lexer)
 
     def p_program(self, p):
@@ -61,9 +61,9 @@ class Parser():
                             | declarator declaration_list_opt compound_statement
         """
         if len(p)==5:
-            p[0] = ('function', p[1], p[2], p[3], p[4])
+            p[0] = FuncDef(p[1], p[2], p[3], p[4])
         else:
-            p[0] = ('function', 'void', p[1],p[2],p[3])
+            p[0] = FuncDef(None, p[1],p[2],p[3])
 
     def p_identifier(self, p):
         """
