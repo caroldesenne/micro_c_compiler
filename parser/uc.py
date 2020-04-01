@@ -118,7 +118,7 @@ class Compiler:
             prints out the abstract syntax tree.
         """
         self.parser = Parser()
-        self.ast = self.parser.parse(self.code)
+        self.ast = self.parser.parse(self.code, '', debug)
         if susy:
             self.ast.show(showcoord=True)
         elif ast_file is not None:
