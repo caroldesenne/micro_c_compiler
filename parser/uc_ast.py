@@ -147,7 +147,7 @@ ArrayDecl ( ), ArrayRef ( ), Assert ( ), Assignment (op), Break ( ),
 Cast ( ), Compound ( ), Decl (name), DeclList ( ), EmptyStatement ( ), 
 ExprList ( ), For ( ), FuncCall ( ), FuncDecl ( ), 
 If ( ), InitList ( ), ParamList ( ), Print ( ), PtrDecl ( ), 
-Read ( ), Return ( ), Type (names), VarDecl (), UnaryOp (op), While ( )
+Return ( ), Type (names), VarDecl (), UnaryOp (op), While ( )
 '''
 
 '''
@@ -160,6 +160,7 @@ ID (name)
 BinaryOp (op)
 
 Constant (type, value)
+Read ( )
 '''
 
 class Program(Node):
@@ -253,3 +254,18 @@ class Constant(Node):
 		return tuple(nodelist)
 
 	attr_names = ('type', 'value', )
+
+class Read(Node):
+	__slots__ = ('expr','coord')
+
+	def __init__(self,expr,coord=None):
+		self.expr = expr
+		self.coord = coord
+
+	def children(self):
+		nodelist = []
+		if self.expr is not None: nodelist.append(("expr", self.expr))
+		return tuple(nodelist)
+
+	attr_names = ()
+

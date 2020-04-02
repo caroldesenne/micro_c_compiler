@@ -472,7 +472,7 @@ class Parser():
         """
         read_statement : READ LPAREN expression RPAREN SEMI
         """
-        p[0] = ('read',p[3])
+        p[0] = Read(p[3])
 
     def p_empty(self, p):
         """empty : """
