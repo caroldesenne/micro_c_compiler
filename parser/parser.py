@@ -313,7 +313,7 @@ class Parser():
                        | MINUS
                        | NOT
         """
-        p[0] = p[1]
+        p[0] = UnaryOp(p[1])
 
     def p_parameter_list(self, p):
         """
@@ -352,7 +352,7 @@ class Parser():
         """
         declaration : type_specifier init_declarator_list_opt SEMI
         """
-        p[0] = ('declaration',p[1],p[2])
+        p[0] = Decl(p[1],p[2])
 
     def p_init_declarator(self, p):
         """
@@ -374,7 +374,7 @@ class Parser():
         if len(p)==2:
             p[0] = p[1]
         else:
-            p[0] = p[2]
+            p[0] = InitList(p[2])
 
     def p_initializer_list(self, p):
         """

@@ -144,10 +144,10 @@ class NodeVisitor(object):
 '''
 TODO:
 ArrayDecl ( ), ArrayRef ( ), Assignment (op), 
-Cast ( ), Decl (name), 
+Cast ( ), 
 ExprList ( ), FuncCall ( ), FuncDecl ( ), 
-InitList ( ), ParamList ( ), PtrDecl ( ), 
-VarDecl (), UnaryOp (op)
+ParamList ( ), PtrDecl ( ), 
+VarDecl ()
 '''
 
 '''
@@ -159,11 +159,14 @@ FuncDef ( )
 ID (name)
 
 BinaryOp (op)
+UnaryOp (op) *
 
 Constant (type, value)
 Type (names)
 
-Compound ( )
+Decl (name) *
+InitList ( )
+Compound ( ) *
 If ( )
 While ( )
 For ( )
@@ -268,6 +271,11 @@ class BinaryOp(Node):
 
 	attr_names = ('op', )
 
+class UnaryOp(Node):
+	# TODO: fazer com PLUSPLUS E MINUSMINUS?? nao esta claro!!
+	#__slots__ = ('op',???)
+	attr_names = ('op', )	
+
 class Constant(Node):
 	__slots__ = ('type', 'value', 'coord')
 
@@ -294,6 +302,36 @@ class Type(Node):
 		return tuple(nodelist)
 
 	attr_names = ('names', )
+
+class Decl(Node):
+	__slots__ = ('type','init_dec_l','coord')
+
+	def __init__(self, t, ,idl, coord=None):
+		self.type = t
+		self.init_dec_l = idl
+		self.coord = coord
+
+	def children(self):
+		nodelist = []
+		# TODO HELP??
+		return tuple(nodelist)
+
+	attr_names = ('name', ) # TODO ENTENDER DE ONDE VEM ESSE NAME???
+
+class InitList(Node):
+	__slots__ = ('inits','coord')
+
+	def __init__(self, inits, coord=None):
+		self.inits = inits
+		self.coord = coord
+
+	def children(self):
+		nodelist = []
+		for i, child in enumerate(self.inits or []):
+			nodelist.append(("initializer[%d]" % i, child))
+		return tuple(nodelist)
+
+	attr_names = ()
 
 class Compound(Node):
 	__slots__ = ('decl_list','st_list','coord')
