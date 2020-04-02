@@ -102,7 +102,7 @@ class Parser():
                        | INT
                        | FLOAT
         """
-        p[0] = p[1]
+        p[0] = Type(p[1])
 
     def p_identifier_list(self, p):
         """
@@ -407,7 +407,7 @@ class Parser():
         """
         compound_statement : LBRACE declaration_list_opt statement_list_opt RBRACE
         """
-        p[0] = (p[2],p[3])
+        p[0] = Compound(p[2],p[3])
 
     def p_statement(self, p):
         """
@@ -428,9 +428,9 @@ class Parser():
         					| IF LPAREN expression RPAREN statement ELSE statement
         """
         if len(p)==6:
-            p[0] = (p[1],p[3],p[5])
+            p[0] = If(p[3],p[5])
         else:
-            p[0] = (p[1],p[3],p[5],p[6],p[7])
+            p[0] = If(p[3],p[5],p[7])
 
     def p_iteration_statement(self, p):
         """
@@ -438,9 +438,9 @@ class Parser():
                             | FOR LPAREN expression_opt SEMI expression_opt SEMI expression_opt RPAREN statement
         """
         if len(p)==6: # while
-            p[0] = (p[1],p[3],p[5])
+            p[0] = While(p[3],p[5])
         else: # for
-            p[0] = (p[1],p[3],p[5],p[7],p[9])
+            p[0] = For(p[3],p[5],p[7],p[9])
 
     def p_jump_statement(self, p):
         """
@@ -448,15 +448,15 @@ class Parser():
                        | RETURN expression_opt SEMI
         """
         if len(p)==3:
-            p[0] = p[1]
+            p[0] = Break(p[1])
         else:
-            p[0] = (p[1],p[2])
+            p[0] = Return(p[2])
 
     def p_assert_statement(self, p):
         """
         assert_statement : ASSERT expression SEMI
         """
-        p[0] = ('assert',p[2])
+        p[0] = Assert(p[2])
 
     def p_print_statement(self, p):
         """
@@ -464,9 +464,9 @@ class Parser():
                         | PRINT LPAREN RPAREN SEMI
         """
         if len(p)==6:
-            p[0] = (p[1],p[3])
+            p[0] = Print(p[3])
         else:
-            p[0] = p[1]
+            p[0] = Print()
 
     def p_read_statement(self, p):
         """
@@ -476,7 +476,7 @@ class Parser():
 
     def p_empty(self, p):
         """empty : """
-        p[0] = None
+        p[0] = Empty()
 
     def p_error(self, p):
         if p:
