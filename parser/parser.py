@@ -69,7 +69,7 @@ class Parser():
         """
         identifier : ID
         """
-        p[0] = ('id', p[1])
+        p[0] = ID(p[1])
 
     def p_string(self, p):
         """
@@ -81,19 +81,19 @@ class Parser():
         """
         integer_constant : INT_CONST
         """
-        p[0]= ('int',p[1])
+        p[0]= Constant('int',p[1])
 
     def p_character_constant(self, p):
         """
         character_constant : CHAR_CONST
         """
-        p[0]= ('char',p[1])
+        p[0]= Constant('char',p[1])
 
     def p_floating_constant(self, p):
         """
         floating_constant : FLOAT_CONST
         """
-        p[0]= ('float',p[1])
+        p[0]= Constant('float',p[1])
 
     def p_type_specifier(self, p):
         """
@@ -196,7 +196,7 @@ class Parser():
         if len(p)==2:
             p[0] = p[1]
         else:
-            p[0] = (p[2], p[1], p[3])
+            p[0] = BinaryOp(p[2], p[1], p[3])
 
     def p_cast_expression(self, p):
         """

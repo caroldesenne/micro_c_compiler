@@ -146,7 +146,7 @@ TODO:
 ArrayDecl ( ), ArrayRef ( ), Assert ( ), Assignment (op), Break ( ), 
 Cast ( ), Compound ( ), Decl (name), DeclList ( ), EmptyStatement ( ), 
 ExprList ( ), For ( ), FuncCall ( ), FuncDecl ( ), 
-ID (name), If ( ), InitList ( ), ParamList ( ), Print ( ), PtrDecl ( ), 
+If ( ), InitList ( ), ParamList ( ), Print ( ), PtrDecl ( ), 
 Read ( ), Return ( ), Type (names), VarDecl (), UnaryOp (op), While ( )
 '''
 
@@ -155,6 +155,7 @@ DONE:
 Program ( )
 GlobalDecl ( )
 FuncDef ( )
+ID (name)
 
 BinaryOp (op)
 
@@ -209,6 +210,18 @@ class FuncDef(Node):
 		return tuple(nodelist)
 
 	attr_names = ()
+
+class ID(Node):
+	__slots__ = ('name','coord')
+
+	def __init__(self,name,coord=None):
+		self.name = name
+
+	def children(self):
+		nodelist = []
+		return tuple(nodelist)
+
+	attr_names = ('name', )
 
 class BinaryOp(Node):
 	__slots__ = ('op', 'lvalue', 'rvalue', 'coord')
