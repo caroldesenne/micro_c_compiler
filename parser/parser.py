@@ -53,7 +53,7 @@ class Parser():
         declaration_list_opt : declaration_list
                              | empty
         """
-        p[0] = p[1]
+        p[0] = DeclList(p[1])
 
     def p_function_definition(self, p):
         """

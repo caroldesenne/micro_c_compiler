@@ -144,7 +144,7 @@ class NodeVisitor(object):
 '''
 TODO:
 ArrayDecl ( ), ArrayRef ( ), Assert ( ), Assignment (op), Break ( ), 
-Cast ( ), Compound ( ), Decl (name), DeclList ( ), EmptyStatement ( ), 
+Cast ( ), Compound ( ), Decl (name), EmptyStatement ( ), 
 ExprList ( ), For ( ), FuncCall ( ), FuncDecl ( ), 
 If ( ), InitList ( ), ParamList ( ), Print ( ), PtrDecl ( ), 
 Return ( ), Type (names), VarDecl (), UnaryOp (op), While ( )
@@ -154,6 +154,7 @@ Return ( ), Type (names), VarDecl (), UnaryOp (op), While ( )
 DONE:
 Program ( )
 GlobalDecl ( )
+DeclList ( )
 FuncDef ( )
 ID (name)
 
@@ -188,6 +189,21 @@ class GlobalDecl(Node):
 	def children(self):
 		nodelist = []
 		nodelist.append(("decl", self.decl))
+		return tuple(nodelist)
+
+	attr_names = ()
+
+class DeclList(Node):
+	__slots__ = ('decls','coord')
+
+	def __init__(self, decls, coord=None):
+		self.decls = decls
+		self.coord = coord
+
+	def children(self):
+		nodelist = []
+		for i, child in enumerate(self.decls or []):
+			nodelist.append(("decls[%d]" % i, child))
 		return tuple(nodelist)
 
 	attr_names = ()
