@@ -13,8 +13,8 @@ class Parser():
         self.tokens = self.lexer.tokens
         self.parser = yacc.yacc(module=self, start='program')
 
-    def parse(self, data, filename='', debugLevel=0):
-        return self.parser.parse(input=data, lexer=self.lexer)
+    def parse(self, data, filename='', deb=False):
+        return self.parser.parse(input=data, lexer=self.lexer, debug=deb)
 
     def p_program(self, p):
         """ program  : global_declaration_list
@@ -75,7 +75,7 @@ class Parser():
         """
         string : STRING_LITERAL
         """
-        p[0] = ('string',p[1])
+        p[0] = Constant('string',p[1])
 
     def p_integer_constant(self, p):
         """
