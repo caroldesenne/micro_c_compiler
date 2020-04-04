@@ -83,69 +83,10 @@ class Node(object):
 		for (child_name, child) in self.children():
 			child.show(buf, offset + 4, attrnames, nodenames, showcoord, child_name)
 
-class NodeVisitor(object):
-	""" A base NodeVisitor class for visiting uc_ast nodes.
-		Subclass it and define your own visit_XXX methods, where
-		XXX is the class name you want to visit with these
-		methods.
-
-		For example:
-
-		class ConstantVisitor(NodeVisitor):
-			def __init__(self):
-				self.values = []
-
-			def visit_Constant(self, node):
-				self.values.append(node.value)
-
-		Creates a list of values of all the constant nodes
-		encountered below the given node. To use it:
-
-		cv = ConstantVisitor()
-		cv.visit(node)
-
-		Notes:
-
-		*   generic_visit() will be called for AST nodes for which
-			no visit_XXX method was defined.
-		*   The children of nodes for which a visit_XXX was
-			defined will not be visited - if you need this, call
-			generic_visit() on the node.
-			You can use:
-				NodeVisitor.generic_visit(self, node)
-		*   Modeled after Python's own AST visiting facilities
-			(the ast module of Python 3.0)
-	"""
-
-	_method_cache = None
-
-	def visit(self, node):
-		""" Visit a node.
-		"""
-
-		if self._method_cache is None:
-			self._method_cache = {}
-
-		visitor = self._method_cache.get(node.__class__.__name__, None)
-		if visitor is None:
-			method = 'visit_' + node.__class__.__name__
-			visitor = getattr(self, method, self.generic_visit)
-			self._method_cache[node.__class__.__name__] = visitor
-
-		return visitor(node)
-
-	def generic_visit(self, node):
-		""" Called if no explicit visitor function exists for a
-			node. Implements preorder visiting of the node.
-		"""
-		for c in node:
-			self.visit(c)
-
 '''
 TODO:
 Assignment (op) 
-ExprList ( )
-FuncDecl ( ) ?? there is FuncDef as well
+FuncDecl ( ) ?? there is FuncDef as well **
 VarDecl ()
 '''
 
@@ -159,13 +100,14 @@ ArrayRef ( )
 ID (name)
 PtrDecl ( )
 FuncCall ( )
-FuncDef ( )
+FuncDef ( ) **
 BinaryOp (op)
 UnaryOp (op) *
 Constant (type, value)
 Type (names)
 Decl (name) *
 InitList ( )
+ExprList ( ) **
 Compound ( ) *
 If ( )
 While ( )
@@ -492,6 +434,21 @@ class For(Node):
 		if self.stop_cond is not None: nodelist.append(("stop_cond", self.stop_cond))
 		if self.increment is not None: nodelist.append(("increment", self.increment))
 		if self.statement is not None: nodelist.append(("statement", self.statement))
+		return tuple(nodelist)
+
+	attr_names = ()
+
+class ExprList(Node):
+	__slots__ = ('list','coord')
+
+	def __init__(self,l,coord=None):
+		self.list = l
+		self.coord = coord
+
+	def children(self):
+		nodelist = []
+		for i, child in enumerate(self.list or []):
+			nodelist.append(("expression[%d]" % i, child))
 		return tuple(nodelist)
 
 	attr_names = ()

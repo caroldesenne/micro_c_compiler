@@ -238,7 +238,7 @@ class Parser():
         """
         postfix_expression : postfix_expression LBRACKET expression RBRACKET
         """
-        p[0] = ArrayRef(p[1],p[3])
+        p[0] = ArrayRef(p[1],ExprList(p[3]))
 
 
     def p_primary_expression(self, p):
@@ -251,7 +251,7 @@ class Parser():
         if len(p)==2: # (id,constant and string)
             p[0] = p[1]
         else: # (expression)
-            p[0] = p[2]
+            p[0] = ExprList(p[2])
 
     def p_constant(self, p):
         """
@@ -261,7 +261,7 @@ class Parser():
         """
         p[0] = p[1]
 
-    def p_expression(self, p):
+    def p_expression_list(self, p):
         """
         expression : assignment_expression
                    | expression COMMA assignment_expression
@@ -428,9 +428,9 @@ class Parser():
         					| IF LPAREN expression RPAREN statement ELSE statement
         """
         if len(p)==6:
-            p[0] = If(p[3],p[5])
+            p[0] = If(ExprList(p[3]),p[5])
         else:
-            p[0] = If(p[3],p[5],p[7])
+            p[0] = If(ExprList(p[3]),p[5],p[7])
 
     def p_iteration_statement(self, p):
         """
@@ -439,7 +439,7 @@ class Parser():
                             | FOR LPAREN declaration SEMI expression_opt SEMI expression_opt RPAREN statement
         """
         if len(p)==6: # while
-            p[0] = While(p[3],p[5])
+            p[0] = While(ExprList(p[3]),p[5])
         else len(p)==10: # for
             p[0] = For(p[3],p[5],p[7],p[9])
 
@@ -457,7 +457,7 @@ class Parser():
         """
         assert_statement : ASSERT expression SEMI
         """
-        p[0] = Assert(p[2])
+        p[0] = Assert(ExprList(p[2]))
 
     def p_print_statement(self, p):
         """
@@ -465,7 +465,7 @@ class Parser():
                         | PRINT LPAREN RPAREN SEMI
         """
         if len(p)==6:
-            p[0] = Print(p[3])
+            p[0] = Print(ExprList(p[3]))
         else:
             p[0] = Print()
 
@@ -473,7 +473,7 @@ class Parser():
         """
         read_statement : READ LPAREN expression RPAREN SEMI
         """
-        p[0] = Read(p[3])
+        p[0] = Read(ExprList(p[3]))
 
     def p_empty(self, p):
         """empty : """
