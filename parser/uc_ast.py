@@ -86,7 +86,7 @@ class Node(object):
 '''
 TODO:
 FuncDecl ( ) ?? there is FuncDef as well **
-VarDecl ()
+VarDecl () **
 '''
 
 '''
@@ -108,7 +108,7 @@ Type (names)
 Decl (name) *
 InitList ( )
 ExprList ( ) **
-Compound ( ) *
+Compound ( )
 If ( )
 While ( )
 For ( )
@@ -216,9 +216,9 @@ class ArrayDecl(Node):
 	attr_names = ()
 
 class ArrayRef(Node):
-	__slots__ = ('name','access_value')
+	__slots__ = ('name','access_value','coord')
 
-	def __init__(self, name, av, coord=None)
+	def __init__(self, name, av, coord=None):
 		self.name = name
 		self.access_value = av
 		self.coord = coord
@@ -234,7 +234,7 @@ class ArrayRef(Node):
 class FuncCall(Node):
 	__slots__ = ('name','params','coord')
 
-	def __init__(self, name, params, coord=None)
+	def __init__(self, name, params, coord=None):
 		self.name = name
 		self.params = params
 		self.coord = coord
@@ -355,10 +355,68 @@ class Type(Node):
 
 	attr_names = ('names', )
 
+
+class ????
+	def _build_declarations(self, spec, decls):
+		""" Builds a list of declarations all sharing the given specifiers.
+		"""
+		declarations = []
+
+		for decl in decls:
+			assert decl['decl'] is not None
+			declaration = uc_ast.Decl(
+				name=None,
+				type=decl['decl'],
+				init=decl.get('init'),
+				coord=decl['decl'].coord)
+
+			fixed_decl = self._fix_decl_name_type(declaration, spec)
+			declarations.append(fixed_decl)
+
+		return declarations
+
+	def _fix_decl_name_type(self, decl, typename):
+		""" Fixes a declaration. Modifies decl.
+		"""
+		# Reach the underlying basic type
+		type = decl
+		while not isinstance(type, uc_ast.VarDecl):
+			type = type.type
+
+		decl.name = type.declname
+
+		# The typename is a list of types. If any type in this
+		# list isn't an Type, it must be the only
+		# type in the list.
+		# If all the types are basic, they're collected in the
+		# Type holder.
+		for tn in typename:
+			if not isinstance(tn, uc_ast.Type):
+				if len(typename) > 1:
+					self._parse_error(
+						"Invalid multiple types specified", tn.coord)
+				else:
+					type.type = tn
+					return decl
+
+		if not typename:
+			# Functions default to returning int
+			if not isinstance(decl.type, uc_ast.FuncDecl):
+				self._parse_error("Missing type in declaration", decl.coord)
+			type.type = uc_ast.Type(['int'], coord=decl.coord)
+		else:
+			# At this point, we know that typename is a list of Type
+			# nodes. Concatenate all the names into a single list.
+			type.type = uc_ast.Type(
+				[typename.names[0]],
+				coord=typename.coord)
+		return decl
+
 class Decl(Node):
 	__slots__ = ('name','type','init_dec_l','coord')
 
 	def __init__(self, t, idl, coord=None):
+		self.name = None
 		self.type = t
 		self.init_dec_l = idl
 		self.coord = coord
@@ -368,7 +426,7 @@ class Decl(Node):
 		# TODO HELP??
 		return tuple(nodelist)
 
-	attr_names = ('name', ) # TODO ENTENDER DE ONDE VEM ESSE NAME???
+	attr_names = ('name', )
 
 class InitList(Node):
 	__slots__ = ('inits','coord')
@@ -395,8 +453,10 @@ class Compound(Node):
 
 	def children(self):
 		nodelist = []
-		nodelist.append(("decl_list", self.decl_list)) # TODO: checar se nao eh empty? pois eh opt no parser
-		nodelist.append(("st_list", self.st_list))
+		for i, child in enumerate(self.decl_list or []):
+			nodelist.append(("decl[%d]" % i, child))
+		for i, child in enumerate(self.st_list or []):
+			nodelist.append(("statement[%d]" % i, child))
 		return tuple(nodelist)
 
 	attr_names = ()

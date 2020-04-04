@@ -31,12 +31,17 @@ class Parser():
         else:
             p[0] = p[1]+[p[2]]
 
-    def p_global_declaration(self, p):
+    def p_global_declaration1(self, p):
         """
-        global_declaration : function_definition
-                           | declaration
+        global_declaration : declaration
         """
         p[0] = GlobalDecl(p[1])
+
+    def p_global_declaration2(self, p):
+        """
+        global_declaration : function_definition
+        """
+        p[0] = p[1]
 
     def p_declaration_list(self, p):
         """
@@ -440,7 +445,7 @@ class Parser():
         """
         if len(p)==6: # while
             p[0] = While(ExprList(p[3]),p[5])
-        else len(p)==10: # for
+        else: # for
             p[0] = For(p[3],p[5],p[7],p[9])
 
     def p_jump_statement(self, p):
@@ -502,5 +507,6 @@ if __name__ == '__main__':
     p = Parser()
     code = open(sys.argv[1]).read()
     ast = p.parse(code)
+    ast.show()
     print(ast)
     
