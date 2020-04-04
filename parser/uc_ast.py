@@ -143,8 +143,6 @@ class NodeVisitor(object):
 
 '''
 TODO:
-ArrayDecl ( )
-ArrayRef ( )
 Assignment (op) 
 Cast ( )
 ExprList ( )
@@ -160,6 +158,8 @@ Program ( )
 GlobalDecl ( )
 DeclList ( )
 FuncDef ( )
+ArrayDecl ( )
+ArrayRef ( )
 ID (name)
 PtrDecl ( )
 BinaryOp (op)
@@ -240,6 +240,38 @@ class FuncDef(Node):
 		for i, child in enumerate(self.decl_list or []):
 			nodelist.append(("declaration[%d]" % i, child))
 		nodelist.append(("compound_statement", self.compound_statement))
+		return tuple(nodelist)
+
+	attr_names = ()
+
+class ArrayDecl(Node):
+	__slots__ = ('declarator','size','coord')
+
+	def __init__(self, dec, s, coord=None):
+		self.declarator = dec
+		self.size = s
+		self.coord = coord
+
+	def children(self):
+		nodelist = []
+		if self.declarator is not None: nodelist.append(("declarator", self.declarator))
+		if self.size is not None: nodelist.append(("size", self.size))
+		return tuple(nodelist)
+
+	attr_names = ()
+
+class ArrayRef(Node):
+	__slots__ = ('name','access_value')
+
+	def __init__(self, name, av, coord=None)
+		self.name = name
+		self.access_value = av
+		self.coord = coord
+
+	def children(self):
+		nodelist = []
+		if self.name is not None: nodelist.append(("name", self.name))
+		if self.access_value is not None: nodelist.append(("access_value", self.access_value))
 		return tuple(nodelist)
 
 	attr_names = ()

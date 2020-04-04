@@ -152,7 +152,7 @@ class Parser():
         elif len(p)==4:
             p[0] = p[2]
         elif len(p)==5:
-            p[0] = ('array',p[1],p[3])
+            p[0] = ArrayDecl(p[1],p[3])
 
     def p_direct_declarator2(self, p):
         """
@@ -160,7 +160,7 @@ class Parser():
                           | direct_declarator LPAREN parameter_list RPAREN
         """
         if len(p)==4:
-            p[0] = ('array',p[1])
+            p[0] = ArrayDecl(p[1],None)
         elif len(p)==5:
             p[0] = (p[1],p[3])
 
@@ -238,7 +238,7 @@ class Parser():
         """
         postfix_expression : postfix_expression LBRACKET expression RBRACKET
         """
-        p[0] = ('array_access',p[1],p[3])
+        p[0] = ArrayRef(p[1],p[3])
 
 
     def p_primary_expression(self, p):
