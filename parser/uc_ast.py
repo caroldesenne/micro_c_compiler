@@ -146,7 +146,6 @@ TODO:
 Assignment (op) 
 ExprList ( )
 FuncDecl ( ) ?? there is FuncDef as well
-ParamList ( )
 VarDecl ()
 '''
 
@@ -239,6 +238,21 @@ class FuncDef(Node):
 		for i, child in enumerate(self.decl_list or []):
 			nodelist.append(("declaration[%d]" % i, child))
 		nodelist.append(("compound_statement", self.compound_statement))
+		return tuple(nodelist)
+
+	attr_names = ()
+
+class ParamList(Node):
+	__slots__ = ('list')
+
+	def __init__(self,l,coord=None):
+		self.list = l
+		self.coord = coord
+
+	def children(self):
+		nodelist = []
+		for i, child in enumerate(self.list or []):
+			nodelist.append(("parameter[%d]" % i, child))
 		return tuple(nodelist)
 
 	attr_names = ()

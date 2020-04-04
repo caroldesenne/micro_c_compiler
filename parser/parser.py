@@ -162,7 +162,7 @@ class Parser():
         if len(p)==4:
             p[0] = ArrayDecl(p[1],None)
         elif len(p)==5:
-            p[0] = (p[1],p[3])
+            p[0] = (p[1],ParamList(p[3]))
 
     def p_direct_declarator3(self, p):
         """
