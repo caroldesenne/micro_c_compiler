@@ -232,7 +232,7 @@ class Parser():
         elif len(p)==3:
             p[0] = (p[1],p[2])
         else:
-            p[0] = ('function',p[1],p[3])
+            p[0] = FuncCall(p[1],p[3])
 
     def p_postfix_expression2(self, p):
         """

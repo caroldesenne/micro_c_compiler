@@ -145,8 +145,7 @@ class NodeVisitor(object):
 TODO:
 Assignment (op) 
 ExprList ( )
-FuncCall ( )
-FuncDecl ( ) 
+FuncDecl ( ) ?? there is FuncDef as well
 ParamList ( )
 VarDecl ()
 '''
@@ -156,11 +155,12 @@ DONE:
 Program ( )
 GlobalDecl ( )
 DeclList ( )
-FuncDef ( )
 ArrayDecl ( )
 ArrayRef ( )
 ID (name)
 PtrDecl ( )
+FuncCall ( )
+FuncDef ( )
 BinaryOp (op)
 UnaryOp (op) *
 Constant (type, value)
@@ -274,6 +274,23 @@ class ArrayRef(Node):
 		return tuple(nodelist)
 
 	attr_names = ()
+
+class FuncCall(Node):
+	__slots__ = ('name','params','coord')
+
+	def __init__(self, name, params, coord=None)
+		self.name = name
+		self.params = params
+		self.coord = coord
+
+	def children(self):
+		nodelist = []
+		if self.name is not None: nodelist.append(("name", self.name))
+		if self.params is not None: nodelist.append(("params", self.params))
+		return tuple(nodelist)
+
+	attr_names = ()
+
 
 class ID(Node):
 	__slots__ = ('name','coord')
