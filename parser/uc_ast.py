@@ -304,9 +304,9 @@ class Type(Node):
 	attr_names = ('names', )
 
 class Decl(Node):
-	__slots__ = ('type','init_dec_l','coord')
+	__slots__ = ('name','type','init_dec_l','coord')
 
-	def __init__(self, t, ,idl, coord=None):
+	def __init__(self, t, idl, coord=None):
 		self.type = t
 		self.init_dec_l = idl
 		self.coord = coord
