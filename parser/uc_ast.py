@@ -85,7 +85,6 @@ class Node(object):
 
 '''
 TODO:
-Assignment (op) 
 FuncDecl ( ) ?? there is FuncDef as well **
 VarDecl ()
 '''
@@ -98,6 +97,7 @@ DeclList ( )
 ArrayDecl ( )
 ArrayRef ( )
 ID (name)
+Assignment (op) 
 PtrDecl ( )
 FuncCall ( )
 FuncDef ( ) **
@@ -259,6 +259,23 @@ class ID(Node):
 		return tuple(nodelist)
 
 	attr_names = ('name', )
+
+class Assignment(Node):
+	__slots__ = ('op','assignee','value','coord')
+
+	def __init__(self,op,ass,v,coord=None):
+		self.op = op
+		self.assignee = ass
+		self.value = v
+		self.coord = coord
+
+	def children(self):
+		nodelist = []
+		if self.assignee is not None: nodelist.append(("assignee", self.assignee))
+		if self.value is not None: nodelist.append(("value", self.value))
+		return tuple(nodelist)
+
+	attr_names = ('op', )
 
 class PtrDecl(Node):
 	__slots__ = ('stars','coord')
