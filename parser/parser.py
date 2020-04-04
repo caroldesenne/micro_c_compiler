@@ -206,7 +206,7 @@ class Parser():
         if len(p)==2:
             p[0] = p[1]
         else:
-            p[0] = ('cast',p[2],p[4])
+            p[0] = Cast(p[2],p[4])
 
     def p_unary_expression(self, p):
         """

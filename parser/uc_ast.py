@@ -144,7 +144,6 @@ class NodeVisitor(object):
 '''
 TODO:
 Assignment (op) 
-Cast ( )
 ExprList ( )
 FuncCall ( )
 FuncDecl ( ) 
@@ -317,6 +316,22 @@ class BinaryOp(Node):
 		return tuple(nodelist)
 
 	attr_names = ('op', )
+
+class Cast(Node):
+	__slots__ = ('type','expression','coord')
+
+	def __init__(self, t, exp, coord=None):
+		self.type = t
+		self.expression = exp
+		self.coord = coord
+
+	def children(self):
+		nodelist = []
+		if self.type is not None: nodelist.append(("type", self.type))
+		if self.expression is not None: nodelist.append(("expression", self.expression))
+		return tuple(nodelist)
+
+	attr_names = ()
 
 class UnaryOp(Node):
 	# TODO: fazer com PLUSPLUS E MINUSMINUS?? nao esta claro!!
