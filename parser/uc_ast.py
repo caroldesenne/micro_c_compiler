@@ -107,7 +107,7 @@ Constant (type, value)
 Type (names)
 Decl (name) *
 InitList ( )
-ExprList ( ) **
+ExprList ( )
 Compound ( )
 If ( )
 While ( )
