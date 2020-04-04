@@ -129,7 +129,7 @@ class Parser():
         if len(p)==2:
             p[0] = p[1]
         else:
-            p[0] = (p[1],p[2])
+            p[0] = (Pointer(p[1]),p[2])
 
     def p_pointer(self, p):
         """
@@ -436,10 +436,11 @@ class Parser():
         """
         iteration_statement : WHILE LPAREN expression RPAREN statement
                             | FOR LPAREN expression_opt SEMI expression_opt SEMI expression_opt RPAREN statement
+                            | FOR LPAREN declaration SEMI expression_opt SEMI expression_opt RPAREN statement
         """
         if len(p)==6: # while
             p[0] = While(p[3],p[5])
-        else: # for
+        else len(p)==10: # for
             p[0] = For(p[3],p[5],p[7],p[9])
 
     def p_jump_statement(self, p):

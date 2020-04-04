@@ -143,10 +143,14 @@ class NodeVisitor(object):
 
 '''
 TODO:
-ArrayDecl ( ), ArrayRef ( ), Assignment (op), 
-Cast ( ), 
-ExprList ( ), FuncCall ( ), FuncDecl ( ), 
-ParamList ( ), PtrDecl ( ), 
+ArrayDecl ( )
+ArrayRef ( )
+Assignment (op) 
+Cast ( )
+ExprList ( )
+FuncCall ( )
+FuncDecl ( ) 
+ParamList ( )
 VarDecl ()
 '''
 
@@ -157,13 +161,11 @@ GlobalDecl ( )
 DeclList ( )
 FuncDef ( )
 ID (name)
-
+PtrDecl ( )
 BinaryOp (op)
 UnaryOp (op) *
-
 Constant (type, value)
 Type (names)
-
 Decl (name) *
 InitList ( )
 Compound ( ) *
@@ -253,6 +255,19 @@ class ID(Node):
 		return tuple(nodelist)
 
 	attr_names = ('name', )
+
+class PtrDecl(Node):
+	__slots__ = ('stars','coord')
+
+	def __init__(self, stars, coord=None):
+		self.stars = stars
+		self.coord = coord
+
+	def children(self):
+		nodelist = []
+		return tuple(nodelist)
+
+	attr_names = ()
 
 class BinaryOp(Node):
 	__slots__ = ('op', 'lvalue', 'rvalue', 'coord')
