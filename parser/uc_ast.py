@@ -377,7 +377,6 @@ class Decl(Node):
         self.type = t
         self.init_dec_l = idl
         self.coord = coord
-        print('--', idl)
 
     def children(self):
         nodelist = []
