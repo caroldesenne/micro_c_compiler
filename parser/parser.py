@@ -4,6 +4,61 @@ from uc_ast import *
 
 class Parser():
 
+    def _fix_decl_name_type(self, decl, typename):
+        """ Fixes a declaration. Modifies decl.
+        """
+        # Reach the underlying basic type
+        type = decl
+        while not isinstance(type, uc_ast.VarDecl):
+            type = type.type
+
+        decl.name = type.declname
+
+        # The typename is a list of types. If any type in this
+        # list isn't an Type, it must be the only
+        # type in the list.
+        # If all the types are basic, they're collected in the
+        # Type holder.
+        for tn in typename:
+            if not isinstance(tn, uc_ast.Type):
+                if len(typename) > 1:
+                    self._parse_error(
+                        "Invalid multiple types specified", tn.coord)
+                else:
+                    type.type = tn
+                    return decl
+
+        if not typename:
+            # Functions default to returning int
+            if not isinstance(decl.type, uc_ast.FuncDecl):
+                self._parse_error("Missing type in declaration", decl.coord)
+            type.type = uc_ast.Type(['int'], coord=decl.coord)
+        else:
+            # At this point, we know that typename is a list of Type
+            # nodes. Concatenate all the names into a single list.
+            type.type = uc_ast.Type(
+                [typename.names[0]],
+                coord=typename.coord)
+        return decl
+
+    def _build_declarations(self, spec, decls):
+        """ Builds a list of declarations all sharing the given specifiers.
+        """
+        declarations = []
+
+        for decl in decls:
+            assert decl['decl'] is not None
+            declaration = uc_ast.Decl(
+                name=None,
+                type=decl['decl'],
+                init=decl.get('init'),
+                coord=decl['decl'].coord)
+
+            fixed_decl = self._fix_decl_name_type(declaration, spec)
+            declarations.append(fixed_decl)
+
+        return declarations
+
     def print_error(msg, x, y):
         print('Lexical error: %s at %d:%d' %(msg,x,y))
 
@@ -273,7 +328,7 @@ class Parser():
                    | expression COMMA assignment_expression
         """
         if len(p)==2: # single expression
-            p[0] = p[1] 
+            p[0] = p[1]
         else:
             if not isinstance(p[1], ExprList):
                 p[1] = ExprList([p[1]])
@@ -513,4 +568,3 @@ if __name__ == '__main__':
     ast = p.parse(code)
     ast.show()
     print(ast)
-    
