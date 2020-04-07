@@ -19,26 +19,7 @@ class Parser():
         # type in the list.
         # If all the types are basic, they're collected in the
         # Type holder.
-        for tn in typename:
-            if not isinstance(tn, Type):
-                if len(typename) > 1:
-                    self._parse_error(
-                        "Invalid multiple types specified", tn.coord)
-                else:
-                    t.type = tn
-                    return decl
-
-        if not typename:
-            # Functions default to returning int
-            if not isinstance(decl.type, FuncDecl):
-                self._parse_error("Missing type in declaration", decl.coord)
-            t.type = Type(['int'], coord=decl.coord)
-        else:
-            # At this point, we know that typename is a list of Type
-            # nodes. Concatenate all the names into a single list.
-            t.type = Type(
-                [typename.names[0]],
-                coord=typename.coord)
+        t.type = typename
         return decl
 
     def _build_declarations(self, spec, decls):

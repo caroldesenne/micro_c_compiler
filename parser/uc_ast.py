@@ -361,10 +361,10 @@ class Type(Node):
     attr_names = ('names', )
 
 class VarDecl(Node):
-    __slots__ = ('name','type','coord')
+    __slots__ = ('declname','type','coord')
 
     def __init__(self, name, coord=None):
-        self.name = name
+        self.declname = name
         self.type = None
         self.coord = coord
 
@@ -378,10 +378,10 @@ class VarDecl(Node):
 class Decl(Node):
     __slots__ = ('name', 'type', 'init', 'coord')
 
-    def __init__(self, t, idl, coord=None):
-        self.name = None
-        self.type = t
-        self.init = idl
+    def __init__(self, name, type, init, coord=None):
+        self.name = name
+        self.type = type
+        self.init = init
         self.coord = coord
 
     def children(self):
