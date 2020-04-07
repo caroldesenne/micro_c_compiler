@@ -41,7 +41,7 @@ class Parser():
         while not isinstance(t, VarDecl):
             t = t.type
 
-        decl.name = t.declname
+        decl.name = t.name
 
         # The typename is a list of types. If any type in this
         # list isn't an Type, it must be the only
@@ -123,15 +123,15 @@ class Parser():
         declaration_list_opt : declaration_list
                              | empty
         """
-        p[0] = DeclList(p[1])
+        p[0] = p[1]
 
     def p_function_definition(self, p):
         """
         function_definition : type_specifier declarator declaration_list_opt compound_statement
         """
         decl = p[2]
-        decls = self._build_declarations(spec=p[1],decls=[dict(decl=decl, init=None)],typedef_namespace=True)[0]
-        p[0] = FuncDef(decls, p[3], p[4])
+        decls = self._build_declarations(spec=p[1],decls=[dict(decl=decl, init=None)])[0]
+        p[0] = FuncDef(decls, p[1], p[3], p[4])
 
     def p_function_definition1(self, p):
         """
@@ -139,8 +139,8 @@ class Parser():
         """
         t = Type(['int'],coord=self._token_coord(p, 1))
         decl = p[1]
-        decls = self._build_declarations(spec=t,decls=[dict(decl=decl, init=None)],typedef_namespace=True)[0]
-        p[0] = FuncDef(decls, p[2], p[3])
+        decls = self._build_declarations(spec=t,decls=[dict(decl=decl, init=None)])[0]
+        p[0] = FuncDef(decls, None, p[2], p[3])
 
     def p_identifier(self, p):
         """
@@ -445,7 +445,7 @@ class Parser():
         if p[2] is None:
             decls = [Decl(name=None,type=p[1],init=None,coord=p[1].coord)]
         else:
-            decls = self._build_declarations(spec=p[1],decls=p[2])[0]
+            decls = self._build_declarations(spec=p[1],decls=p[2])
         p[0] = decls
 
     def p_declaration(self, p):
@@ -532,12 +532,14 @@ class Parser():
         """
         iteration_statement : WHILE LPAREN expression RPAREN statement
                             | FOR LPAREN expression_opt SEMI expression_opt SEMI expression_opt RPAREN statement
-                            | FOR LPAREN declaration SEMI expression_opt SEMI expression_opt RPAREN statement
+                            | FOR LPAREN declaration expression_opt SEMI expression_opt RPAREN statement
         """
         if len(p)==6: # while
             p[0] = While(p[3],p[5])
-        else: # for
+        elif len(p)==10:
             p[0] = For(p[3],p[5],p[7],p[9])
+        else: # for
+            p[0] = For(DeclList(p[3]),p[4],p[6],p[8])
 
     def p_jump_statement(self, p):
         """
@@ -599,4 +601,4 @@ if __name__ == '__main__':
     code = open(sys.argv[1]).read()
     ast = p.parse(code)
     ast.show()
-    print(ast)
+    #print(ast)

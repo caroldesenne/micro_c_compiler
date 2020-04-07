@@ -131,15 +131,16 @@ class Program(Node):
     attr_names = ()
 
 class GlobalDecl(Node):
-    __slots__ = ('decl','coord')
+    __slots__ = ('decls','coord')
 
     def __init__(self, decl, coord=None):
-        self.decl = decl
+        self.decls = decl
         self.coord = coord
 
     def children(self):
         nodelist = []
-        nodelist.append(("decl", self.decl))
+        for i, child in enumerate(self.decls or []):
+            nodelist.append(("decls[%d]" % i, child))
         return tuple(nodelist)
 
     attr_names = ()
@@ -176,21 +177,22 @@ class FuncDecl(Node):
     attr_names = ()
 
 class FuncDef(Node):
-    __slots__ = ('declarations','decl_list','compound_statement','coord')
+    __slots__ = ('decl','type','decl_list','compound_statement','coord')
 
-    def __init__(self, decl, dl, cs, coord=None):
-        self.declarations = decl
+    def __init__(self, decl, type, dl, cs, coord=None):
+        self.decl = decl
+        self.type = type
         self.decl_list = dl
         self.compound_statement = cs
         self.coord = coord
 
     def children(self):
         nodelist = []
-        for i, child in enumerate(self.declarations or []):
-            nodelist.append(("declaration[%d]" % i, child))
+        if self.type is not None: nodelist.append(("type", self.type))
+        if self.decl is not None: nodelist.append(("decl", self.decl))
+        if self.compound_statement is not None: nodelist.append(("compound_statement", self.compound_statement))
         for i, child in enumerate(self.decl_list or []):
             nodelist.append(("declaration[%d]" % i, child))
-        nodelist.append(("compound_statement", self.compound_statement))
         return tuple(nodelist)
 
     attr_names = ()
@@ -376,10 +378,10 @@ class Type(Node):
     attr_names = ('names', )
 
 class VarDecl(Node):
-    __slots__ = ('declname','type','coord')
+    __slots__ = ('name','type','coord')
 
     def __init__(self, name, coord=None):
-        self.declname = name
+        self.name = name
         self.type = None
         self.coord = coord
 
@@ -388,7 +390,7 @@ class VarDecl(Node):
         if self.type is not None: nodelist.append(("type", self.type))
         return tuple(nodelist)
 
-    attr_names = ('name', )
+    attr_names = ()
 
 class Decl(Node):
     __slots__ = ('name', 'type', 'init', 'coord')
@@ -401,6 +403,7 @@ class Decl(Node):
 
     def children(self):
         nodelist = []
+        if self.type is not None: nodelist.append(("type", self.type))
         if self.init is not None: nodelist.append(("init", self.init))
         return tuple(nodelist)
 
