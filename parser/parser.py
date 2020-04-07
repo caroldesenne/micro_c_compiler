@@ -455,7 +455,10 @@ class Parser():
         """
         decl_body : type_specifier init_declarator_list_opt
         """
-        p[0] = self._build_declarations(spec=p[1],decls=[dict(decl=p[2])])[0]
+        if p[2] is None:
+            decls = [Decl(name=None,type=p[1],init=None,coord=p[1].coord)]
+        else:
+            decls = self._build_declarations(spec=p[1],decls=p[2])[0]
         p[0] = decls
 
     def p_declaration(self, p):
@@ -469,9 +472,7 @@ class Parser():
         init_declarator : declarator
                         | declarator EQUALS initializer
         """
-        #if len(p)==4:
-            #p[1].init = p[3] # TODO set initializer
-        p[0] = p[1]
+        p[0] = dict(decl=p[1], init=(p[3] if len(p) > 2 else None))
 
     def p_initializer(self, p):
         """

@@ -321,7 +321,7 @@ class Cast(Node):
 class UnaryOp(Node):
     __slots__ = ('op','expression','coord')
 
-    def __init__(self, op, exp, coord):
+    def __init__(self, op, exp, coord=None):
     	self.op = op
     	self.expression = exp
     	self.coord = coord
@@ -370,6 +370,7 @@ class VarDecl(Node):
 
     def children(self):
         nodelist = []
+        if self.type is not None: nodelist.append(("type", self.type))
         return tuple(nodelist)
 
     attr_names = ('name', )
