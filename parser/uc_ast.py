@@ -159,6 +159,22 @@ class DeclList(Node):
 
     attr_names = ()
 
+class FuncDecl(Node):
+    __slots__ = ('args', 'type', 'coord')
+
+    def __init__(self, args, type, coord=None):
+        self.args = args
+        self.type = type
+        self.coord = coord
+
+    def children(self):
+        nodelist = []
+        if self.args is not None: nodelist.append(("args", self.args))
+        if self.type is not None: nodelist.append(("type", self.type))
+        return tuple(nodelist)
+
+    attr_names = ()
+
 class FuncDef(Node):
     __slots__ = ('declarations','decl_list','compound_statement','coord')
 
@@ -195,16 +211,16 @@ class ParamList(Node):
     attr_names = ()
 
 class ArrayDecl(Node):
-    __slots__ = ('declarator','size','coord')
+    __slots__ = ('type','size','coord')
 
-    def __init__(self, dec, s, coord=None):
-        self.declarator = dec
+    def __init__(self, type, s, coord=None):
+        self.type = type
         self.size = s
         self.coord = coord
 
     def children(self):
         nodelist = []
-        if self.declarator is not None: nodelist.append(("declarator", self.declarator))
+        if self.type is not None: nodelist.append(("type", self.type))
         if self.size is not None: nodelist.append(("size", self.size))
         return tuple(nodelist)
 
@@ -241,7 +257,6 @@ class FuncCall(Node):
         return tuple(nodelist)
 
     attr_names = ()
-
 
 class ID(Node):
     __slots__ = ('name','coord')

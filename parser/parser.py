@@ -4,6 +4,35 @@ from uc_ast import *
 
 class Parser():
 
+    def _type_modify_decl(self, decl, modifier):
+        """ Tacks a type modifier on a declarator, and returns
+            the modified declarator.
+            Note: the declarator and modifier may be modified
+        """
+        modifier_head = modifier
+        modifier_tail = modifier
+
+        # The modifier may be a nested list. Reach its tail.
+        while modifier_tail.type:
+            modifier_tail = modifier_tail.type
+
+        # If the decl is a basic type, just tack the modifier onto it
+        if isinstance(decl, VarDecl):
+            modifier_tail.type = decl
+            return modifier
+        else:
+            # Otherwise, the decl is a list of modifiers. Reach
+            # its tail and splice the modifier onto the tail,
+            # pointing to the underlying basic type.
+            decl_tail = decl
+
+            while not isinstance(decl_tail.type, VarDecl):
+                decl_tail = decl_tail.type
+
+            modifier_tail.type = decl_tail.type
+            decl_tail.type = modifier_head
+            return decl
+
     def _fix_decl_name_type(self, decl, typename):
         """ Fixes a declaration. Modifies decl.
         """
@@ -39,35 +68,6 @@ class Parser():
             declarations.append(fixed_decl)
 
         return declarations
-
-    def _type_modify_decl(self, decl, modifier):
-        """ Tacks a type modifier on a declarator, and returns
-            the modified declarator.
-            Note: the declarator and modifier may be modified
-        """
-        modifier_head = modifier
-        modifier_tail = modifier
-
-        # The modifier may be a nested list. Reach its tail.
-        while modifier_tail.type:
-            modifier_tail = modifier_tail.type
-
-        # If the decl is a basic type, just tack the modifier onto it
-        if isinstance(decl, VarDecl):
-            modifier_tail.type = decl
-            return modifier
-        else:
-            # Otherwise, the decl is a list of modifiers. Reach
-            # its tail and splice the modifier onto the tail,
-            # pointing to the underlying basic type.
-            decl_tail = decl
-
-            while not isinstance(decl_tail.type, VarDecl):
-                decl_tail = decl_tail.type
-
-            modifier_tail.type = decl_tail.type
-            decl_tail.type = modifier_head
-            return decl
 
     def print_error(msg, x, y):
         print('Lexical error: %s at %d:%d' %(msg,x,y))
@@ -206,7 +206,7 @@ class Parser():
         if len(p)==2:
             p[0] = p[1]
         else:
-            p[0] = (p[1],p[2]) # TODO modify type?
+            p[0] = self._type_modify_decl(p[2],p[1])
 
     def p_pointer(self, p):
         """
@@ -230,7 +230,9 @@ class Parser():
         elif len(p)==4:
             p[0] = p[2]
         elif len(p)==5:
-            p[0] = ArrayDecl(p[1],p[3])
+            arr = ArrayDecl(None,p[3])
+            p[0] = self._type_modify_decl(decl=p[1],modifier=arr)
+
 
     def p_direct_declarator2(self, p):
         """
@@ -238,15 +240,18 @@ class Parser():
                           | direct_declarator LPAREN parameter_list RPAREN
         """
         if len(p)==4:
-            p[0] = ArrayDecl(p[1],None)
+            arr = ArrayDecl(None,None)
+            p[0] = self._type_modify_decl(decl=p[1],modifier=arr)
         elif len(p)==5:
-            p[0] = FuncDecl(p[1],ParamList(p[3]))
+            func = FuncDecl(args=p[3],type=None)
+            p[0] = self._type_modify_decl(decl=p[1], modifier=func)
 
     def p_direct_declarator3(self, p):
         """
         direct_declarator : direct_declarator LPAREN identifier_list_opt RPAREN
         """
-        p[0] = FuncDecl(p[1],p[3])
+        func = FuncDecl(args=p[3],type=None)
+        p[0] = self._type_modify_decl(decl=p[1], modifier=func)
 
     def p_constant_expression(self, p):
         """
@@ -404,10 +409,11 @@ class Parser():
         parameter_list : parameter_declaration
                        | parameter_list COMMA parameter_declaration
         """
-        if len(p)==2:
-            p[0] = [p[1]]
+        if len(p) == 2: # single parameter
+            p[0] = c_ast.ParamList([p[1]], p[1].coord)
         else:
-            p[0] = p[1] + [p[3]]
+            p[1].list.append(p[3])
+            p[0] = p[1]
 
     def p_parameter_declaration(self, p):
         """
