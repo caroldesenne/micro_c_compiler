@@ -37,7 +37,7 @@ class Node(object):
         result = self.__class__.__name__ + '('
         indent = ''
         separator = ''
-        for name in self.__slots__[:-2]:
+        for name in self.__slots__[:-1]:
             result += separator
             result += indent
             result += name + '=' + (_repr(getattr(self, name)).replace('\n', '\n  ' + (' ' * (len(name) + len(self.__class__.__name__)))))
@@ -84,28 +84,23 @@ class Node(object):
             child.show(buf, offset + 4, attrnames, nodenames, showcoord, child_name)
 
 '''
-TODO:
-FuncDecl ( ) ?? there is FuncDef as well **
-VarDecl () **
-'''
-
-'''
-DONE:
+FuncDecl ( )
 Program ( )
 GlobalDecl ( )
 DeclList ( )
 ArrayDecl ( )
 ArrayRef ( )
+VarDecl ()
 ID (name)
 Assignment (op)
-PtrDecl ( )
+PtrDecl ( ) **
 FuncCall ( )
-FuncDef ( ) **
+FuncDef ( )
 BinaryOp (op)
-UnaryOp (op) *
+UnaryOp (op)
 Constant (type, value)
 Type (names)
-Decl (name) *
+Decl (name)
 InitList ( )
 ExprList ( )
 Compound ( )
@@ -165,18 +160,18 @@ class DeclList(Node):
     attr_names = ()
 
 class FuncDef(Node):
-    __slots__ = ('type_spec','declarator','decl_list','compound_statement','coord')
+    __slots__ = ('declarations','decl_list','compound_statement','coord')
 
-    def __init__(self, ts, d, dl, cs, coord=None):
-        self.type_spec = ts
-        self.declarator = d
+    def __init__(self, decl, dl, cs, coord=None):
+        self.declarations = decl
         self.decl_list = dl
         self.compound_statement = cs
         self.coord = coord
 
     def children(self):
         nodelist = []
-        if self.type_spec is not None: nodelist.append(("type_spec", self.type_spec))
+        for i, child in enumerate(self.declarations or []):
+            nodelist.append(("declaration[%d]" % i, child))
         for i, child in enumerate(self.decl_list or []):
             nodelist.append(("declaration[%d]" % i, child))
         nodelist.append(("compound_statement", self.compound_statement))
@@ -324,8 +319,18 @@ class Cast(Node):
     attr_names = ()
 
 class UnaryOp(Node):
-    # TODO: fazer com PLUSPLUS E MINUSMINUS?? nao esta claro!!
-    #__slots__ = ('op',???)
+    __slots__ = ('op','expression','coord')
+
+    def __init__(self, op, exp, coord):
+    	self.op = op
+    	self.expression = exp
+    	self.coord = coord
+
+    def children(self):
+        nodelist = []
+        if self.expression is not None: nodelist.append(("expression", self.expression))
+        return tuple(nodelist)	
+
     attr_names = ('op', )
 
 class Constant(Node):
@@ -358,9 +363,9 @@ class Type(Node):
 class VarDecl(Node):
     __slots__ = ('name','type','coord')
 
-    def __init__(self, t, coord=None):
-        self.name = None
-        self.type = t
+    def __init__(self, name, coord=None):
+        self.name = name
+        self.type = None
         self.coord = coord
 
     def children(self):
@@ -370,18 +375,17 @@ class VarDecl(Node):
     attr_names = ('name', )
 
 class Decl(Node):
-    __slots__ = ('name', 'type', 'init_dec_l', 'coord')
+    __slots__ = ('name', 'type', 'init', 'coord')
 
     def __init__(self, t, idl, coord=None):
         self.name = None
         self.type = t
-        self.init_dec_l = idl
+        self.init = idl
         self.coord = coord
 
     def children(self):
         nodelist = []
-        # nodelist.append(self.init_dec_l[0][0])
-        # nodelist.append(self.init_dec_l[0][1])
+        if self.init is not None: nodelist.append(("init", self.init))
         return tuple(nodelist)
 
     attr_names = ('name', )

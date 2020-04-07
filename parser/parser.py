@@ -8,11 +8,11 @@ class Parser():
         """ Fixes a declaration. Modifies decl.
         """
         # Reach the underlying basic type
-        type = decl
-        while not isinstance(type, uc_ast.VarDecl):
-            type = type.type
+        t = decl
+        while not isinstance(t, VarDecl):
+            t = t.type
 
-        decl.name = type.declname
+        decl.name = t.declname
 
         # The typename is a list of types. If any type in this
         # list isn't an Type, it must be the only
@@ -20,23 +20,23 @@ class Parser():
         # If all the types are basic, they're collected in the
         # Type holder.
         for tn in typename:
-            if not isinstance(tn, uc_ast.Type):
+            if not isinstance(tn, Type):
                 if len(typename) > 1:
                     self._parse_error(
                         "Invalid multiple types specified", tn.coord)
                 else:
-                    type.type = tn
+                    t.type = tn
                     return decl
 
         if not typename:
             # Functions default to returning int
-            if not isinstance(decl.type, uc_ast.FuncDecl):
+            if not isinstance(decl.type, FuncDecl):
                 self._parse_error("Missing type in declaration", decl.coord)
-            type.type = uc_ast.Type(['int'], coord=decl.coord)
+            t.type = Type(['int'], coord=decl.coord)
         else:
             # At this point, we know that typename is a list of Type
             # nodes. Concatenate all the names into a single list.
-            type.type = uc_ast.Type(
+            t.type = Type(
                 [typename.names[0]],
                 coord=typename.coord)
         return decl
@@ -48,16 +48,45 @@ class Parser():
 
         for decl in decls:
             assert decl['decl'] is not None
-            declaration = uc_ast.Decl(
-                name=None,
-                type=decl['decl'],
-                init=decl.get('init'),
-                coord=decl['decl'].coord)
+            declaration = Decl(
+                    name=None,
+                    type=decl['decl'],
+                    init=decl.get('init'),
+                    coord=decl['decl'].coord)
 
             fixed_decl = self._fix_decl_name_type(declaration, spec)
             declarations.append(fixed_decl)
 
         return declarations
+
+    def _type_modify_decl(self, decl, modifier):
+        """ Tacks a type modifier on a declarator, and returns
+            the modified declarator.
+            Note: the declarator and modifier may be modified
+        """
+        modifier_head = modifier
+        modifier_tail = modifier
+
+        # The modifier may be a nested list. Reach its tail.
+        while modifier_tail.type:
+            modifier_tail = modifier_tail.type
+
+        # If the decl is a basic type, just tack the modifier onto it
+        if isinstance(decl, VarDecl):
+            modifier_tail.type = decl
+            return modifier
+        else:
+            # Otherwise, the decl is a list of modifiers. Reach
+            # its tail and splice the modifier onto the tail,
+            # pointing to the underlying basic type.
+            decl_tail = decl
+
+            while not isinstance(decl_tail.type, VarDecl):
+                decl_tail = decl_tail.type
+
+            modifier_tail.type = decl_tail.type
+            decl_tail.type = modifier_head
+            return decl
 
     def print_error(msg, x, y):
         print('Lexical error: %s at %d:%d' %(msg,x,y))
@@ -118,12 +147,19 @@ class Parser():
     def p_function_definition(self, p):
         """
         function_definition : type_specifier declarator declaration_list_opt compound_statement
-                            | declarator declaration_list_opt compound_statement
         """
-        if len(p)==5:
-            p[0] = FuncDef(p[1], p[2], p[3], p[4])
-        else:
-            p[0] = FuncDef(None, p[1],p[2],p[3])
+        decl = p[2]
+        decls = self._build_declarations(spec=p[1],decls=[dict(decl=decl, init=None)],typedef_namespace=True)[0]
+        p[0] = FuncDef(decls, p[3], p[4])
+
+    def p_function_definition1(self, p):
+        """
+        function_definition : declarator declaration_list_opt compound_statement
+        """
+        t = Type(['int'],coord=self._token_coord(p, 1))
+        decl = p[1]
+        decls = self._build_declarations(spec=t,decls=[dict(decl=decl, init=None)],typedef_namespace=True)[0]
+        p[0] = FuncDef(decls, p[2], p[3])
 
     def p_identifier(self, p):
         """
@@ -162,7 +198,7 @@ class Parser():
                        | INT
                        | FLOAT
         """
-        p[0] = Type(p[1])
+        p[0] = Type([p[1]])
 
     def p_identifier_list(self, p):
         """
@@ -187,9 +223,9 @@ class Parser():
                    | pointer direct_declarator
         """
         if len(p)==2:
-            p[0] = VarDecl(p[1])
+            p[0] = p[1]
         else:
-            p[0] = (p[1],VarDecl(p[2]))
+            p[0] = (p[1],p[2]) # TODO modify type?
 
     def p_pointer(self, p):
         """
@@ -209,11 +245,11 @@ class Parser():
                           | direct_declarator LBRACKET constant_expression RBRACKET
         """
         if len(p)==2:
-            p[0] = p[1]
+            p[0] = VarDecl(p[1])
         elif len(p)==4:
             p[0] = p[2]
         elif len(p)==5:
-            p[0] = ArrayDecl(VarDecl(p[1]),p[3])
+            p[0] = ArrayDecl(p[1],p[3])
 
     def p_direct_declarator2(self, p):
         """
@@ -223,13 +259,13 @@ class Parser():
         if len(p)==4:
             p[0] = ArrayDecl(p[1],None)
         elif len(p)==5:
-            p[0] = FuncDecl((VarDecl(p[1]),ParamList(p[3])))
+            p[0] = FuncDecl(p[1],ParamList(p[3]))
 
     def p_direct_declarator3(self, p):
         """
         direct_declarator : direct_declarator LPAREN identifier_list_opt RPAREN
         """
-        p[0] = FuncDecl((VarDecl(p[1]),p[3]))
+        p[0] = FuncDecl(p[1],p[3])
 
     def p_constant_expression(self, p):
         """
@@ -279,7 +315,7 @@ class Parser():
         if len(p)==2:
             p[0] = p[1]
         else:
-            p[0] = (p[1],p[2])
+            p[0] = UnaryOp('p'+p[1],p[2])
 
     def p_postfix_expression(self, p):
         """
@@ -291,7 +327,7 @@ class Parser():
         if len(p)==2:
             p[0] = p[1]
         elif len(p)==3:
-            p[0] = (p[1],p[2])
+            p[0] = UnaryOp('p'+p[2],p[1])
         else:
             p[0] = FuncCall(p[1],p[3])
 
@@ -346,7 +382,10 @@ class Parser():
         """
         expression_statement : expression_opt SEMI
         """
-        p[0] = p[1]
+        if p[1] is None:
+            p[0] = EmptyStatement()
+        else:
+            p[0] = p[1]
 
     def p_assignment_expression(self, p):
         """
@@ -377,7 +416,7 @@ class Parser():
                        | MINUS
                        | NOT
         """
-        p[0] = UnaryOp(p[1])
+        p[0] = p[1]
 
     def p_parameter_list(self, p):
         """
@@ -393,7 +432,7 @@ class Parser():
         """
         parameter_declaration : type_specifier declarator
         """
-        p[0] = (p[1],p[2])
+        p[0] = self._build_declarations(spec=p[1],decls=[dict(decl=p[2])])[0]
 
     def p_init_declarator_list(self, p):
         """
@@ -412,22 +451,27 @@ class Parser():
         """
         p[0] = p[1]
 
+    def p_decl_body(self, p):
+        """
+        decl_body : type_specifier init_declarator_list_opt
+        """
+        p[0] = self._build_declarations(spec=p[1],decls=[dict(decl=p[2])])[0]
+        p[0] = decls
+
     def p_declaration(self, p):
         """
-        declaration : type_specifier init_declarator_list_opt SEMI
+        declaration : decl_body SEMI
         """
-        p[0] = Decl(p[1],p[2])
+        p[0] = p[1]
 
     def p_init_declarator(self, p):
         """
         init_declarator : declarator
                         | declarator EQUALS initializer
         """
-        if len(p)==2:
-            p[0] = p[1]
-        else:
-            p[0] = (p[1],p[3])
-            #p[0] = ('=',p[1],p[3])
+        #if len(p)==4:
+            #p[1].init = p[3] # TODO set initializer
+        p[0] = p[1]
 
     def p_initializer(self, p):
         """
@@ -492,7 +536,7 @@ class Parser():
         					| IF LPAREN expression RPAREN statement ELSE statement
         """
         if len(p)==6:
-            p[0] = If(p[3],p[5])
+            p[0] = If(p[3],p[5],None)
         else:
             p[0] = If(p[3],p[5],p[7])
 
@@ -529,7 +573,7 @@ class Parser():
                         | PRINT LPAREN RPAREN SEMI
         """
         if len(p)==6:
-            p[0] = Print(p[3])
+            p[0] = Print(p[3]) # TODO must be list?
         else:
             p[0] = Print(None)
 
@@ -537,11 +581,11 @@ class Parser():
         """
         read_statement : READ LPAREN expression RPAREN SEMI
         """
-        p[0] = Read(p[3])
+        p[0] = Read(p[3]) # TODO must be list?
 
     def p_empty(self, p):
         """empty : """
-        p[0] = Empty()
+        p[0] = None
 
     def p_error(self, p):
         if p:
