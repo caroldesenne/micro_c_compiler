@@ -447,19 +447,16 @@ class InitList(Node):
     attr_names = ()
 
 class Compound(Node):
-    __slots__ = ('decl_list','st_list','coord')
+    __slots__ = ('block_items','coord')
 
-    def __init__(self, dl, sl, coord=None):
-        self.decl_list = dl
-        self.st_list = sl
+    def __init__(self, bi, coord=None):
+        self.block_items = bi
         self.coord = coord
 
     def children(self):
         nodelist = []
-        for i, child in enumerate(self.decl_list or []):
-            nodelist.append(("decl[%d]" % i, child))
-        for i, child in enumerate(self.st_list or []):
-            nodelist.append(("statement[%d]" % i, child))
+        for i, child in enumerate(self.block_items or []):
+            nodelist.append(("block_items[%d]" % i, child))
         return tuple(nodelist)
 
     attr_names = ()

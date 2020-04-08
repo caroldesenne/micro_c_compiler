@@ -417,7 +417,7 @@ class Parser():
                        | parameter_list COMMA parameter_declaration
         """
         if len(p) == 2: # single parameter
-            p[0] = c_ast.ParamList([p[1]], p[1].coord)
+            p[0] = ParamList([p[1]], p[1].coord)
         else:
             p[1].list.append(p[3])
             p[0] = p[1]
@@ -477,7 +477,7 @@ class Parser():
         if len(p)==2:
             p[0] = p[1]
         else:
-            p[0] = InitList(p[2],coord=self._token_coord(p, 1))
+            p[0] = InitList(p[2],coord=p[2][0].coord)
 
     def p_initializer_list(self, p):
         """
@@ -489,28 +489,30 @@ class Parser():
         else:
             p[0] = p[1] + [p[3]]
 
-    def p_statement_list(self, p):
+    def p_block_item(self, p):
+        """ block_item  : declaration
+                        | statement
         """
-        statement_list : statement
-                       | statement_list statement
-        """
-        if len(p)==2:
-            p[0] = [p[1]]
-        else:
-            p[0] = p[1] + [p[2]]
+        p[0] = p[1] if isinstance(p[1], list) else [p[1]]
 
-    def p_statement_list_opt(self, p):
+    def p_block_item_list(self, p):
+        """ block_item_list : block_item
+                            | block_item_list block_item
         """
-        statement_list_opt : statement_list
-                           | empty
+        # Empty block items (plain ';') produce [None], so ignore them
+        p[0] = p[1] if (len(p) == 2 or p[2] == [None]) else p[1] + p[2]
+
+    def p_block_item_list_opt(self, p):
+        """ block_item_list_opt : block_item_list
+                                | empty
         """
         p[0] = p[1]
 
     def p_compound_statement(self, p):
         """
-        compound_statement : LBRACE declaration_list_opt statement_list_opt RBRACE
+        compound_statement : LBRACE block_item_list_opt RBRACE
         """
-        p[0] = Compound(p[2],p[3],coord=self._token_coord(p, 1))
+        p[0] = Compound(p[2],coord=self._token_coord(p, 1))
 
     def p_statement(self, p):
         """
