@@ -315,7 +315,7 @@ class PtrDecl(Node):
     __slots__ = ('stars', 'type', 'coord')
 
     def __init__(self, stars, coord=None):
-        self.stars = stars
+        self.stars = [stars]
         self.type = None
         self.coord = coord
 
@@ -369,7 +369,7 @@ class UnaryOp(Node):
     def children(self):
         nodelist = []
         if self.expression is not None: nodelist.append(("expression", self.expression))
-        return tuple(nodelist)	
+        return tuple(nodelist)
 
     attr_names = ('op', )
 
