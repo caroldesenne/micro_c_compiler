@@ -312,10 +312,11 @@ class Assignment(Node):
     attr_names = ('op', )
 
 class PtrDecl(Node):
-    __slots__ = ('stars','coord')
+    __slots__ = ('stars', 'type', 'coord')
 
     def __init__(self, stars, coord=None):
         self.stars = stars
+        self.type = None
         self.coord = coord
 
     def children(self):

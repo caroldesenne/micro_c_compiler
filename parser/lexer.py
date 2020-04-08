@@ -135,7 +135,7 @@ class Lexer():
     t_ignore = ' \t'
 
     def t_comment(self, t):
-        r'/\*(.|\n)*?\*/'
+        r'(/\*(.|\n)*?\*/)|(//(.)*?\n)'
         t.lexer.lineno += t.value.count('\n')
         pass
 
