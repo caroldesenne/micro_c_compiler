@@ -141,7 +141,7 @@ class Program(Node):
 
     def __init__(self, gdecls, coord=None):
         self.gdecls = gdecls
-        self.coord = coord
+        self.coord = None
 
     def children(self):
         nodelist = []
@@ -156,7 +156,7 @@ class GlobalDecl(Node):
 
     def __init__(self, decl, coord=None):
         self.decls = decl
-        self.coord = coord
+        self.coord = None
 
     def children(self):
         nodelist = []
@@ -187,7 +187,7 @@ class FuncDecl(Node):
     def __init__(self, args, type, coord=None):
         self.args = args
         self.type = type
-        self.coord = coord
+        self.coord = None
 
     def children(self):
         nodelist = []
@@ -205,7 +205,7 @@ class FuncDef(Node):
         self.type = type
         self.decl_list = dl
         self.compound_statement = cs
-        self.coord = coord
+        self.coord = None
 
     def children(self):
         nodelist = []
@@ -223,7 +223,7 @@ class ParamList(Node):
 
     def __init__(self,l,coord=None):
         self.list = l
-        self.coord = coord
+        self.coord = None
 
     def children(self):
         nodelist = []
@@ -239,7 +239,7 @@ class ArrayDecl(Node):
     def __init__(self, type, s, coord=None):
         self.type = type
         self.size = s
-        self.coord = coord
+        self.coord = None
 
     def children(self):
         nodelist = []
@@ -405,7 +405,7 @@ class VarDecl(Node):
     def __init__(self, name, coord=None):
         self.name = name
         self.type = None
-        self.coord = coord
+        self.coord = None
 
     def children(self):
         nodelist = []

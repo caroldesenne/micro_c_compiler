@@ -512,7 +512,9 @@ class Parser():
         """
         compound_statement : LBRACE block_item_list_opt RBRACE
         """
-        p[0] = Compound(p[2],coord=self._token_coord(p, 1))
+        aux = self._token_coord(p, 1)
+        aux.column = 1
+        p[0] = Compound(p[2],coord=aux)
 
     def p_statement(self, p):
         """
