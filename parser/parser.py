@@ -69,6 +69,13 @@ class Parser():
 
         return declarations
 
+    def _token_coord(self, p, token_idx):
+        last_cr = p.lexer.lexer.lexdata.rfind('\n', 0, p.lexpos(token_idx))
+        if last_cr < 0:
+            last_cr = -1
+        column = (p.lexpos(token_idx) - (last_cr))
+        return Coord(p.lineno(token_idx), column)
+
     def print_error(msg, x, y):
         print('Lexical error: %s at %d:%d' %(msg,x,y))
 
@@ -84,7 +91,7 @@ class Parser():
     def p_program(self, p):
         """ program  : global_declaration_list
         """
-        p[0] = Program(p[1])
+        p[0] = Program(p[1],coord=self._token_coord(p, 1))
 
     def p_global_declaration_list(self, p):
         """
@@ -100,7 +107,7 @@ class Parser():
         """
         global_declaration : declaration
         """
-        p[0] = GlobalDecl(p[1])
+        p[0] = GlobalDecl(p[1],coord=self._token_coord(p, 1))
 
     def p_global_declaration2(self, p):
         """
@@ -131,7 +138,7 @@ class Parser():
         """
         decl = p[2]
         decls = self._build_declarations(spec=p[1],decls=[dict(decl=decl, init=None)])[0]
-        p[0] = FuncDef(decls, p[1], p[3], p[4])
+        p[0] = FuncDef(decls, p[1], p[3], p[4],coord=p[2].coord)
 
     def p_function_definition1(self, p):
         """
@@ -140,37 +147,37 @@ class Parser():
         t = Type(['int'],coord=self._token_coord(p, 1))
         decl = p[1]
         decls = self._build_declarations(spec=t,decls=[dict(decl=decl, init=None)])[0]
-        p[0] = FuncDef(decls, None, p[2], p[3])
+        p[0] = FuncDef(decls, None, p[2], p[3],coord=p[1].coord)
 
     def p_identifier(self, p):
         """
         identifier : ID
         """
-        p[0] = ID(p[1])
+        p[0] = ID(p[1],coord=self._token_coord(p, 1))
 
     def p_string(self, p):
         """
         string : STRING_LITERAL
         """
-        p[0] = Constant('string',p[1])
+        p[0] = Constant('string',p[1],coord=self._token_coord(p, 1))
 
     def p_integer_constant(self, p):
         """
         integer_constant : INT_CONST
         """
-        p[0]= Constant('int',p[1])
+        p[0]= Constant('int',p[1],coord=self._token_coord(p, 1))
 
     def p_character_constant(self, p):
         """
         character_constant : CHAR_CONST
         """
-        p[0]= Constant('char',p[1])
+        p[0]= Constant('char',p[1],coord=self._token_coord(p, 1))
 
     def p_floating_constant(self, p):
         """
         floating_constant : FLOAT_CONST
         """
-        p[0]= Constant('float',p[1])
+        p[0]= Constant('float',p[1],coord=self._token_coord(p, 1))
 
     def p_type_specifier(self, p):
         """
@@ -179,7 +186,7 @@ class Parser():
                        | INT
                        | FLOAT
         """
-        p[0] = Type([p[1]])
+        p[0] = Type([p[1]],coord=self._token_coord(p, 1))
 
     def p_identifier_list(self, p):
         """
@@ -214,7 +221,7 @@ class Parser():
                 | TIMES pointer
         """
         if len(p)==2:
-            p[0] = Pointer(p[1])
+            p[0] = PtrDecl(p[1],self._token_coord(p, 1))
         else:
             p[2].stars.append(p[1])
             p[0] = p[2]
@@ -226,11 +233,11 @@ class Parser():
                           | direct_declarator LBRACKET constant_expression RBRACKET
         """
         if len(p)==2:
-            p[0] = VarDecl(p[1])
+            p[0] = VarDecl(p[1],coord=p[1].coord)
         elif len(p)==4:
             p[0] = p[2]
         elif len(p)==5:
-            arr = ArrayDecl(None,p[3])
+            arr = ArrayDecl(None,p[3],coord=p[1].coord)
             p[0] = self._type_modify_decl(decl=p[1],modifier=arr)
 
 
@@ -240,17 +247,17 @@ class Parser():
                           | direct_declarator LPAREN parameter_list RPAREN
         """
         if len(p)==4:
-            arr = ArrayDecl(None,None)
+            arr = ArrayDecl(None,None,coord=p[1].coord)
             p[0] = self._type_modify_decl(decl=p[1],modifier=arr)
         elif len(p)==5:
-            func = FuncDecl(args=p[3],type=None)
+            func = FuncDecl(args=p[3],type=None,coord=p[1].coord)
             p[0] = self._type_modify_decl(decl=p[1], modifier=func)
 
     def p_direct_declarator3(self, p):
         """
         direct_declarator : direct_declarator LPAREN identifier_list_opt RPAREN
         """
-        func = FuncDecl(args=p[3],type=None)
+        func = FuncDecl(args=p[3],type=None,coord=p[1].coord)
         p[0] = self._type_modify_decl(decl=p[1], modifier=func)
 
     def p_constant_expression(self, p):
@@ -279,7 +286,7 @@ class Parser():
         if len(p)==2:
             p[0] = p[1]
         else:
-            p[0] = BinaryOp(p[2], p[1], p[3])
+            p[0] = BinaryOp(p[2], p[1], p[3],coord=p[1].coord)
 
     def p_cast_expression(self, p):
         """
@@ -301,7 +308,7 @@ class Parser():
         if len(p)==2:
             p[0] = p[1]
         else:
-            p[0] = UnaryOp('p'+p[1],p[2])
+            p[0] = UnaryOp('p'+p[1],p[2],coord=p[2].coord)
 
     def p_postfix_expression(self, p):
         """
@@ -313,15 +320,15 @@ class Parser():
         if len(p)==2:
             p[0] = p[1]
         elif len(p)==3:
-            p[0] = UnaryOp('p'+p[2],p[1])
+            p[0] = UnaryOp('p'+p[2],p[1],coord=p[1].coord)
         else:
-            p[0] = FuncCall(p[1],p[3])
+            p[0] = FuncCall(p[1],p[3],coord=p[1].coord)
 
     def p_postfix_expression2(self, p):
         """
         postfix_expression : postfix_expression LBRACKET expression RBRACKET
         """
-        p[0] = ArrayRef(p[1],p[3])
+        p[0] = ArrayRef(p[1],p[3],coord=p[1].coord)
 
 
     def p_primary_expression(self, p):
@@ -353,7 +360,7 @@ class Parser():
             p[0] = p[1]
         else:
             if not isinstance(p[1], ExprList):
-                p[1] = ExprList([p[1]])
+                p[1] = ExprList([p[1]],coord=p[1].coord)
             p[1].list.append(p[3])
             p[0] = p[1]
 
@@ -369,7 +376,7 @@ class Parser():
         expression_statement : expression_opt SEMI
         """
         if p[1] is None:
-            p[0] = EmptyStatement()
+            p[0] = EmptyStatement(coord=self._token_coord(p, 1))
         else:
             p[0] = p[1]
 
@@ -381,7 +388,7 @@ class Parser():
         if len(p)==2:
             p[0] = p[1]
         else:
-            p[0] = Assignment(p[2],p[1],p[3])
+            p[0] = Assignment(p[2],p[1],p[3],p[1].coord)
 
     def p_assignment_operator(self, p):
         """
@@ -470,7 +477,7 @@ class Parser():
         if len(p)==2:
             p[0] = p[1]
         else:
-            p[0] = InitList(p[2])
+            p[0] = InitList(p[2],coord=self._token_coord(p, 1))
 
     def p_initializer_list(self, p):
         """
@@ -503,7 +510,7 @@ class Parser():
         """
         compound_statement : LBRACE declaration_list_opt statement_list_opt RBRACE
         """
-        p[0] = Compound(p[2],p[3])
+        p[0] = Compound(p[2],p[3],coord=self._token_coord(p, 1))
 
     def p_statement(self, p):
         """
@@ -524,9 +531,9 @@ class Parser():
         					| IF LPAREN expression RPAREN statement ELSE statement
         """
         if len(p)==6:
-            p[0] = If(p[3],p[5],None)
+            p[0] = If(p[3],p[5],None,coord=self._token_coord(p, 1))
         else:
-            p[0] = If(p[3],p[5],p[7])
+            p[0] = If(p[3],p[5],p[7],coord=self._token_coord(p, 1))
 
     def p_iteration_statement(self, p):
         """
@@ -535,11 +542,11 @@ class Parser():
                             | FOR LPAREN declaration expression_opt SEMI expression_opt RPAREN statement
         """
         if len(p)==6: # while
-            p[0] = While(p[3],p[5])
+            p[0] = While(p[3],p[5],coord=self._token_coord(p, 1))
         elif len(p)==10:
-            p[0] = For(p[3],p[5],p[7],p[9])
+            p[0] = For(p[3],p[5],p[7],p[9],coord=self._token_coord(p, 1))
         else: # for
-            p[0] = For(DeclList(p[3]),p[4],p[6],p[8])
+            p[0] = For(DeclList(decls=p[3],coord=self._token_coord(p, 1)),p[4],p[6],p[8],coord=self._token_coord(p, 1))
 
     def p_jump_statement(self, p):
         """
@@ -547,15 +554,15 @@ class Parser():
                        | RETURN expression_opt SEMI
         """
         if len(p)==3:
-            p[0] = Break(p[1])
+            p[0] = Break(coord=self._token_coord(p, 1))
         else:
-            p[0] = Return(p[2])
+            p[0] = Return(p[2],coord=self._token_coord(p, 1))
 
     def p_assert_statement(self, p):
         """
         assert_statement : ASSERT expression SEMI
         """
-        p[0] = Assert(p[2])
+        p[0] = Assert(p[2],coord=self._token_coord(p, 1))
 
     def p_print_statement(self, p):
         """
@@ -563,15 +570,15 @@ class Parser():
                         | PRINT LPAREN RPAREN SEMI
         """
         if len(p)==6:
-            p[0] = Print(p[3]) # TODO must be list?
+            p[0] = Print(p[3], coord=self._token_coord(p, 1)) # TODO must be list?
         else:
-            p[0] = Print(None)
+            p[0] = Print(None, coord=self._token_coord(p, 1))
 
     def p_read_statement(self, p):
         """
         read_statement : READ LPAREN expression RPAREN SEMI
         """
-        p[0] = Read(p[3]) # TODO must be list?
+        p[0] = Read(p[3],coord=self._token_coord(p, 1)) # TODO must be list?
 
     def p_empty(self, p):
         """empty : """

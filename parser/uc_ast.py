@@ -80,39 +80,60 @@ class Node(object):
                 buf.write('%s' % self.coord)
         buf.write('\n')
 
+
         for (child_name, child) in self.children():
             child.show(buf, offset + 4, attrnames, nodenames, showcoord, child_name)
 
+class Coord(object):
+    """ Coordinates of a syntactic element. Consists of:
+            - Line number
+            - (optional) column number, for the Lexer
+    """
+    __slots__ = ('line', 'column')
+
+    def __init__(self, line, column=None):
+        self.line = line
+        self.column = column
+
+    def __str__(self):
+        if self.line:
+            coord_str = "   @ %s:%s" % (self.line, self.column)
+        else:
+            coord_str = ""
+        return coord_str
+
 '''
-FuncDecl ( )
-Program ( )
-GlobalDecl ( )
-DeclList ( )
-ArrayDecl ( )
-ArrayRef ( )
-VarDecl ()
-ID (name)
-Assignment (op)
-PtrDecl ( ) **
-FuncCall ( )
-FuncDef ( )
-BinaryOp (op)
-UnaryOp (op)
-Constant (type, value)
-Type (names)
-Decl (name)
-InitList ( )
-ExprList ( )
-Compound ( )
-If ( )
-While ( )
-For ( )
-Break ( )
-Return ( )
-Assert ( )
-Print ( )
-Read ( )
-EmptyStatement ( )
+a * means coord is done for this class
+
+FuncDecl ( ) *
+Program ( ) *
+GlobalDecl ( ) *
+DeclList ( ) *
+ArrayDecl ( ) *
+ArrayRef ( ) *
+VarDecl () *
+ID (name) *
+Assignment (op) *
+PtrDecl ( ) *
+FuncCall ( ) *
+FuncDef ( ) *
+BinaryOp (op) *
+UnaryOp (op) *
+Constant (type, value) *
+Type (names) *
+Decl (name) *
+InitList ( ) *
+ExprList ( ) *
+Compound ( ) *
+If ( ) *
+While ( ) *
+For ( ) *
+Break ( ) *
+Return ( ) *
+Assert ( ) *
+Print ( ) *
+Read ( ) *
+EmptyStatement ( ) *
 '''
 
 class Program(Node):
@@ -198,7 +219,7 @@ class FuncDef(Node):
     attr_names = ()
 
 class ParamList(Node):
-    __slots__ = ('list')
+    __slots__ = ('list', 'coord')
 
     def __init__(self,l,coord=None):
         self.list = l
@@ -265,6 +286,7 @@ class ID(Node):
 
     def __init__(self,name,coord=None):
         self.name = name
+        self.coord = coord
 
     def children(self):
         nodelist = []
