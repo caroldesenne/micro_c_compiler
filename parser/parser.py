@@ -308,7 +308,7 @@ class Parser():
         if len(p)==2:
             p[0] = p[1]
         else:
-            p[0] = UnaryOp('p'+p[1],p[2],coord=p[2].coord)
+            p[0] = UnaryOp(p[1],p[2],coord=p[2].coord)
 
     def p_postfix_expression(self, p):
         """
