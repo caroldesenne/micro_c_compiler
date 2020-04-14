@@ -1,0 +1,52 @@
+Program: 
+    FuncDef: 
+        Type: ['int']   @ 3:1
+        Decl: ID(name='fat'  )
+            FuncDecl: 
+                ParamList: 
+                    Decl: ID(name='n'  )
+                        VarDecl: 
+                            Type: ['int']   @ 3:10
+                VarDecl: 
+                    Type: ['int']   @ 3:1
+        Compound:    @ 3:1
+            If:    @ 4:5
+                BinaryOp: ==   @ 4:9
+                    ID: n   @ 4:9
+                    Constant: int, 0   @ 4:14
+                Return:    @ 5:9
+                    Constant: int, 1   @ 5:16
+                Return:    @ 7:9
+                    BinaryOp: *   @ 7:16
+                        ID: n   @ 7:16
+                        FuncCall:    @ 7:20
+                            ID: fat   @ 7:20
+                            BinaryOp: -   @ 7:25
+                                ID: n   @ 7:25
+                                Constant: int, 1   @ 7:27
+    FuncDef: 
+        Type: ['void']   @ 10:1
+        Decl: ID(name='main'  )
+            FuncDecl: 
+                VarDecl: 
+                    Type: ['void']   @ 10:1
+        Compound:    @ 10:1
+            Assert:    @ 11:5
+                BinaryOp: ==   @ 11:12
+                    FuncCall:    @ 11:12
+                        ID: fat   @ 11:12
+                        Constant: int, 5   @ 11:16
+                    Constant: int, 120   @ 11:22
+            Assert:    @ 12:5
+                BinaryOp: ==   @ 12:12
+                    FuncCall:    @ 12:12
+                        ID: fat   @ 12:12
+                        Constant: int, 6   @ 12:16
+                    Constant: int, 720   @ 12:22
+            Assert:    @ 13:5
+                BinaryOp: ==   @ 13:12
+                    FuncCall:    @ 13:12
+                        ID: fat   @ 13:12
+                        Constant: int, 7   @ 13:16
+                    Constant: int, 5040   @ 13:22
+            Return:    @ 14:5

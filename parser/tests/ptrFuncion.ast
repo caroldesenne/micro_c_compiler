@@ -1,0 +1,87 @@
+Program: 
+    GlobalDecl: 
+        Decl: ID(name='operation'  )   @ 5:6
+            PtrDecl:    @ 5:6
+    FuncDef: 
+        Type: ['int']   @ 7:1
+        Decl: ID(name='add'  )
+            FuncDecl: 
+                ParamList: 
+                    Decl: ID(name='x'  )
+                        VarDecl: 
+                            Type: ['int']   @ 7:9
+                    Decl: ID(name='y'  )
+                        VarDecl: 
+                            Type: ['int']   @ 7:16
+                VarDecl: 
+                    Type: ['int']   @ 7:1
+        Compound:    @ 7:1
+            Return:    @ 8:5
+                BinaryOp: +   @ 8:12
+                    ID: x   @ 8:12
+                    ID: y   @ 8:16
+    FuncDef: 
+        Type: ['int']   @ 11:1
+        Decl: ID(name='subtract'  )
+            FuncDecl: 
+                ParamList: 
+                    Decl: ID(name='x'  )
+                        VarDecl: 
+                            Type: ['int']   @ 11:14
+                    Decl: ID(name='y'  )
+                        VarDecl: 
+                            Type: ['int']   @ 11:21
+                VarDecl: 
+                    Type: ['int']   @ 11:1
+        Compound:    @ 11:1
+            Return:    @ 12:5
+                BinaryOp: -   @ 12:12
+                    ID: x   @ 12:12
+                    ID: y   @ 12:16
+    FuncDef: 
+        Type: ['int']   @ 15:1
+        Decl: ID(name='main'  )
+            FuncDecl: 
+                VarDecl: 
+                    Type: ['int']   @ 15:1
+        Compound:    @ 15:1
+            Decl: ID(name='foo'  )
+                VarDecl: 
+                    Type: ['int']   @ 16:4
+                Constant: int, 1   @ 16:15
+            Decl: ID(name='bar'  )
+                VarDecl: 
+                    Type: ['int']   @ 16:4
+                Constant: int, 1   @ 16:24
+            Assignment: =   @ 17:4
+                ID: operation   @ 17:4
+                ID: add   @ 17:16
+            Print:    @ 18:4
+                ExprList:    @ 18:10
+                    ID: foo   @ 18:10
+                    Constant: string, " + "   @ 18:15
+                    ID: bar   @ 18:22
+                    Constant: string, " = "   @ 18:27
+                    FuncCall:    @ 18:34
+                        ID: operation   @ 18:34
+                        ExprList:    @ 18:44
+                            ID: foo   @ 18:44
+                            ID: bar   @ 18:49
+                    Constant: string, "\n"   @ 18:55
+            Assignment: =   @ 19:4
+                ID: operation   @ 19:4
+                ID: subtract   @ 19:16
+            Print:    @ 20:4
+                ExprList:    @ 20:10
+                    ID: foo   @ 20:10
+                    Constant: string, " - "   @ 20:15
+                    ID: bar   @ 20:22
+                    Constant: string, " = "   @ 20:27
+                    FuncCall:    @ 20:34
+                        ID: operation   @ 20:34
+                        ExprList:    @ 20:44
+                            ID: foo   @ 20:44
+                            ID: bar   @ 20:49
+                    Constant: string, "\n"   @ 20:55
+            Return:    @ 21:4
+                Constant: int, 0   @ 21:11
