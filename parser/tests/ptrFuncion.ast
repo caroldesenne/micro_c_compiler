@@ -2,6 +2,16 @@ Program:
     GlobalDecl: 
         Decl: ID(name='operation'  )   @ 5:6
             PtrDecl:    @ 5:6
+                FuncDecl: 
+                    ParamList: 
+                        Decl: ID(name='x'  )
+                            VarDecl: 
+                                Type: ['int']   @ 5:18
+                        Decl: ID(name='y'  )
+                            VarDecl: 
+                                Type: ['int']   @ 5:25
+                    VarDecl: 
+                        Type: ['int']   @ 5:1
     FuncDef: 
         Type: ['int']   @ 7:1
         Decl: ID(name='add'  )

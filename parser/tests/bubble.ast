@@ -1,0 +1,121 @@
+Program: 
+    FuncDef: 
+        Type: ['int']   @ 3:1
+        Decl: ID(name='main'  )
+            FuncDecl: 
+                VarDecl: 
+                    Type: ['int']   @ 3:1
+        Compound:    @ 3:1
+            Decl: ID(name='v'  )
+                ArrayDecl: 
+                    VarDecl: 
+                        Type: ['int']   @ 4:5
+                    Constant: int, 100   @ 4:11
+            Decl: ID(name='n'  )
+                VarDecl: 
+                    Type: ['int']   @ 5:5
+            Decl: ID(name='c'  )
+                VarDecl: 
+                    Type: ['int']   @ 5:5
+            Decl: ID(name='d'  )
+                VarDecl: 
+                    Type: ['int']   @ 5:5
+            Decl: ID(name='swap'  )
+                VarDecl: 
+                    Type: ['int']   @ 5:5
+            Print:    @ 6:5
+                Constant: string, "Enter number of elements: "   @ 6:11
+            Read:    @ 7:5
+                ID: n   @ 7:10
+            Print:    @ 8:5
+                ExprList:    @ 8:11
+                    Constant: string, "Enter "   @ 8:11
+                    ID: n   @ 8:21
+                    Constant: string, " integers\n"   @ 8:24
+            For:    @ 9:5
+                Assignment: =   @ 9:10
+                    ID: c   @ 9:10
+                    Constant: int, 0   @ 9:14
+                BinaryOp: <   @ 9:17
+                    ID: c   @ 9:17
+                    ID: n   @ 9:21
+                UnaryOp: p++   @ 9:24
+                    ID: c   @ 9:24
+                Read:    @ 10:9
+                    ArrayRef:    @ 10:14
+                        ID: v   @ 10:14
+                        ID: c   @ 10:16
+            For:    @ 11:5
+                Assignment: =   @ 11:10
+                    ID: c   @ 11:10
+                    Constant: int, 0   @ 11:14
+                BinaryOp: <   @ 11:17
+                    ID: c   @ 11:17
+                    BinaryOp: -   @ 11:21
+                        ID: n   @ 11:21
+                        Constant: int, 1   @ 11:23
+                UnaryOp: p++   @ 11:26
+                    ID: c   @ 11:26
+                For:    @ 12:9
+                    Assignment: =   @ 12:14
+                        ID: d   @ 12:14
+                        Constant: int, 0   @ 12:18
+                    BinaryOp: <   @ 12:21
+                        ID: d   @ 12:21
+                        BinaryOp: -   @ 12:25
+                            BinaryOp: -   @ 12:25
+                                ID: n   @ 12:25
+                                ID: c   @ 12:27
+                            Constant: int, 1   @ 12:29
+                    UnaryOp: p++   @ 12:32
+                        ID: d   @ 12:32
+                    If:    @ 13:13
+                        BinaryOp: >   @ 13:17
+                            ArrayRef:    @ 13:17
+                                ID: v   @ 13:17
+                                ID: d   @ 13:19
+                            ArrayRef:    @ 13:24
+                                ID: v   @ 13:24
+                                BinaryOp: +   @ 13:26
+                                    ID: d   @ 13:26
+                                    Constant: int, 1   @ 13:28
+                        Compound:    @ 13:1
+                            Assignment: =   @ 14:17
+                                ID: swap   @ 14:17
+                                ArrayRef:    @ 14:24
+                                    ID: v   @ 14:24
+                                    ID: d   @ 14:26
+                            Assignment: =   @ 15:17
+                                ArrayRef:    @ 15:17
+                                    ID: v   @ 15:17
+                                    ID: d   @ 15:19
+                                ArrayRef:    @ 15:24
+                                    ID: v   @ 15:24
+                                    BinaryOp: +   @ 15:26
+                                        ID: d   @ 15:26
+                                        Constant: int, 1   @ 15:28
+                            Assignment: =   @ 16:17
+                                ArrayRef:    @ 16:17
+                                    ID: v   @ 16:17
+                                    BinaryOp: +   @ 16:19
+                                        ID: d   @ 16:19
+                                        Constant: int, 1   @ 16:21
+                                ID: swap   @ 16:26
+            Print:    @ 18:5
+                Constant: string, "Sorted list in ascending order:\n"   @ 18:11
+            For:    @ 19:5
+                Assignment: =   @ 19:10
+                    ID: c   @ 19:10
+                    Constant: int, 0   @ 19:14
+                BinaryOp: <   @ 19:17
+                    ID: c   @ 19:17
+                    ID: n   @ 19:21
+                UnaryOp: p++   @ 19:24
+                    ID: c   @ 19:24
+                Print:    @ 20:9
+                    ExprList:    @ 20:15
+                        ArrayRef:    @ 20:15
+                            ID: v   @ 20:15
+                            ID: c   @ 20:17
+                        Constant: string, " "   @ 20:21
+            Return:    @ 21:5

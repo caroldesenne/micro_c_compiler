@@ -9,6 +9,12 @@ all:
 	-diff tests/t3.ast tests/out3.ast
 	-diff tests/t4.ast tests/out4.ast
 	-diff tests/t5.ast tests/out5.ast
+	python3 uc.py tests/armstrong.uc
+	python3 uc.py tests/bubble.uc
+	python3 uc.py tests/factorial.uc
+	python3 uc.py tests/gdc.uc
+	python3 uc.py tests/primes.uc
+	python3 uc.py tests/ptrFuncion.uc
 
 clean:
 	rm parser.out parsetab.py
