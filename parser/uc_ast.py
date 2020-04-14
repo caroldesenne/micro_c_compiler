@@ -321,6 +321,7 @@ class PtrDecl(Node):
 
     def children(self):
         nodelist = []
+        if self.type is not None: nodelist.append(("type", self.type))
         return tuple(nodelist)
 
     attr_names = ()
