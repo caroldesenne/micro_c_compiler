@@ -221,7 +221,7 @@ class Parser():
                 | TIMES pointer
         """
         if len(p)==2:
-            p[0] = PtrDecl(p[1],self._token_coord(p, 1))
+            p[0] = PtrDecl([p[1]],self._token_coord(p, 1))
         else:
             p[2].stars.append(p[1])
             p[0] = p[2]

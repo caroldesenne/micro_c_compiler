@@ -315,7 +315,7 @@ class PtrDecl(Node):
     __slots__ = ('stars', 'type', 'coord')
 
     def __init__(self, stars, coord=None):
-        self.stars = [stars]
+        self.stars = stars
         self.type = None
         self.coord = coord
 
