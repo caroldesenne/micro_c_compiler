@@ -129,35 +129,15 @@ class Scopes(object):
         return None
 
 '''
-a * means we still have TODO in visit for this class
-
-FuncDecl ( ) *
-Program ( )
-GlobalDecl ( )
-DeclList ( ) *
-ArrayDecl ( )
-ArrayRef ( ) *
-VarDecl ()
-ID (name) *
 Assignment (op) *
 PtrDecl ( ) *
 FuncCall ( ) *
 FuncDef ( ) *
-BinaryOp (op) *
-UnaryOp (op) *
-Constant (type, value)
-Type (names)
-Decl (name) *
-InitList ( )
 ExprList ( ) *
-Compound ( ) *
 If ( ) *
 While ( ) *
-For ( ) *
 Break ( ) *
-Return ( ) *
 Assert ( ) *
-Print ( ) *
 Read ( ) *
 EmptyStatement ( ) *
 '''
@@ -170,13 +150,15 @@ class CheckProgramVisitor(NodeVisitor):
     '''
     def __init__(self):
         self.scopes = Scopes()
+        # TODO complete sets
+        self.boolOps = {"<="}
 
     def visit_Program(self,node):
         for i, child in enumerate(node.gdecls or []):
             self.visit(child)
 
     def visit_GlobalDecl(self,node):
-         for i, child in enumerate(node.decls or []):
+        for i, child in enumerate(node.decls or []):
             self.visit(child)
 
     def visit_FuncDef(self,node):
@@ -198,10 +180,38 @@ class CheckProgramVisitor(NodeVisitor):
         alreadyDefined = f"{node.coord.line}:{node.coord.column} - symbol {sym} already defined in current scope."
         assert self.scopes.insert(sym,t), alreadyDefined
         # check if declaration type matches initializer type
-        self.visit(node.init)
-        ti = node.init.type
-        assert t==ti, f"{node.coord.line}:{node.coord.column} - declaration and initializer types must match."
+        if node.init != None:
+            self.visit(node.init)
+            ti = node.init.type
+            assert t==ti, f"{node.coord.line}:{node.coord.column} - declaration and initializer types must match."
         # TODO check size if node.type = ArrayDecl and arrayDecl.size != None
+
+    def visit_Compound(self,node):
+        for i, child in enumerate(node.block_items or []):
+            self.visit(child)
+
+    def visit_For(self,node):
+        if node.init != None:
+            self.visit(node.init)
+        if node.stop_cond != None:
+            self.visit(node.stop_cond)
+            mustBool = f"{node.coord.line}:{node.coord.column} - stop condition must be of type bool."
+            assert node.stop_cond.type=="bool", mustBool
+        if node.increment != None:
+            self.visit(node.increment)
+        if node.statement != None:
+            self.visit(node.statement)
+
+    def visit_DeclList(self,node):
+        for i, child in enumerate(node.decls or []):
+            self.visit(child)
+
+    def visit_Return(self,node):
+        if node.expr != None:
+            self.visit(node.expr)
+            node.type = node.expr.type
+        else:
+            node.type = "void"
 
     def visit_ArrayDecl(self,node):
         self.visit(node.type)
@@ -222,16 +232,58 @@ class CheckProgramVisitor(NodeVisitor):
             self.visit(child)
             assert child.type == node.type, f"{child.coord.line}:{child.coord.column} - types in initializer list must all match."
 
+    def visit_FuncDecl(self,node):
+        for i, child in enumerate(node.args or []):
+            self.visit(child)
+        self.visit(node.type)
+
     def visit_Constant(self,node):
         pass
 
-    def visit_BinaryOp(self, node):
-        # 1. Make sure left and right operands have the same type
-        # 2. Make sure the operation is supported
-        # 3. Assign the result type
+    def visit_BinaryOp(self,node):
         self.visit(node.left)
         self.visit(node.right)
-        node.type = node.left.type
+        # Make sure left and right operands have the same type
+        binop = f"{node.coord.line}:{node.coord.column} - left ({node.left.type}) and right ({node.right.type}) sides of binary operation must have the same types."
+        assert node.left.type==node.right.type, binop
+
+        # Make sure the operation is supported
+        # TODO
+
+        # TODO Assign the result type (verify which operation it is)
+        if node.op in self.boolOps:
+            node.type = "bool"
+        else:
+            node.type = node.left.type
+
+    def visit_UnaryOp(self,node):
+        self.visit(node.expression)
+        # Make sure the operation is supported
+        # TODO
+
+        # TODO Assing the result type (check which operation it is)
+        node.type = node.expression
+
+    def visit_Print(self,node):
+        if node.expr != None:
+            self.visit(node.expr)
+
+    def visit_ArrayRef(self,node):
+        self.visit(node.name)
+        accNone = f"{node.coord.line}:{node.coord.column} - array access value must be specified."
+        assert node.access_value != None, accNone
+        self.visit(node.access_value)
+        accInt = f"{node.coord.line}:{node.coord.column} - array access value must be of type int."
+        assert node.access_value.type=="int", accInt
+        node.type = node.name.type
+
+    def visit_ID(self,node):
+        sym = node.name
+        t = self.scopes.find(sym)
+        # check if symbol exists
+        notDefined = f"{node.coord.line}:{node.coord.column} - symbol {sym} not defined."
+        assert t != None, notDefined
+        node.type = t
 
     def visit_Assignment(self,node):
         ## 1. Make sure the location of the assignment is defined
@@ -265,4 +317,3 @@ if __name__ == '__main__':
     #ast.show()
     check = CheckProgramVisitor()
     check.visit_Program(ast)
-

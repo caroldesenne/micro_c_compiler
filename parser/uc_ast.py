@@ -250,11 +250,12 @@ class ArrayDecl(Node):
     attr_names = ()
 
 class ArrayRef(Node):
-    __slots__ = ('name','access_value','coord')
+    __slots__ = ('name','access_value','type','coord')
 
     def __init__(self, name, av, coord=None):
         self.name = name
         self.access_value = av
+        self.type = None
         self.coord = coord
 
     def children(self):
@@ -282,10 +283,11 @@ class FuncCall(Node):
     attr_names = ()
 
 class ID(Node):
-    __slots__ = ('name','coord')
+    __slots__ = ('name','type','coord')
 
     def __init__(self,name,coord=None):
         self.name = name
+        self.type = None
         self.coord = coord
 
     def children(self):
@@ -327,18 +329,19 @@ class PtrDecl(Node):
     attr_names = ()
 
 class BinaryOp(Node):
-    __slots__ = ('op', 'lvalue', 'rvalue', 'coord')
+    __slots__ = ('op', 'left', 'right', 'type', 'coord')
 
     def __init__(self, op, left, right, coord=None):
         self.op = op
-        self.lvalue = left
-        self.rvalue = right
+        self.left = left
+        self.right = right
+        self.type = None
         self.coord = coord
 
     def children(self):
         nodelist = []
-        if self.lvalue is not None: nodelist.append(("lvalue", self.lvalue))
-        if self.rvalue is not None: nodelist.append(("rvalue", self.rvalue))
+        if self.left is not None: nodelist.append(("left", self.left))
+        if self.right is not None: nodelist.append(("right", self.right))
         return tuple(nodelist)
 
     attr_names = ('op', )
@@ -360,12 +363,13 @@ class Cast(Node):
     attr_names = ()
 
 class UnaryOp(Node):
-    __slots__ = ('op','expression','coord')
+    __slots__ = ('op','expression','type','coord')
 
     def __init__(self, op, exp, coord=None):
-    	self.op = op
-    	self.expression = exp
-    	self.coord = coord
+        self.op = op
+        self.expression = exp
+        self.type = None
+        self.coord = coord
 
     def children(self):
         nodelist = []
@@ -547,10 +551,11 @@ class Break(Node):
     attr_names = ()
 
 class Return(Node):
-    __slots__ = ('expr','coord')
+    __slots__ = ('expr','type','coord')
 
     def __init__(self,expr=None,coord=None):
         self.expr = expr
+        self.type = None
         self.coord = coord
 
     def children(self):
