@@ -68,6 +68,11 @@ class SymbolTable(object):
     '''
     def __init__(self):
         self.symtab = {}
+        # Add built-in type names (int, float, char) to every symbol table
+        self.add("int",uctype.int_type)
+        self.add("float",uctype.float_type)
+        self.add("char",uctype.char_type)
+        # self.symtab.add("bool",uctype.boolean_type) TODO: there is no bool
 
     def lookup(self, a):
         return self.symtab.get(a)
@@ -75,6 +80,52 @@ class SymbolTable(object):
     def add(self, a, v):
         self.symtab[a] = v
 
+class Scopes(object):
+    '''
+    Class representing all the scopes in a program. Each scope level is
+    represented by a symbol table, and they are assembled in a list. The first
+    element of the list is the root scope and we go into deeper scopes as we
+    go through the array. Depth represents the maximal scope depth we are in
+    at the moment (and it corresponds to the scopes array size).
+    '''
+    def __init__(self):
+        root = SymbolTable()
+        self.scope = [root]
+        self.depth = 1
+
+    def pushLevel(self):
+        s = SymbolTable()
+        self.scope.append(s)
+        self.depth += 1
+
+    def popLevel(self):
+        self.scope.pop()
+        self.depth -= 1
+
+    def insert(self,sym,t):
+        '''
+        insert inserts a new symbol in the symbol table of the current scope (which is
+        the one represented by depth, or self.scope[self.depth-1]). If the symbol already exists
+        in the current scope, return false. Otherwise, insert it and return true.
+        '''
+        s = self.scope[self.depth-1]
+        if s.lookup(sym) == None:
+            s.add(sym,t)
+            return True
+        return False
+
+    def find(self,sym):
+        '''
+        find tries to find a symbol in the current scope or in previous scopes. If it finds it,
+        return the corresponding found, otherwise returns None.
+        '''
+        currentDepth = self.depth
+        while(currentDepth > 0):
+            s = self.scope[currentDepth-1]
+            if s.lookup(sym) != None:
+                return s.lookup(sym)
+            currentDepth -= 1
+        return None
 
 '''
 a * means we still have TODO in visit for this class
@@ -120,12 +171,6 @@ class CheckProgramVisitor(NodeVisitor):
         # Initialize the symbol table
         self.symtab = SymbolTable()
 
-        # Add built-in type names (int, float, char) to the symbol table
-        self.symtab.add("int",uctype.int_type)
-        self.symtab.add("float",uctype.float_type)
-        self.symtab.add("char",uctype.char_type)
-        self.symtab.add("bool",uctype.boolean_type)
-
     def visit_Program(self,node):
         # 1. Visit all of the statements
         # 2. Record the associated symbol table
@@ -152,12 +197,24 @@ class CheckProgramVisitor(NodeVisitor):
 
     def visit_Assignment(self,node):
         ## 1. Make sure the location of the assignment is defined
-        sym = self.symtab.lookup(node.location)
+        # sym = self.symtab.lookup(node.location) TODO FIX THIS
         assert sym, "Assigning to unknown sym"
         ## 2. Check that the types match
         self.visit(node.value)
         assert sym.type == node.value.type, "Type mismatch in assignment"
 
+
+def scopesTest():
+    sc = Scopes()
+    print(sc.insert("hello",2)) # true
+    sc.pushLevel()
+    print(sc.insert("cat",3)) # true
+    print(sc.insert("hello",1)) # true
+    print(sc.find("cat")) # 3
+    print(sc.find("hello")) # 1
+    sc.popLevel()
+    print(sc.insert("hello",1)) # false
+    print(sc.find("hello")) # 2
 
 if __name__ == '__main__':
 
@@ -166,7 +223,9 @@ if __name__ == '__main__':
     p = Parser()
     code = open(sys.argv[1]).read()
     ast = p.parse(code)
+    #scopesTest()
+
     #ast.show()
-    check = CheckProgramVisitor()
-    check.visit_Program(ast)
+    #check = CheckProgramVisitor()
+    #check.visit_Program(ast)
 
