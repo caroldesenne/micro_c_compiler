@@ -28,7 +28,6 @@ char_type = uCType("char",
     set(('PLUS',)),
     set(),
     )
-# TODO: check if this is okay for string
 string_type = uCType("string",
     set(('PLUS',)),
     set(),

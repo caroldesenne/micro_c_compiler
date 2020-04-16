@@ -141,7 +141,7 @@ class Program(Node):
 
     def __init__(self, gdecls, coord=None):
         self.gdecls = gdecls
-        self.coord = None
+        self.coord = coord
 
     def children(self):
         nodelist = []
@@ -156,7 +156,7 @@ class GlobalDecl(Node):
 
     def __init__(self, decl, coord=None):
         self.decls = decl
-        self.coord = None
+        self.coord = coord
 
     def children(self):
         nodelist = []
@@ -187,7 +187,7 @@ class FuncDecl(Node):
     def __init__(self, args, type, coord=None):
         self.args = args
         self.type = type
-        self.coord = None
+        self.coord = coord
 
     def children(self):
         nodelist = []
@@ -205,7 +205,7 @@ class FuncDef(Node):
         self.type = type
         self.decl_list = dl
         self.compound_statement = cs
-        self.coord = None
+        self.coord = coord
 
     def children(self):
         nodelist = []
@@ -223,7 +223,7 @@ class ParamList(Node):
 
     def __init__(self,l,coord=None):
         self.list = l
-        self.coord = None
+        self.coord = coord
 
     def children(self):
         nodelist = []
@@ -239,7 +239,7 @@ class ArrayDecl(Node):
     def __init__(self, type, s, coord=None):
         self.type = type
         self.size = s
-        self.coord = None
+        self.coord = coord
 
     def children(self):
         nodelist = []
@@ -389,10 +389,11 @@ class Constant(Node):
     attr_names = ('type', 'value', )
 
 class Type(Node):
-    __slots__ = ('names','coord')
+    __slots__ = ('names','type','coord')
 
     def __init__(self, names, coord=None):
         self.names = names
+        self.type = None
         self.coord = coord
 
     def children(self):
@@ -407,7 +408,7 @@ class VarDecl(Node):
     def __init__(self, name, coord=None):
         self.name = name
         self.type = None
-        self.coord = None
+        self.coord = coord
 
     def children(self):
         nodelist = []
@@ -434,10 +435,11 @@ class Decl(Node):
     attr_names = ('name', )
 
 class InitList(Node):
-    __slots__ = ('inits','coord')
+    __slots__ = ('inits','type','coord')
 
     def __init__(self, inits, coord=None):
         self.inits = inits
+        self.type = None
         self.coord = coord
 
     def children(self):

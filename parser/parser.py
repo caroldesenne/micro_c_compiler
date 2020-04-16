@@ -138,7 +138,7 @@ class Parser():
         """
         decl = p[2]
         decls = self._build_declarations(spec=p[1],decls=[dict(decl=decl, init=None)])[0]
-        p[0] = FuncDef(decls, p[1], p[3], p[4],coord=p[2].coord)
+        p[0] = FuncDef(decl=decls, type=p[1], dl=p[3], cs=p[4],coord=p[2].coord)
 
     def p_function_definition1(self, p):
         """

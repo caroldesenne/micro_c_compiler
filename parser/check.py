@@ -72,7 +72,8 @@ class SymbolTable(object):
         self.add("int",uctype.int_type)
         self.add("float",uctype.float_type)
         self.add("char",uctype.char_type)
-        # self.symtab.add("bool",uctype.boolean_type) TODO: there is no bool
+        self.add("string",uctype.char_type)
+        self.add("bool",uctype.boolean_type)
 
     def lookup(self, a):
         return self.symtab.get(a)
@@ -131,12 +132,12 @@ class Scopes(object):
 a * means we still have TODO in visit for this class
 
 FuncDecl ( ) *
-Program ( ) *
-GlobalDecl ( ) *
+Program ( )
+GlobalDecl ( )
 DeclList ( ) *
-ArrayDecl ( ) *
+ArrayDecl ( )
 ArrayRef ( ) *
-VarDecl () *
+VarDecl ()
 ID (name) *
 Assignment (op) *
 PtrDecl ( ) *
@@ -144,10 +145,10 @@ FuncCall ( ) *
 FuncDef ( ) *
 BinaryOp (op) *
 UnaryOp (op) *
-Constant (type, value) *
-Type (names) *
+Constant (type, value)
+Type (names)
 Decl (name) *
-InitList ( ) *
+InitList ( )
 ExprList ( ) *
 Compound ( ) *
 If ( ) *
@@ -168,24 +169,61 @@ class CheckProgramVisitor(NodeVisitor):
     Note: You will need to adjust the names of the AST nodes if you picked different names.
     '''
     def __init__(self):
-        # Initialize the symbol table
-        self.symtab = SymbolTable()
+        self.scopes = Scopes()
 
     def visit_Program(self,node):
-        # 1. Visit all of the statements
-        # 2. Record the associated symbol table
-        print("----------hey I got to visit_Program!!!-----------")
-        # TODO
         for i, child in enumerate(node.gdecls or []):
             self.visit(child)
 
     def visit_GlobalDecl(self,node):
-        # TODO
-        print("----------hey I got to visit_GlobalDecl!!!-----------")
+         for i, child in enumerate(node.decls or []):
+            self.visit(child)
 
     def visit_FuncDef(self,node):
-        # TODO
-        print("----------hey I got to visit_FuncDef!!!-----------")
+        t = node.type.names[0] # TODO how to make return value of function check this? how about void?
+        node.type = t
+        self.scopes.pushLevel() # TODO: push before or after visiting node.decl??
+        self.visit(node.decl)
+        self.visit(node.compound_statement)
+        for i, child in enumerate(node.decl_list or []):
+            self.visit(child)
+        self.scopes.popLevel()
+
+    def visit_Decl(self,node):
+        self.visit(node.type)
+        sym = node.name.name # get ID from Decl (which is called name), then it's name
+        t = node.type.type
+        node.type = t
+        # check if symbol exists already, otherwise insert it in scope
+        alreadyDefined = f"{node.coord.line}:{node.coord.column} - symbol {sym} already defined in current scope."
+        assert self.scopes.insert(sym,t), alreadyDefined
+        # check if declaration type matches initializer type
+        self.visit(node.init)
+        ti = node.init.type
+        assert t==ti, f"{node.coord.line}:{node.coord.column} - declaration and initializer types must match."
+        # TODO check size if node.type = ArrayDecl and arrayDecl.size != None
+
+    def visit_ArrayDecl(self,node):
+        self.visit(node.type)
+        node.type = node.type.type
+
+    def visit_VarDecl(self,node):
+        self.visit(node.type)
+        node.type = node.type.type
+
+    def visit_Type(self,node):
+        node.type = node.names[0]
+
+    def visit_InitList(self,node):
+        if node.inits != None and len(node.inits)>0:
+            self.visit(node.inits[0])
+            node.type = node.inits[0].type
+        for i, child in enumerate(node.inits or []):
+            self.visit(child)
+            assert child.type == node.type, f"{child.coord.line}:{child.coord.column} - types in initializer list must all match."
+
+    def visit_Constant(self,node):
+        pass
 
     def visit_BinaryOp(self, node):
         # 1. Make sure left and right operands have the same type
@@ -202,7 +240,6 @@ class CheckProgramVisitor(NodeVisitor):
         ## 2. Check that the types match
         self.visit(node.value)
         assert sym.type == node.value.type, "Type mismatch in assignment"
-
 
 def scopesTest():
     sc = Scopes()
@@ -226,6 +263,6 @@ if __name__ == '__main__':
     #scopesTest()
 
     #ast.show()
-    #check = CheckProgramVisitor()
-    #check.visit_Program(ast)
+    check = CheckProgramVisitor()
+    check.visit_Program(ast)
 
