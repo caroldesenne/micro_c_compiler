@@ -320,7 +320,7 @@ class Parser():
         if len(p)==2:
             p[0] = p[1]
         elif len(p)==3:
-            p[0] = UnaryOp('p'+p[2],p[1],coord=p[1].coord)
+            p[0] = UnaryOp(p[2],p[1],coord=p[1].coord)
         else:
             p[0] = FuncCall(p[1],p[3],coord=p[1].coord)
 
