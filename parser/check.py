@@ -130,10 +130,6 @@ class Scopes(object):
             currentDepth -= 1
         return None
 
-'''
-PtrDecl ( ) *
-'''
-
 class CheckProgramVisitor(NodeVisitor):
     '''
     Program checking class. This class uses the visitor pattern. You need to define methods
@@ -336,6 +332,9 @@ class CheckProgramVisitor(NodeVisitor):
             self.visit(node.expression)
         t = self.scopes.find(node.type)
         assert t!=None, f"{node.coord.line}:{node.coord.column} - must specify cast type."
+
+    def visit_PtrDecl(self,node):
+        node.type = 'pointer'
 
     def visit_ID(self,node):
         sym = node.name
