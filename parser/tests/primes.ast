@@ -1,25 +1,25 @@
 Program: 
-    FuncDef: 
+    FuncDef:    @ 3:5
         Type: ['int']   @ 3:1
-        Decl: ID(name='main'  )
-            FuncDecl: 
-                VarDecl: 
+        Decl: ID(name='main',  type=None  )   @ 3:5
+            FuncDecl:    @ 3:5
+                VarDecl:    @ 3:5
                     Type: ['int']   @ 3:1
-        Compound:    @ 3:1
-            Decl: ID(name='n1'  )
-                VarDecl: 
+        Compound:    @ 3:12
+            Decl: ID(name='n1',  type=None  )   @ 4:9
+                VarDecl:    @ 4:9
                     Type: ['int']   @ 4:5
-            Decl: ID(name='n2'  )
-                VarDecl: 
+            Decl: ID(name='n2',  type=None  )   @ 4:13
+                VarDecl:    @ 4:13
                     Type: ['int']   @ 4:5
-            Decl: ID(name='i'  )
-                VarDecl: 
+            Decl: ID(name='i',  type=None  )   @ 4:17
+                VarDecl:    @ 4:17
                     Type: ['int']   @ 4:5
-            Decl: ID(name='j'  )
-                VarDecl: 
+            Decl: ID(name='j',  type=None  )   @ 4:20
+                VarDecl:    @ 4:20
                     Type: ['int']   @ 4:5
-            Decl: ID(name='flag'  )
-                VarDecl: 
+            Decl: ID(name='flag',  type=None  )   @ 4:23
+                VarDecl:    @ 4:23
                     Type: ['int']   @ 4:5
             Print:    @ 6:5
                 Constant: string, "Enter 2 numbers (intervals) separated by space: "   @ 6:11
@@ -43,7 +43,7 @@ Program:
                     ID: n2   @ 9:22
                 UnaryOp: p++   @ 9:26
                     ID: i   @ 9:26
-                Compound:    @ 9:1
+                Compound:    @ 9:31
                     Assignment: =   @ 10:9
                         ID: flag   @ 10:9
                         Constant: int, 1   @ 10:16
@@ -64,7 +64,7 @@ Program:
                                     ID: i   @ 12:17
                                     ID: j   @ 12:21
                                 Constant: int, 0   @ 12:26
-                            Compound:    @ 12:1
+                            Compound:    @ 12:29
                                 Assignment: =   @ 13:17
                                     ID: flag   @ 13:17
                                     Constant: int, 0   @ 13:24

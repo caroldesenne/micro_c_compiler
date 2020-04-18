@@ -1,26 +1,26 @@
 Program: 
-    FuncDef: 
+    FuncDef:    @ 7:5
         Type: ['int']   @ 7:1
-        Decl: ID(name='power'  )
-            FuncDecl: 
-                ParamList: 
-                    Decl: ID(name='n'  )
-                        VarDecl: 
+        Decl: ID(name='power',  type=None  )   @ 7:5
+            FuncDecl:    @ 7:5
+                ParamList:    @ 7:16
+                    Decl: ID(name='n',  type=None  )   @ 7:16
+                        VarDecl:    @ 7:16
                             Type: ['int']   @ 7:12
-                    Decl: ID(name='r'  )
-                        VarDecl: 
+                    Decl: ID(name='r',  type=None  )   @ 7:23
+                        VarDecl:    @ 7:23
                             Type: ['int']   @ 7:19
-                VarDecl: 
+                VarDecl:    @ 7:5
                     Type: ['int']   @ 7:1
-        Compound:    @ 7:1
-            Decl: ID(name='p'  )
-                VarDecl: 
+        Compound:    @ 7:26
+            Decl: ID(name='p',  type=None  )   @ 8:9
+                VarDecl:    @ 8:9
                     Type: ['int']   @ 8:5
                 Constant: int, 1   @ 8:13
             For:    @ 9:5
                 DeclList:    @ 9:5
-                    Decl: ID(name='c'  )
-                        VarDecl: 
+                    Decl: ID(name='c',  type=None  )   @ 9:14
+                        VarDecl:    @ 9:14
                             Type: ['int']   @ 9:10
                         Constant: int, 1   @ 9:18
                 BinaryOp: <=   @ 9:21
@@ -35,28 +35,28 @@ Program:
                         ID: n   @ 10:15
             Return:    @ 11:5
                 ID: p   @ 11:12
-    FuncDef: 
+    FuncDef:    @ 14:5
         Type: ['int']   @ 14:1
-        Decl: ID(name='main'  )
-            FuncDecl: 
-                VarDecl: 
+        Decl: ID(name='main',  type=None  )   @ 14:5
+            FuncDecl:    @ 14:5
+                VarDecl:    @ 14:5
                     Type: ['int']   @ 14:1
-        Compound:    @ 14:1
-            Decl: ID(name='n'  )
-                VarDecl: 
+        Compound:    @ 14:12
+            Decl: ID(name='n',  type=None  )   @ 15:9
+                VarDecl:    @ 15:9
                     Type: ['int']   @ 15:5
-            Decl: ID(name='sum'  )
-                VarDecl: 
+            Decl: ID(name='sum',  type=None  )   @ 15:12
+                VarDecl:    @ 15:12
                     Type: ['int']   @ 15:5
                 Constant: int, 0   @ 15:18
-            Decl: ID(name='temp'  )
-                VarDecl: 
+            Decl: ID(name='temp',  type=None  )   @ 16:9
+                VarDecl:    @ 16:9
                     Type: ['int']   @ 16:5
-            Decl: ID(name='remainder'  )
-                VarDecl: 
+            Decl: ID(name='remainder',  type=None  )   @ 16:15
+                VarDecl:    @ 16:15
                     Type: ['int']   @ 16:5
-            Decl: ID(name='digits'  )
-                VarDecl: 
+            Decl: ID(name='digits',  type=None  )   @ 16:26
+                VarDecl:    @ 16:26
                     Type: ['int']   @ 16:5
                 Constant: int, 0   @ 16:35
             Print:    @ 17:5
@@ -70,7 +70,7 @@ Program:
                 BinaryOp: !=   @ 20:12
                     ID: temp   @ 20:12
                     Constant: int, 0   @ 20:20
-                Compound:    @ 20:1
+                Compound:    @ 20:23
                     Assignment: +=   @ 21:9
                         ID: digits   @ 21:9
                         Constant: int, 1   @ 21:19
@@ -86,7 +86,7 @@ Program:
                 BinaryOp: !=   @ 25:12
                     ID: temp   @ 25:12
                     Constant: int, 0   @ 25:20
-                Compound:    @ 25:1
+                Compound:    @ 25:23
                     Assignment: =   @ 26:9
                         ID: remainder   @ 26:9
                         BinaryOp: %   @ 26:21

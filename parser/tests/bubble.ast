@@ -1,27 +1,27 @@
 Program: 
-    FuncDef: 
+    FuncDef:    @ 3:5
         Type: ['int']   @ 3:1
-        Decl: ID(name='main'  )
-            FuncDecl: 
-                VarDecl: 
+        Decl: ID(name='main',  type=None  )   @ 3:5
+            FuncDecl:    @ 3:5
+                VarDecl:    @ 3:5
                     Type: ['int']   @ 3:1
-        Compound:    @ 3:1
-            Decl: ID(name='v'  )
-                ArrayDecl: 
-                    VarDecl: 
+        Compound:    @ 3:12
+            Decl: ID(name='v',  type=None  )   @ 4:9
+                ArrayDecl:    @ 4:9
+                    VarDecl:    @ 4:9
                         Type: ['int']   @ 4:5
                     Constant: int, 100   @ 4:11
-            Decl: ID(name='n'  )
-                VarDecl: 
+            Decl: ID(name='n',  type=None  )   @ 5:9
+                VarDecl:    @ 5:9
                     Type: ['int']   @ 5:5
-            Decl: ID(name='c'  )
-                VarDecl: 
+            Decl: ID(name='c',  type=None  )   @ 5:12
+                VarDecl:    @ 5:12
                     Type: ['int']   @ 5:5
-            Decl: ID(name='d'  )
-                VarDecl: 
+            Decl: ID(name='d',  type=None  )   @ 5:15
+                VarDecl:    @ 5:15
                     Type: ['int']   @ 5:5
-            Decl: ID(name='swap'  )
-                VarDecl: 
+            Decl: ID(name='swap',  type=None  )   @ 5:18
+                VarDecl:    @ 5:18
                     Type: ['int']   @ 5:5
             Print:    @ 6:5
                 Constant: string, "Enter number of elements: "   @ 6:11
@@ -79,7 +79,7 @@ Program:
                                 BinaryOp: +   @ 13:26
                                     ID: d   @ 13:26
                                     Constant: int, 1   @ 13:28
-                        Compound:    @ 13:1
+                        Compound:    @ 13:32
                             Assignment: =   @ 14:17
                                 ID: swap   @ 14:17
                                 ArrayRef:    @ 14:24

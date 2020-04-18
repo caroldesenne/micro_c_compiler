@@ -1,27 +1,27 @@
 Program: 
-    FuncDef: 
+    FuncDef:    @ 3:5
         Type: ['int']   @ 3:1
-        Decl: ID(name='gcd'  )
-            FuncDecl: 
-                ParamList: 
-                    Decl: ID(name='x'  )
-                        VarDecl: 
+        Decl: ID(name='gcd',  type=None  )   @ 3:5
+            FuncDecl:    @ 3:5
+                ParamList:    @ 3:14
+                    Decl: ID(name='x',  type=None  )   @ 3:14
+                        VarDecl:    @ 3:14
                             Type: ['int']   @ 3:10
-                    Decl: ID(name='y'  )
-                        VarDecl: 
+                    Decl: ID(name='y',  type=None  )   @ 3:21
+                        VarDecl:    @ 3:21
                             Type: ['int']   @ 3:17
-                VarDecl: 
+                VarDecl:    @ 3:5
                     Type: ['int']   @ 3:1
-        Compound:    @ 3:1
-            Decl: ID(name='g'  )
-                VarDecl: 
+        Compound:    @ 3:24
+            Decl: ID(name='g',  type=None  )   @ 4:9
+                VarDecl:    @ 4:9
                     Type: ['int']   @ 4:5
                 ID: y   @ 4:13
             While:    @ 5:5
                 BinaryOp: >   @ 5:12
                     ID: x   @ 5:12
                     Constant: int, 0   @ 5:16
-                Compound:    @ 5:1
+                Compound:    @ 5:19
                     Assignment: =   @ 6:9
                         ID: g   @ 6:9
                         ID: x   @ 6:13
@@ -39,18 +39,18 @@ Program:
                         ID: g   @ 8:10
             Return:    @ 10:5
                 ID: g   @ 10:12
-    FuncDef: 
+    FuncDef:    @ 13:6
         Type: ['void']   @ 13:1
-        Decl: ID(name='main'  )
-            FuncDecl: 
-                VarDecl: 
+        Decl: ID(name='main',  type=None  )   @ 13:6
+            FuncDecl:    @ 13:6
+                VarDecl:    @ 13:6
                     Type: ['void']   @ 13:1
-        Compound:    @ 13:1
-            Decl: ID(name='a'  )
-                VarDecl: 
+        Compound:    @ 13:13
+            Decl: ID(name='a',  type=None  )   @ 14:9
+                VarDecl:    @ 14:9
                     Type: ['int']   @ 14:5
-            Decl: ID(name='b'  )
-                VarDecl: 
+            Decl: ID(name='b',  type=None  )   @ 14:12
+                VarDecl:    @ 14:12
                     Type: ['int']   @ 14:5
             Print:    @ 15:5
                 Constant: string, "give-me two integers separated by space:"   @ 15:11
