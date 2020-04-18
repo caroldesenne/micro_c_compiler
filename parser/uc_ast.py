@@ -102,40 +102,6 @@ class Coord(object):
             coord_str = ""
         return coord_str
 
-'''
-a * means coord is done for this class
-
-FuncDecl ( ) *
-Program ( ) *
-GlobalDecl ( ) *
-DeclList ( ) *
-ArrayDecl ( ) *
-ArrayRef ( ) *
-VarDecl () *
-ID (name) *
-Assignment (op) *
-PtrDecl ( ) *
-FuncCall ( ) *
-FuncDef ( ) *
-BinaryOp (op) *
-UnaryOp (op) *
-Constant (type, value) *
-Type (names) *
-Decl (name) *
-InitList ( ) *
-ExprList ( ) *
-Compound ( ) *
-If ( ) *
-While ( ) *
-For ( ) *
-Break ( ) *
-Return ( ) *
-Assert ( ) *
-Print ( ) *
-Read ( ) *
-EmptyStatement ( ) *
-'''
-
 class Program(Node):
     __slots__ = ('gdecls', 'coord')
 
@@ -267,11 +233,12 @@ class ArrayRef(Node):
     attr_names = ()
 
 class FuncCall(Node):
-    __slots__ = ('name','params','coord')
+    __slots__ = ('name','params','type','coord')
 
     def __init__(self, name, params, coord=None):
         self.name = name
         self.params = params
+        self.type = None
         self.coord = coord
 
     def children(self):
@@ -297,12 +264,13 @@ class ID(Node):
     attr_names = ('name', )
 
 class Assignment(Node):
-    __slots__ = ('op','assignee','value','coord')
+    __slots__ = ('op','assignee','value','type','coord')
 
     def __init__(self,op,ass,v,coord=None):
         self.op = op
         self.assignee = ass
         self.value = v
+        self.type = None
         self.coord = coord
 
     def children(self):
@@ -422,12 +390,13 @@ class VarDecl(Node):
     attr_names = ()
 
 class Decl(Node):
-    __slots__ = ('name', 'type', 'init', 'coord')
+    __slots__ = ('name', 'type', 'init', 'isFunction','coord')
 
     def __init__(self, name, type, init, coord=None):
         self.name = name
         self.type = type
         self.init = init
+        self.isFunction = False
         self.coord = coord
 
     def children(self):
@@ -524,10 +493,11 @@ class For(Node):
     attr_names = ()
 
 class ExprList(Node):
-    __slots__ = ('list','coord')
+    __slots__ = ('list','type','coord')
 
     def __init__(self,l,coord=None):
         self.list = l
+        self.type = None
         self.coord = coord
 
     def children(self):
