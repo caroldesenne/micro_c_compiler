@@ -368,7 +368,10 @@ class CheckProgramVisitor(NodeVisitor):
         assert typesEqual(btr,btl), binop
         # assign left type to node's type
         node.type = node.left.type
+        gt = getInnerMostType(node)
         bt = getBasicType(node)
+        if gt.arrayLevel > 0:
+            bt = "array"
         t = self.scopes.find(bt)
         # check if type exists
         assert t != None, f"{node.coord.line}:{node.coord.column} - inexistent type {node.type}."
@@ -382,7 +385,10 @@ class CheckProgramVisitor(NodeVisitor):
         self.visit(node.expression)
         # assing the result type (check which operation it is)
         node.type = node.expression.type
+        gt = getInnerMostType(node)
         bt = getBasicType(node)
+        if gt.arrayLevel > 0:
+            bt = "array"
         t = self.scopes.find(bt)
         # check if type exists
         assert t != None, f"{node.coord.line}:{node.coord.column} - inexistent type {node.type}."
@@ -470,8 +476,5 @@ if __name__ == '__main__':
     p = Parser()
     code = open(sys.argv[1]).read()
     ast = p.parse(code)
-    #scopesTest()
-
-    #ast.show()
     check = CheckProgramVisitor()
     check.visit_Program(ast)
