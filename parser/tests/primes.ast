@@ -78,3 +78,97 @@ Program:
                                 ID: i   @ 17:19
                                 Constant: string, "  "   @ 17:22
             Return:    @ 19:5
+                Constant: int, 0   @ 19:12
+Program: 
+    FuncDef:    @ 3:5
+        Type: ['int']   @ 3:1
+        Decl: ID(name='main',  type=None  )   @ 3:5
+            FuncDecl:    @ 3:5
+                VarDecl:    @ 3:5
+                    Type: ['int']   @ 3:1
+        Compound:    @ 3:12
+            Decl: ID(name='n1',  type=None  )   @ 4:9
+                VarDecl:    @ 4:9
+                    Type: ['int']   @ 4:5
+            Decl: ID(name='n2',  type=None  )   @ 4:13
+                VarDecl:    @ 4:13
+                    Type: ['int']   @ 4:5
+            Decl: ID(name='i',  type=None  )   @ 4:17
+                VarDecl:    @ 4:17
+                    Type: ['int']   @ 4:5
+            Decl: ID(name='j',  type=None  )   @ 4:20
+                VarDecl:    @ 4:20
+                    Type: ['int']   @ 4:5
+            Decl: ID(name='flag',  type=None  )   @ 4:23
+                VarDecl:    @ 4:23
+                    Type: ['int']   @ 4:5
+            Print:    @ 6:5
+                Constant: Type(names=['string'
+           ],    type=None,    arrayLevel=0    ), "Enter 2 numbers (intervals) separated by space: "   @ 6:11
+            Read:    @ 7:5
+                ExprList:    @ 7:10
+                    ID: n1   @ 7:10
+                    ID: n2   @ 7:14
+            Print:    @ 8:5
+                ExprList:    @ 8:11
+                    Constant: Type(names=['string'
+           ],    type=None,    arrayLevel=0    ), "Prime numbers between "   @ 8:11
+                    ID: n1   @ 8:37
+                    Constant: Type(names=['string'
+           ],    type=None,    arrayLevel=0    ), " and "   @ 8:41
+                    ID: n2   @ 8:50
+                    Constant: Type(names=['string'
+           ],    type=None,    arrayLevel=0    ), " are:\n"   @ 8:54
+            For:    @ 9:5
+                Assignment: =   @ 9:10
+                    ID: i   @ 9:10
+                    ID: n1   @ 9:14
+                BinaryOp: <=   @ 9:18
+                    ID: i   @ 9:18
+                    ID: n2   @ 9:22
+                UnaryOp: p++   @ 9:26
+                    ID: i   @ 9:26
+                Compound:    @ 9:31
+                    Assignment: =   @ 10:9
+                        ID: flag   @ 10:9
+                        Constant: Type(names=['int'
+           ],    type=None,    arrayLevel=0    ), 1   @ 10:16
+                    For:    @ 11:9
+                        Assignment: =   @ 11:14
+                            ID: j   @ 11:14
+                            Constant: Type(names=['int'
+           ],    type=None,    arrayLevel=0    ), 2   @ 11:18
+                        BinaryOp: <=   @ 11:21
+                            ID: j   @ 11:21
+                            BinaryOp: /   @ 11:26
+                                ID: i   @ 11:26
+                                Constant: Type(names=['int'
+           ],    type=None,    arrayLevel=0    ), 2   @ 11:28
+                        UnaryOp: p++   @ 11:31
+                            ID: j   @ 11:31
+                        If:    @ 12:13
+                            BinaryOp: ==   @ 12:17
+                                BinaryOp: %   @ 12:17
+                                    ID: i   @ 12:17
+                                    ID: j   @ 12:21
+                                Constant: Type(names=['int'
+           ],    type=None,    arrayLevel=0    ), 0   @ 12:26
+                            Compound:    @ 12:29
+                                Assignment: =   @ 13:17
+                                    ID: flag   @ 13:17
+                                    Constant: Type(names=['int'
+           ],    type=None,    arrayLevel=0    ), 0   @ 13:24
+                                Break:    @ 14:17
+                    If:    @ 16:9
+                        BinaryOp: ==   @ 16:13
+                            ID: flag   @ 16:13
+                            Constant: Type(names=['int'
+           ],    type=None,    arrayLevel=0    ), 1   @ 16:21
+                        Print:    @ 17:13
+                            ExprList:    @ 17:19
+                                ID: i   @ 17:19
+                                Constant: Type(names=['string'
+           ],    type=None,    arrayLevel=0    ), "  "   @ 17:22
+            Return:    @ 19:5
+                Constant: Type(names=['int'
+           ],    type=None,    arrayLevel=0    ), 0   @ 19:12
