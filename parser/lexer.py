@@ -82,7 +82,7 @@ class Lexer():
 
     # regex for constants
     t_FLOAT_CONST = r'([0-9]*\.[0-9]+)|([0-9]+\.)'
-    t_CHAR_CONST = r'\'.*\''
+    t_CHAR_CONST = r'\'.\''
     t_INT_CONST = r'[0-9]+'
 
     # regex for string literals

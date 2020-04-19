@@ -347,12 +347,16 @@ class UnaryOp(Node):
     attr_names = ('op', )
 
 class Constant(Node):
-    __slots__ = ('type', 'value', 'coord')
+    __slots__ = ('type', 'value', 'size','coord')
 
     def __init__(self, type, value, coord=None):
         self.type = type
         self.value = value
         self.coord = coord
+        if(self.type=='string'):
+            self.size = len(value)-2
+        else:
+            self.size = 1
 
     def children(self):
         nodelist = []
@@ -361,12 +365,14 @@ class Constant(Node):
     attr_names = ('type', 'value', )
 
 class Type(Node):
-    __slots__ = ('names','type','isArray','coord')
+    __slots__ = ('names','type','arrayLevel','coord')
 
     def __init__(self, names, coord=None):
         self.names = names
         self.type = None
-        self.isArray = False
+        self.arrayLevel = 0 # int a;    : arrayLevel = 0
+                            # int b[]   : arrayLevel = 1
+                            # int c[][] : arrayLevel = 2
         self.coord = coord
 
     def children(self):

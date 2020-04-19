@@ -154,7 +154,7 @@ def getBasicType(node):
     return t.names[0]
 
 def typesEqual(t1,t2):
-    return t1.names==t2.names and t1.isArray==t2.isArray
+    return t1.names==t2.names and t1.arrayLevel==t2.arrayLevel
 
 class CheckProgramVisitor(NodeVisitor):
     '''
@@ -191,6 +191,7 @@ class CheckProgramVisitor(NodeVisitor):
         self.scopes.popLevel()
 
     def visit_Decl(self,node):
+        self.visit(node.type)
         t = node.type
         sym = node.name.name # get ID from Decl (which is called name), then its name
         # check if symbol exists already, otherwise insert it in scope
@@ -209,22 +210,29 @@ class CheckProgramVisitor(NodeVisitor):
 
         if node.init:
             self.visit(node.init)
-            # check if declaration type matches initializer type
-            td = getInnerMostType(node)
-            ti = getInnerMostType(node.init)
-            assert typesEqual(td,ti), f"{node.coord.line}:{node.coord.column} - declaration and initializer types must match."
 
             if isinstance(node.type,ArrayDecl):
-                # check init type (must be InitList)
-                err = f"{node.coord.line}:{node.coord.column} - array initializer must be of array type."
-                assert isinstance(node.init,InitList), err
-                # check if their sizes match
-                ad = node.type
-                if ad.size:
-                    err = f"{node.coord.line}:{node.coord.column} - array initializer size must match declaration."
-                    assert ad.size==node.init.size, err
-                else:
-                    ad.size = node.init.size
+                self.check_Decl_ArrayDecl(node)
+
+            else:
+                # check if declaration type matches initializer type
+                td = getInnerMostType(node)
+                ti = getInnerMostType(node.init)
+                assert typesEqual(td,ti), f"{node.coord.line}:{node.coord.column} - declaration and initializer types must match."
+
+    def check_Decl_ArrayDecl(self,node):
+        isString = False
+        if getBasicType(node)=='char' and getBasicType(node.init)=='string':
+            isString = True
+        # check init type (must be InitList)
+        err = f"{node.coord.line}:{node.coord.column} - array initializer must be of array type."
+        assert isString or isinstance(node.init,InitList), err
+        # check if their sizes match
+        ad = node.type
+        if ad.size:
+            err = f"{node.coord.line}:{node.coord.column} - array initializer size must match declaration."
+            assert int(ad.size.value)==int(node.init.size), err
+        ad.size = node.init.size
 
     def visit_Compound(self,node):
         for i, child in enumerate(node.block_items or []):
@@ -279,7 +287,7 @@ class CheckProgramVisitor(NodeVisitor):
     def visit_ArrayDecl(self,node):
         self.visit(node.type)
         t = getInnerMostType(node)
-        t.isArray = True
+        t.arrayLevel += 1
 
     def visit_VarDecl(self,node):
         self.visit(node.type)
@@ -386,16 +394,22 @@ class CheckProgramVisitor(NodeVisitor):
             self.visit(node.expr)
 
     def visit_ArrayRef(self,node):
-        # TODO check if this is an array (in ArrayDecl, set type as array as well)
         self.visit(node.name)
+        self.visit(node.access_value)
+        # check if this is an array
+        at = getInnerMostType(node.name)
+        f"{node.coord.line}:{node.coord.column} - array reference to non array variable."
+        assert at.arrayLevel > 0, err
+        # check if there is an access value
         accNone = f"{node.coord.line}:{node.coord.column} - array access value must be specified."
         assert node.access_value, accNone
-        self.visit(node.access_value)
+        # check if the access value is an integer
         accInt = f"{node.coord.line}:{node.coord.column} - array access value must be of type int."
         bt = getBasicType(node.access_value)
         assert bt=="int", accInt
-        # TODO change this because we want to get element type of array, not array type
-        node.type = node.name.type
+        # take same type as this array with an array level lower
+        node.type = Type(at.names)
+        node.type.arrayLevel = at.arrayLevel-1
 
     def visit_If(self,node):
         self.visit(node.cond)
