@@ -42,7 +42,6 @@ class NodeVisitor(object):
     def visit(self, node):
         """ Visit a node.
         """
-
         if self._method_cache is None:
             self._method_cache = {}
 
@@ -94,7 +93,21 @@ class Scopes(object):
     def __init__(self):
         root = SymbolTable()
         self.scope = [root]
+        self.loopStack = []
         self.depth = 1
+
+    def pushLoop(self,loop):
+        self.loopStack.append(loop)
+
+    def popLoop(self):
+        if not self.inLoop():
+            return None
+        return self.loopStack.pop()
+
+    def inLoop(self):
+        if len(self.loopStack) == 0:
+            return False
+        return True
 
     def pushLevel(self):
         s = SymbolTable()
@@ -130,6 +143,19 @@ class Scopes(object):
             currentDepth -= 1
         return None
 
+def getInnerMostType(node):
+    td = node
+    while td and (not isinstance(td,Type)):
+        td = td.type
+    return td
+
+def getBasicType(node):
+    t = getInnerMostType(node)
+    return t.names[0]
+
+def typesEqual(t1,t2):
+    return t1.names==t2.names and t1.isArray==t2.isArray
+
 class CheckProgramVisitor(NodeVisitor):
     '''
     Program checking class. This class uses the visitor pattern. You need to define methods
@@ -140,8 +166,10 @@ class CheckProgramVisitor(NodeVisitor):
         self.scopes = Scopes()
 
     def visit_Program(self,node):
+        self.scopes.pushLevel()
         for i, child in enumerate(node.gdecls or []):
             self.visit(child)
+        self.scopes.popLevel()
 
     def visit_GlobalDecl(self,node):
         for i, child in enumerate(node.decls or []):
@@ -149,10 +177,11 @@ class CheckProgramVisitor(NodeVisitor):
 
     def visit_FuncDef(self,node):
         self.visit(node.type)
-        node.type = node.type.type
-        node.decl.isFunction = True # new scope is pushed in visit_Decl()
-        # TODO: push before or after visiting node.decl?? (I think before, since parameters must be in the scope of the function)
-        # problem: node.decl holds function name (which should be visible from current scope) and also paramlist (which should be visible from next scope)
+
+        decl = node.decl
+        while not isinstance(decl,Decl):
+            decl = decl.type
+        decl.isFunction = True # new scope is pushed in visit_Decl()
         self.visit(node.decl)
         # insert in scope expected return type
         self.scopes.insert("return",node.type)
@@ -162,49 +191,74 @@ class CheckProgramVisitor(NodeVisitor):
         self.scopes.popLevel()
 
     def visit_Decl(self,node):
-        self.visit(node.type)
-        t = node.type.type
+        t = node.type
         sym = node.name.name # get ID from Decl (which is called name), then its name
-        if node.isFunction: # function case
-            t = (t,None) # TODO HOW TO GET PARAMETER LIST?
         # check if symbol exists already, otherwise insert it in scope
         alreadyDefined = f"{node.coord.line}:{node.coord.column} - symbol {sym} already defined in current scope."
         assert self.scopes.insert(sym,t), alreadyDefined
-        if node.isFunction:
-            self.scopes.pushLevel()
-        # check if declaration type matches initializer type
+
+        if isinstance(node.type,FuncDecl):
+            self.scopes.pushLevel() # TODO fazer push do escopo dentro de FuncDecl 
+            self.visit(node.type)
+            if not node.isFunction: # this is the prototype case (FuncDecl outside a FuncDef)
+                self.scopes.popLevel()
+
+        if isinstance(node.type,PtrDecl):
+            # TODO
+            assert False, "PtrDecl not implemented yet."
+
         if node.init:
             self.visit(node.init)
-            ti = node.init.type
-            assert t==ti, f"{node.coord.line}:{node.coord.column} - declaration and initializer types must match."
-        # TODO check size if node.type = ArrayDecl and arrayDecl.size
-        # TODO what to do about type array? should I also keep the int, if it's an int array?
-        node.type = t
+            # check if declaration type matches initializer type
+            td = getInnerMostType(node)
+            ti = getInnerMostType(node.init)
+            assert typesEqual(td,ti), f"{node.coord.line}:{node.coord.column} - declaration and initializer types must match."
+
+            if isinstance(node.type,ArrayDecl):
+                # check init type (must be InitList)
+                err = f"{node.coord.line}:{node.coord.column} - array initializer must be of array type."
+                assert isinstance(node.init,InitList), err
+                # check if their sizes match
+                ad = node.type
+                if ad.size:
+                    err = f"{node.coord.line}:{node.coord.column} - array initializer size must match declaration."
+                    assert ad.size==node.init.size, err
+                else:
+                    ad.size = node.init.size
 
     def visit_Compound(self,node):
         for i, child in enumerate(node.block_items or []):
             self.visit(child)
 
     def visit_For(self,node):
+        self.scopes.pushLevel()
+        self.scopes.pushLoop('for')
         if node.init:
             self.visit(node.init)
         if node.stop_cond:
             self.visit(node.stop_cond)
             mustBool = f"{node.coord.line}:{node.coord.column} - stop condition must be of type bool."
-            assert node.stop_cond.type=="bool", mustBool
+            bt = getBasicType(node.stop_cond)
+            assert bt=="bool", mustBool
         if node.increment:
             self.visit(node.increment)
         if node.statement:
             self.visit(node.statement)
+        self.scopes.popLoop()
+        self.scopes.popLevel()
 
     def visit_While(self,node):
+        self.scopes.pushLoop('while')
         self.visit(node.cond)
-        assert node.cond.type=='bool', f"{node.coord.line}:{node.coord.column} - while condition must be of type bool."
+        bt = getBasicType(node.cond)
+        assert bt=='bool', f"{node.coord.line}:{node.coord.column} - while condition must be of type bool."
         if node.statement:
             self.visit(node.statement)
+        self.scopes.popLoop()
 
     def visit_Break(self,node):
-        pass
+        err = f"{node.coord.line}:{node.coord.column} - break statement should be inside a loop."
+        assert self.scopes.inLoop(), err
 
     def visit_DeclList(self,node):
         for i, child in enumerate(node.decls or []):
@@ -215,36 +269,38 @@ class CheckProgramVisitor(NodeVisitor):
             self.visit(node.expr)
             node.type = node.expr.type
         else:
-            node.type = "void"
+            node.type = Type(names=['void'])
         # check return type matches function definition
         t = self.scopes.find("return")
-        err = f"{node.coord.line}:{node.coord.column} - wrong return type in function: expected {t}, got {node.type}."
-        assert t==node.type, err
+        bt = getInnerMostType(node)
+        err = f"{node.coord.line}:{node.coord.column} - wrong return type in function: expected {t}, got {bt}."
+        assert typesEqual(t,bt), err
 
     def visit_ArrayDecl(self,node):
         self.visit(node.type)
-        node.type = node.type.type
+        t = getInnerMostType(node)
+        t.isArray = True
 
     def visit_VarDecl(self,node):
         self.visit(node.type)
-        node.type = node.type.type
 
     def visit_Type(self,node):
-        node.type = node.names[0]
+        pass
 
     def visit_InitList(self,node):
         if node.inits and len(node.inits)>0:
             self.visit(node.inits[0])
             node.type = node.inits[0].type
+        nt = getInnerMostType(node)
         for i, child in enumerate(node.inits or []):
             self.visit(child)
-            assert child.type == node.type, f"{child.coord.line}:{child.coord.column} - types in initializer list must all match."
+            ct = getInnerMostType(child)
+            assert typesEqual(ct,nt), f"{child.coord.line}:{child.coord.column} - types in initializer list must all match."
 
     def visit_FuncDecl(self,node):
         if node.args:
             self.visit(node.args)
         self.visit(node.type)
-        node.type = node.type.type
 
     def visit_ParamList(self,node):
         for i, child in enumerate(node.list or []):
@@ -256,54 +312,70 @@ class CheckProgramVisitor(NodeVisitor):
         self.visit(node.value)
         node.type = node.assignee.type
         err = f"{node.coord.line}:{node.coord.column} - type mismatch in assignment: ({node.assignee.type},{node.value.type})."
-        assert node.assignee.type==node.value.type, err
+        at = getInnerMostType(node.assignee)
+        vt = getInnerMostType(node.value)
+        assert typesEqual(at,vt), err
 
     def visit_Assert(self,node):
         self.visit(node.expr)
         err = f"{node.coord.line}:{node.coord.column} - assert expression must be of type bool, got {node.expr.type}."
-        assert node.expr.type=='bool', err
+        bt = getBasicType(node.expr)
+        assert bt=='bool', err
 
     def visit_FuncCall(self,node):
         self.visit(node.name)
         node.type = node.name.type
-        func = self.scope.find(node.name.name[0])
+        func = self.scopes.find(node.name.name)
         # check function declaration
         assert func, f"{node.coord.line}:{node.coord.column} - undeclared function."
+        assert isinstance(func,FuncDecl), f"{node.coord.line}:{node.coord.column} - cannot call non-function symbol {node.name.name}."
         # check size of parameters list
-        par = func[1]
+        arg_list = func.args.list
+        if not isinstance(node.params,ExprList):
+            par_list = [node.params]
+        else:
+            par_list = node.params.list
         err = f"{node.coord.line}:{node.coord.column} - number of arguments must match with function declaration."
-        assert len(par)==len(node.params), err
+        assert len(arg_list)==len(par_list), err
         # check arguments types match parameters type
-        for i, arg in enumerate(node.params or []):
-            self.visit(arg)
-            err = f"{arg.coord.line}:{arg.coord.column} - argument type doesn't match parameter in function declaration."
-            assert node.arg.type==par[i].type, err
+        for i, par in enumerate(par_list or []):
+            self.visit(par)
+            err = f"{par.coord.line}:{par.coord.column} - argument type doesn't match parameter in function declaration."
+            pt = getInnerMostType(par)
+            at = getInnerMostType(arg_list[i])
+            assert typesEqual(pt,at), err
 
     def visit_Constant(self,node):
-        pass
+        if not isinstance(node.type,Type):
+            bt = node.type
+            node.type = Type(names=[bt])
 
     def visit_BinaryOp(self,node):
         self.visit(node.left)
-        self.visit(node.right)
+        self.visit(node.right)        
         # Make sure left and right operands have the same type
         binop = f"{node.coord.line}:{node.coord.column} - left ({node.left.type}) and right ({node.right.type}) sides of binary operation must have the same types."
-        assert node.left.type==node.right.type, binop
+        btr = getInnerMostType(node.left)
+        btl = getInnerMostType(node.right)
+        assert typesEqual(btr,btl), binop
         # assign left type to node's type
         node.type = node.left.type
-        t = self.scopes.find(node.type)
+        bt = getBasicType(node)
+        t = self.scopes.find(bt)
         # check if type exists
         assert t != None, f"{node.coord.line}:{node.coord.column} - inexistent type {node.type}."
         # make sure the operation is supported for this type
         assert node.op in t.bin_ops, f"{node.coord.line}:{node.coord.column} - {node.op} binary operation not supported for type {node.type}."
         # verify if we are making a relational operation and assign bool type
         if node.op in t.bool_ops:
-            node.type = "bool"
+            node.type = Type(names=['bool'])
 
     def visit_UnaryOp(self,node):
         self.visit(node.expression)
         # assing the result type (check which operation it is)
         node.type = node.expression.type
-        t = self.scopes.find(node.type)
+        bt = getBasicType(node)
+        t = self.scopes.find(bt)
         # check if type exists
         assert t != None, f"{node.coord.line}:{node.coord.column} - inexistent type {node.type}."
         # make sure the operation is supported for this type
@@ -314,25 +386,32 @@ class CheckProgramVisitor(NodeVisitor):
             self.visit(node.expr)
 
     def visit_ArrayRef(self,node):
+        # TODO check if this is an array (in ArrayDecl, set type as array as well)
         self.visit(node.name)
         accNone = f"{node.coord.line}:{node.coord.column} - array access value must be specified."
         assert node.access_value, accNone
         self.visit(node.access_value)
         accInt = f"{node.coord.line}:{node.coord.column} - array access value must be of type int."
-        assert node.access_value.type=="int", accInt
+        bt = getBasicType(node.access_value)
+        assert bt=="int", accInt
+        # TODO change this because we want to get element type of array, not array type
         node.type = node.name.type
 
     def visit_If(self,node):
         self.visit(node.cond)
-        assert node.cond.type=='bool', f"{node.coord.line}:{node.coord.column} - if condition must be of type bool."
+        bt = getBasicType(node.cond)
+        assert bt=='bool', f"{node.coord.line}:{node.coord.column} - if condition must be of type bool."
         if node.statement:
             self.visit(node.statement)
+        # else new scope
         if node.else_st:
             self.visit(node.else_st)
 
     def visit_ExprList(self,node):
         for i, child in enumerate(node.list or []):
             self.visit(child)
+        if node.list:
+            node.type = node.list[0].type
 
     def visit_Read(self,node):
         if node.expr:
@@ -345,7 +424,7 @@ class CheckProgramVisitor(NodeVisitor):
         assert t!=None, f"{node.coord.line}:{node.coord.column} - must specify cast type."
 
     def visit_PtrDecl(self,node):
-        node.type = 'pointer'
+        node.type = Type(names=['pointer'])
 
     def visit_ID(self,node):
         sym = node.name

@@ -361,11 +361,12 @@ class Constant(Node):
     attr_names = ('type', 'value', )
 
 class Type(Node):
-    __slots__ = ('names','type','coord')
+    __slots__ = ('names','type','isArray','coord')
 
     def __init__(self, names, coord=None):
         self.names = names
         self.type = None
+        self.isArray = False
         self.coord = coord
 
     def children(self):
@@ -408,11 +409,12 @@ class Decl(Node):
     attr_names = ('name', )
 
 class InitList(Node):
-    __slots__ = ('inits','type','coord')
+    __slots__ = ('inits','type','size','coord')
 
     def __init__(self, inits, coord=None):
         self.inits = inits
         self.type = None
+        self.size = len(inits)
         self.coord = coord
 
     def children(self):
@@ -495,8 +497,8 @@ class For(Node):
 class ExprList(Node):
     __slots__ = ('list','type','coord')
 
-    def __init__(self,l,coord=None):
-        self.list = l
+    def __init__(self,list,coord=None):
+        self.list = list
         self.type = None
         self.coord = coord
 
