@@ -164,8 +164,9 @@ class CheckProgramVisitor(NodeVisitor):
     def visit_Decl(self,node):
         self.visit(node.type)
         t = node.type.type
-        node.type = t
         sym = node.name.name # get ID from Decl (which is called name), then its name
+        if node.isFunction: # function case
+            t = (t,None) # TODO HOW TO GET PARAMETER LIST?
         # check if symbol exists already, otherwise insert it in scope
         alreadyDefined = f"{node.coord.line}:{node.coord.column} - symbol {sym} already defined in current scope."
         assert self.scopes.insert(sym,t), alreadyDefined
@@ -177,6 +178,8 @@ class CheckProgramVisitor(NodeVisitor):
             ti = node.init.type
             assert t==ti, f"{node.coord.line}:{node.coord.column} - declaration and initializer types must match."
         # TODO check size if node.type = ArrayDecl and arrayDecl.size
+        # TODO what to do about type array? should I also keep the int, if it's an int array?
+        node.type = t
 
     def visit_Compound(self,node):
         for i, child in enumerate(node.block_items or []):
@@ -263,9 +266,18 @@ class CheckProgramVisitor(NodeVisitor):
     def visit_FuncCall(self,node):
         self.visit(node.name)
         node.type = node.name.type
-        # TODO check parameters type match the function's (type and size)
-        if node.params:
-            self.visit(node.params)
+        func = self.scope.find(node.name.name[0])
+        # check function declaration
+        assert func, f"{node.coord.line}:{node.coord.column} - undeclared function."
+        # check size of parameters list
+        par = func[1]
+        err = f"{node.coord.line}:{node.coord.column} - number of arguments must match with function declaration."
+        assert len(par)==len(node.params), err
+        # check arguments types match parameters type
+        for i, arg in enumerate(node.params or []):
+            self.visit(arg)
+            err = f"{arg.coord.line}:{arg.coord.column} - argument type doesn't match parameter in function declaration."
+            assert node.arg.type==par[i].type, err
 
     def visit_Constant(self,node):
         pass
@@ -323,7 +335,6 @@ class CheckProgramVisitor(NodeVisitor):
             self.visit(child)
 
     def visit_Read(self,node):
-        # TODO check something in the param list of read?
         if node.expr:
             self.visit(node.expr)
 
