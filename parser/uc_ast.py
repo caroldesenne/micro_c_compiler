@@ -216,12 +216,13 @@ class ArrayDecl(Node):
     attr_names = ()
 
 class ArrayRef(Node):
-    __slots__ = ('name','access_value','type','coord')
+    __slots__ = ('name','access_value','type','size','coord')
 
     def __init__(self, name, av, coord=None):
         self.name = name
         self.access_value = av
         self.type = None
+        self.size = 0
         self.coord = coord
 
     def children(self):

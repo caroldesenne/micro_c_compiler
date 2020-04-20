@@ -44,3 +44,10 @@ Program:
                 ArrayRef:    @ 9:14
                     ID: c   @ 9:14
                     Constant: int, 0   @ 9:16
+            Decl: ID(name='e',  type=None  )   @ 10:7
+                ArrayDecl:    @ 10:7
+                    VarDecl:    @ 10:7
+                        Type: ['int']   @ 10:3
+                ArrayRef:    @ 10:13
+                    ID: c   @ 10:13
+                    Constant: int, 1   @ 10:15
