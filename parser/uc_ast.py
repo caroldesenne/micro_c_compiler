@@ -365,11 +365,10 @@ class Constant(Node):
     attr_names = ('type', 'value', )
 
 class Type(Node):
-    __slots__ = ('names','type','arrayLevel','coord')
+    __slots__ = ('names','arrayLevel','coord')
 
     def __init__(self, names, coord=None):
         self.names = names
-        self.type = None
         self.arrayLevel = 0 # int a;    : arrayLevel = 0
                             # int b[]   : arrayLevel = 1
                             # int c[][] : arrayLevel = 2
