@@ -49,6 +49,7 @@ class NodeVisitor(object):
         visitor = self._method_cache.get(node.__class__.__name__, None)
         if visitor is None:
             method = 'visit_' + node.__class__.__name__
+            print(method)
             visitor = getattr(self, method, self.generic_visit)
             self._method_cache[node.__class__.__name__] = visitor
 
@@ -107,15 +108,25 @@ class GenerateCode(NodeVisitor):
 
     def visit_FuncDef(self, node):
         self.code.append(('define', '_{}'.format(node.decl.name.name)))
-        # for i, child in enumerate(node.decl_list or []):
-        #     self.visit(child)
 
+        self.visit(node.decl.type)
         self.visit(node.compound_statement)
         self.code.append(('end', ''))
 
-    # def visit_FuncDecl(self, node):
+    def visit_FuncDecl(self, node):
+        # Check if function has parameters
+        if node.args is not None:
+            self.visit(node.args)
 
+    def visit_FuncCall(self, node):
+        for param in node.params.list:
+            self.code.append(('param_' + getBasicType(param), param.name))
 
+        self.code.append(('call', node.name.name))
+
+    def visit_ParamList(self, node):
+        for i, child in enumerate(node.list or []):
+            self.visit(child)
 
     def visit_Compound(self, node):
         for i, child in enumerate(node.block_items or []):
@@ -160,7 +171,7 @@ class GenerateCode(NodeVisitor):
 
     def visit_ID(self, node):
         node.gen_location = self.temp_var_dict[node.name]
-        return self.new_temp(node.type.type)
+        return node.gen_location
 
     def visit_BinaryOp(self, node):
         # Visit the left and right expressions

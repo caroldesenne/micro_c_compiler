@@ -234,12 +234,13 @@ class ArrayRef(Node):
     attr_names = ()
 
 class FuncCall(Node):
-    __slots__ = ('name','params','type','coord')
+    __slots__ = ('name','params','type','gen_location', 'coord')
 
     def __init__(self, name, params, coord=None):
         self.name = name
         self.params = params
         self.type = None
+        self.gen_location = None
         self.coord = coord
 
     def children(self):
