@@ -119,6 +119,10 @@ class GenerateCode(NodeVisitor):
         for i, child in enumerate(node.gdecls or []):
             self.visit(child)
 
+    def visit_GlobalDecl(self, node):
+        for i, child in enumerate(node.decls or []):
+            self.visit(child)
+
     def visit_FuncDef(self, node):
         self.code.append(('define', '_{}'.format(node.decl.name.name)))
 
@@ -161,7 +165,7 @@ class GenerateCode(NodeVisitor):
 
     def visit_Return(self, node):
         # Create a new temporary variable name
-        target = self.new_temp(node.expr.type)
+        target = self.new_temp(getInnerMostType(node.expr))
 
         self.visit(node.expr)
 
@@ -201,6 +205,12 @@ class GenerateCode(NodeVisitor):
 
         # Store location of the result on the node
         node.gen_location = target
+
+    def visit_Assignment(self, node):
+        self.visit(node.value)
+
+        inst = ('store_' + getBasicType(node.value), node.value.gen_location, self.temp_var_dict[node.assignee.name])
+        self.code.append(inst)
 
     def visit_PrintStatement(self, node):
         # Visit the expression
