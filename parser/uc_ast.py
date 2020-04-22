@@ -251,11 +251,12 @@ class FuncCall(Node):
     attr_names = ()
 
 class ID(Node):
-    __slots__ = ('name','type','coord')
+    __slots__ = ('name','type', 'gen_location', 'coord')
 
     def __init__(self,name,coord=None):
         self.name = name
         self.type = None
+        self.gen_location = None
         self.coord = coord
 
     def children(self):
@@ -298,13 +299,14 @@ class PtrDecl(Node):
     attr_names = ()
 
 class BinaryOp(Node):
-    __slots__ = ('op', 'left', 'right', 'type', 'coord')
+    __slots__ = ('op', 'left', 'right', 'type', 'gen_location', 'coord')
 
     def __init__(self, op, left, right, coord=None):
         self.op = op
         self.left = left
         self.right = right
-        self.type = None
+        self.type = type
+        self.gen_location = None
         self.coord = coord
 
     def children(self):
@@ -348,12 +350,13 @@ class UnaryOp(Node):
     attr_names = ('op', )
 
 class Constant(Node):
-    __slots__ = ('type', 'value', 'size','coord')
+    __slots__ = ('type', 'value', 'size', 'gen_location', 'coord')
 
     def __init__(self, type, value, coord=None):
         self.type = type
         self.value = value
         self.coord = coord
+        self.gen_location = None
         if(self.type=='string'):
             self.size = len(value)-2
         else:

@@ -199,7 +199,7 @@ class CheckProgramVisitor(NodeVisitor):
         assert self.scopes.insert(sym,t), alreadyDefined
 
         if isinstance(node.type,FuncDecl):
-            self.scopes.pushLevel() # TODO fazer push do escopo dentro de FuncDecl 
+            self.scopes.pushLevel() # TODO fazer push do escopo dentro de FuncDecl
             self.visit(node.type)
             if not node.isFunction: # this is the prototype case (FuncDecl outside a FuncDef)
                 self.scopes.popLevel()
@@ -226,7 +226,7 @@ class CheckProgramVisitor(NodeVisitor):
             isString = True
         # check init type (must be InitList)
         err = f"{node.coord.line}:{node.coord.column} - array initializer must be of array type."
-        assert isString or isinstance(node.init,InitList) or isinstance(node.init,ArrayRef), err
+        assert isString or isinstance(node.init,InitList), err
         # check if their sizes match
         ad = node.type
         if ad.size:
@@ -360,7 +360,7 @@ class CheckProgramVisitor(NodeVisitor):
 
     def visit_BinaryOp(self,node):
         self.visit(node.left)
-        self.visit(node.right)        
+        self.visit(node.right)
         # Make sure left and right operands have the same type
         binop = f"{node.coord.line}:{node.coord.column} - left ({node.left.type}) and right ({node.right.type}) sides of binary operation must have the same types."
         btr = getInnerMostType(node.left)
@@ -416,13 +416,6 @@ class CheckProgramVisitor(NodeVisitor):
         # take same type as this array with an array level lower
         node.type = Type(at.names)
         node.type.arrayLevel = at.arrayLevel-1
-        # get element size        
-        if node.type.arrayLevel > 0:
-            innarray = node.name.type.type
-            size = innarray.size.value
-            node.size = size
-        else:
-            node.size = 1
 
     def visit_If(self,node):
         self.visit(node.cond)
