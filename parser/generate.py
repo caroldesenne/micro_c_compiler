@@ -4,6 +4,19 @@ from parser import Parser
 from collections import defaultdict
 from uc_ast import *
 
+binary_ops = {
+    '+': 'add',
+    '*': 'mul',
+    '-': 'sub',
+    '/': 'div',
+    '%': 'mod',
+}
+
+unary_ops = {
+    '+': 'uadd',
+    '-': 'uneg',
+}
+
 class NodeVisitor(object):
     """ A base NodeVisitor class for visiting uc_ast nodes.
         Subclass it and define your own visit_XXX methods, where
@@ -182,8 +195,7 @@ class GenerateCode(NodeVisitor):
         target = self.new_temp(getInnerMostType(node.type))
 
         # Create the opcode and append to list
-        # opcode = binary_ops[node.op] + "_"+node.left.type.name #TODO create op conv table * --> mul
-        opcode = node.op + "_"+getBasicType(node.left)
+        opcode = binary_ops[node.op] + "_"+getBasicType(node.left)
         inst = (opcode, node.left.gen_location, node.right.gen_location, target)
         self.code.append(inst)
 
