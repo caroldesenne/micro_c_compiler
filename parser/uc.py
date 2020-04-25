@@ -158,9 +158,9 @@ class Compiler:
         self._parse(susy, ast_file, debug)
         if not errors_reported():
             self._sema(susy, ast_file)
-            self._gen(susy, ast_file)
-            pprint(self.gen.code)
-        # print("Semantic checks OK.")
+            print("Semantic checks OK.")
+            #self._gen(susy, ast_file)
+            #pprint(self.gen.code)
 
     def compile(self, code, susy, ast_file, debug):
         """ Compiles the given code string """
