@@ -157,8 +157,9 @@ class Compiler:
         """ Compiles the code to the given file object. """
         self._parse(susy, ast_file, debug)
         if not errors_reported():
-            self._sema(susy, ast_file)
-            print("Semantic checks OK.")
+            print("Parse OK.")
+            #self._sema(susy, ast_file)
+            #print("Semantic checks OK.")
             #self._gen(susy, ast_file)
             #pprint(self.gen.code)
 
