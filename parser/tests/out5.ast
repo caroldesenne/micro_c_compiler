@@ -1,20 +1,20 @@
 Program: 
-    FuncDef: 
+    FuncDef:    @ 1:5
         Type: ['int']   @ 1:1
-        Decl: ID(name='main'  )
-            FuncDecl: 
-                VarDecl: 
+        Decl: ID(name='main',  type=None  )   @ 1:5
+            FuncDecl:    @ 1:5
+                VarDecl:    @ 1:5
                     Type: ['int']   @ 1:1
-        Compound:    @ 1:1
-            Decl: ID(name='n'  )
-                VarDecl: 
+        Compound:    @ 1:12
+            Decl: ID(name='n',  type=None  )   @ 2:9
+                VarDecl:    @ 2:9
                     Type: ['int']   @ 2:5
-            Decl: ID(name='reverse'  )
-                VarDecl: 
+            Decl: ID(name='reverse',  type=None  )   @ 2:12
+                VarDecl:    @ 2:12
                     Type: ['int']   @ 2:5
                 Constant: int, 0   @ 2:22
-            Decl: ID(name='rem'  )
-                VarDecl: 
+            Decl: ID(name='rem',  type=None  )   @ 2:25
+                VarDecl:    @ 2:25
                     Type: ['int']   @ 2:5
             Print:    @ 3:5
                 Constant: string, "Enter a number: "   @ 3:11
@@ -24,7 +24,7 @@ Program:
                 BinaryOp: !=   @ 5:12
                     ID: n   @ 5:12
                     Constant: int, 0   @ 5:17
-                Compound:    @ 5:1
+                Compound:    @ 5:20
                     Assignment: =   @ 6:9
                         ID: rem   @ 6:9
                         BinaryOp: %   @ 6:15

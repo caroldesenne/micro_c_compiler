@@ -138,7 +138,7 @@ class Parser():
         """
         decl = p[2]
         decls = self._build_declarations(spec=p[1],decls=[dict(decl=decl, init=None)])[0]
-        p[0] = FuncDef(decls, p[1], p[3], p[4],coord=p[2].coord)
+        p[0] = FuncDef(decl=decls, type=p[1], dl=p[3], cs=p[4],coord=p[2].coord)
 
     def p_function_definition1(self, p):
         """
@@ -512,9 +512,7 @@ class Parser():
         """
         compound_statement : LBRACE block_item_list_opt RBRACE
         """
-        aux = self._token_coord(p, 1)
-        aux.column = 1
-        p[0] = Compound(p[2],coord=aux)
+        p[0] = Compound(p[2],coord=self._token_coord(p, 1))
 
     def p_statement(self, p):
         """
@@ -574,7 +572,7 @@ class Parser():
                         | PRINT LPAREN RPAREN SEMI
         """
         if len(p)==6:
-            p[0] = Print(p[3], coord=self._token_coord(p, 1)) # TODO must be list?
+            p[0] = Print(p[3], coord=self._token_coord(p, 1))
         else:
             p[0] = Print(None, coord=self._token_coord(p, 1))
 
@@ -582,7 +580,7 @@ class Parser():
         """
         read_statement : READ LPAREN expression RPAREN SEMI
         """
-        p[0] = Read(p[3],coord=self._token_coord(p, 1)) # TODO must be list?
+        p[0] = Read(p[3],coord=self._token_coord(p, 1))
 
     def p_empty(self, p):
         """empty : """

@@ -102,46 +102,12 @@ class Coord(object):
             coord_str = ""
         return coord_str
 
-'''
-a * means coord is done for this class
-
-FuncDecl ( ) *
-Program ( ) *
-GlobalDecl ( ) *
-DeclList ( ) *
-ArrayDecl ( ) *
-ArrayRef ( ) *
-VarDecl () *
-ID (name) *
-Assignment (op) *
-PtrDecl ( ) *
-FuncCall ( ) *
-FuncDef ( ) *
-BinaryOp (op) *
-UnaryOp (op) *
-Constant (type, value) *
-Type (names) *
-Decl (name) *
-InitList ( ) *
-ExprList ( ) *
-Compound ( ) *
-If ( ) *
-While ( ) *
-For ( ) *
-Break ( ) *
-Return ( ) *
-Assert ( ) *
-Print ( ) *
-Read ( ) *
-EmptyStatement ( ) *
-'''
-
 class Program(Node):
     __slots__ = ('gdecls', 'coord')
 
     def __init__(self, gdecls, coord=None):
         self.gdecls = gdecls
-        self.coord = None
+        self.coord = coord
 
     def children(self):
         nodelist = []
@@ -156,7 +122,7 @@ class GlobalDecl(Node):
 
     def __init__(self, decl, coord=None):
         self.decls = decl
-        self.coord = None
+        self.coord = coord
 
     def children(self):
         nodelist = []
@@ -187,7 +153,7 @@ class FuncDecl(Node):
     def __init__(self, args, type, coord=None):
         self.args = args
         self.type = type
-        self.coord = None
+        self.coord = coord
 
     def children(self):
         nodelist = []
@@ -205,7 +171,7 @@ class FuncDef(Node):
         self.type = type
         self.decl_list = dl
         self.compound_statement = cs
-        self.coord = None
+        self.coord = coord
 
     def children(self):
         nodelist = []
@@ -223,7 +189,7 @@ class ParamList(Node):
 
     def __init__(self,l,coord=None):
         self.list = l
-        self.coord = None
+        self.coord = coord
 
     def children(self):
         nodelist = []
@@ -239,7 +205,7 @@ class ArrayDecl(Node):
     def __init__(self, type, s, coord=None):
         self.type = type
         self.size = s
-        self.coord = None
+        self.coord = coord
 
     def children(self):
         nodelist = []
@@ -250,11 +216,13 @@ class ArrayDecl(Node):
     attr_names = ()
 
 class ArrayRef(Node):
-    __slots__ = ('name','access_value','coord')
+    __slots__ = ('name','access_value','type','size','coord')
 
     def __init__(self, name, av, coord=None):
         self.name = name
         self.access_value = av
+        self.type = None
+        self.size = 0
         self.coord = coord
 
     def children(self):
@@ -266,11 +234,12 @@ class ArrayRef(Node):
     attr_names = ()
 
 class FuncCall(Node):
-    __slots__ = ('name','params','coord')
+    __slots__ = ('name','params','type','coord')
 
     def __init__(self, name, params, coord=None):
         self.name = name
         self.params = params
+        self.type = None
         self.coord = coord
 
     def children(self):
@@ -282,10 +251,11 @@ class FuncCall(Node):
     attr_names = ()
 
 class ID(Node):
-    __slots__ = ('name','coord')
+    __slots__ = ('name','type','coord')
 
     def __init__(self,name,coord=None):
         self.name = name
+        self.type = None
         self.coord = coord
 
     def children(self):
@@ -295,12 +265,13 @@ class ID(Node):
     attr_names = ('name', )
 
 class Assignment(Node):
-    __slots__ = ('op','assignee','value','coord')
+    __slots__ = ('op','assignee','value','type','coord')
 
     def __init__(self,op,ass,v,coord=None):
         self.op = op
         self.assignee = ass
         self.value = v
+        self.type = None
         self.coord = coord
 
     def children(self):
@@ -327,18 +298,19 @@ class PtrDecl(Node):
     attr_names = ()
 
 class BinaryOp(Node):
-    __slots__ = ('op', 'lvalue', 'rvalue', 'coord')
+    __slots__ = ('op', 'left', 'right', 'type', 'coord')
 
     def __init__(self, op, left, right, coord=None):
         self.op = op
-        self.lvalue = left
-        self.rvalue = right
+        self.left = left
+        self.right = right
+        self.type = None
         self.coord = coord
 
     def children(self):
         nodelist = []
-        if self.lvalue is not None: nodelist.append(("lvalue", self.lvalue))
-        if self.rvalue is not None: nodelist.append(("rvalue", self.rvalue))
+        if self.left is not None: nodelist.append(("left", self.left))
+        if self.right is not None: nodelist.append(("right", self.right))
         return tuple(nodelist)
 
     attr_names = ('op', )
@@ -360,12 +332,13 @@ class Cast(Node):
     attr_names = ()
 
 class UnaryOp(Node):
-    __slots__ = ('op','expression','coord')
+    __slots__ = ('op','expression','type','coord')
 
     def __init__(self, op, exp, coord=None):
-    	self.op = op
-    	self.expression = exp
-    	self.coord = coord
+        self.op = op
+        self.expression = exp
+        self.type = None
+        self.coord = coord
 
     def children(self):
         nodelist = []
@@ -375,12 +348,16 @@ class UnaryOp(Node):
     attr_names = ('op', )
 
 class Constant(Node):
-    __slots__ = ('type', 'value', 'coord')
+    __slots__ = ('type', 'value', 'size','coord')
 
     def __init__(self, type, value, coord=None):
         self.type = type
         self.value = value
         self.coord = coord
+        if(self.type=='string'):
+            self.size = len(value)-2
+        else:
+            self.size = 1
 
     def children(self):
         nodelist = []
@@ -389,10 +366,13 @@ class Constant(Node):
     attr_names = ('type', 'value', )
 
 class Type(Node):
-    __slots__ = ('names','coord')
+    __slots__ = ('names','arrayLevel','coord')
 
     def __init__(self, names, coord=None):
         self.names = names
+        self.arrayLevel = 0 # int a;    : arrayLevel = 0
+                            # int b[]   : arrayLevel = 1
+                            # int c[][] : arrayLevel = 2
         self.coord = coord
 
     def children(self):
@@ -407,7 +387,7 @@ class VarDecl(Node):
     def __init__(self, name, coord=None):
         self.name = name
         self.type = None
-        self.coord = None
+        self.coord = coord
 
     def children(self):
         nodelist = []
@@ -417,12 +397,13 @@ class VarDecl(Node):
     attr_names = ()
 
 class Decl(Node):
-    __slots__ = ('name', 'type', 'init', 'coord')
+    __slots__ = ('name', 'type', 'init', 'isFunction','coord')
 
     def __init__(self, name, type, init, coord=None):
         self.name = name
         self.type = type
         self.init = init
+        self.isFunction = False
         self.coord = coord
 
     def children(self):
@@ -434,10 +415,12 @@ class Decl(Node):
     attr_names = ('name', )
 
 class InitList(Node):
-    __slots__ = ('inits','coord')
+    __slots__ = ('inits','type','size','coord')
 
     def __init__(self, inits, coord=None):
         self.inits = inits
+        self.type = None
+        self.size = len(inits)
         self.coord = coord
 
     def children(self):
@@ -518,10 +501,11 @@ class For(Node):
     attr_names = ()
 
 class ExprList(Node):
-    __slots__ = ('list','coord')
+    __slots__ = ('list','type','coord')
 
-    def __init__(self,l,coord=None):
-        self.list = l
+    def __init__(self,list,coord=None):
+        self.list = list
+        self.type = None
         self.coord = coord
 
     def children(self):
@@ -545,10 +529,11 @@ class Break(Node):
     attr_names = ()
 
 class Return(Node):
-    __slots__ = ('expr','coord')
+    __slots__ = ('expr','type','coord')
 
     def __init__(self,expr=None,coord=None):
         self.expr = expr
+        self.type = None
         self.coord = coord
 
     def children(self):

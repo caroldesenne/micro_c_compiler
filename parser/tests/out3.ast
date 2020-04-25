@@ -1,38 +1,38 @@
 Program: 
-    FuncDef: 
+    FuncDef:    @ 1:5
         Type: ['int']   @ 1:1
-        Decl: ID(name='f'  )
-            FuncDecl: 
-                ParamList: 
-                    Decl: ID(name='n'  )
-                        VarDecl: 
+        Decl: ID(name='f',  type=None  )   @ 1:5
+            FuncDecl:    @ 1:5
+                ParamList:    @ 1:11
+                    Decl: ID(name='n',  type=None  )   @ 1:11
+                        VarDecl:    @ 1:11
                             Type: ['int']   @ 1:7
-                    Decl: ID(name='k'  )
-                        VarDecl: 
+                    Decl: ID(name='k',  type=None  )   @ 1:18
+                        VarDecl:    @ 1:18
                             Type: ['int']   @ 1:14
-                VarDecl: 
+                VarDecl:    @ 1:5
                     Type: ['int']   @ 1:1
-        Compound:    @ 1:1
-            Decl: ID(name='p'  )
-                VarDecl: 
+        Compound:    @ 1:21
+            Decl: ID(name='p',  type=None  )   @ 2:9
+                VarDecl:    @ 2:9
                     Type: ['int']   @ 2:5
-            Decl: ID(name='q'  )
-                VarDecl: 
+            Decl: ID(name='q',  type=None  )   @ 2:12
+                VarDecl:    @ 2:12
                     Type: ['int']   @ 2:5
-            Decl: ID(name='t'  )
-                VarDecl: 
+            Decl: ID(name='t',  type=None  )   @ 2:15
+                VarDecl:    @ 2:15
                     Type: ['int']   @ 2:5
             If:    @ 3:5
                 BinaryOp: <   @ 3:9
                     ID: n   @ 3:9
                     Constant: int, 2   @ 3:13
-                Compound:    @ 3:1
+                Compound:    @ 3:16
                     Assignment: =   @ 4:9
                         ID: k   @ 4:9
                         Constant: int, 0   @ 4:13
                     Return:    @ 5:9
                         ID: n   @ 5:16
-                Compound:    @ 7:1
+                Compound:    @ 7:10
                     Assignment: =   @ 8:9
                         ID: t   @ 8:9
                         BinaryOp: +   @ 8:13
@@ -59,15 +59,15 @@ Program:
                             Constant: int, 1   @ 9:21
                     Return:    @ 10:9
                         ID: t   @ 10:16
-    FuncDef: 
+    FuncDef:    @ 14:5
         Type: ['int']   @ 14:1
-        Decl: ID(name='main'  )
-            FuncDecl: 
-                VarDecl: 
+        Decl: ID(name='main',  type=None  )   @ 14:5
+            FuncDecl:    @ 14:5
+                VarDecl:    @ 14:5
                     Type: ['int']   @ 14:1
-        Compound:    @ 14:1
-            Decl: ID(name='m'  )
-                VarDecl: 
+        Compound:    @ 14:12
+            Decl: ID(name='m',  type=None  )   @ 15:9
+                VarDecl:    @ 15:9
                     Type: ['int']   @ 15:5
                 Constant: int, 9   @ 15:13
             Print:    @ 16:5

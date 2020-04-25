@@ -1,8 +1,0 @@
-Program: 
-    GlobalDecl: 
-        Decl: ID(name='a'  )
-            BinaryOp: +
-                BinaryOp: *
-                    Constant: int, 3
-                    Constant: int, 4
-                Constant: int, 5

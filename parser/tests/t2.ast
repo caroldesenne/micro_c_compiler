@@ -1,33 +1,33 @@
 Program: 
     GlobalDecl: 
-        Decl: ID(name='n'  )
-            VarDecl: 
+        Decl: ID(name='n',  type=None  )   @ 1:5
+            VarDecl:    @ 1:5
                 Type: ['int']   @ 1:1
             Constant: int, 3   @ 1:9
-    FuncDef: 
+    FuncDef:    @ 3:5
         Type: ['int']   @ 3:1
-        Decl: ID(name='doubleMe'  )
-            FuncDecl: 
-                ParamList: 
-                    Decl: ID(name='x'  )
-                        VarDecl: 
+        Decl: ID(name='doubleMe',  type=None  )   @ 3:5
+            FuncDecl:    @ 3:5
+                ParamList:    @ 3:19
+                    Decl: ID(name='x',  type=None  )   @ 3:19
+                        VarDecl:    @ 3:19
                             Type: ['int']   @ 3:15
-                VarDecl: 
+                VarDecl:    @ 3:5
                     Type: ['int']   @ 3:1
-        Compound:    @ 3:1
+        Compound:    @ 3:22
             Return:    @ 4:5
                 BinaryOp: *   @ 4:12
                     ID: x   @ 4:12
                     ID: x   @ 4:16
-    FuncDef: 
+    FuncDef:    @ 7:6
         Type: ['void']   @ 7:1
-        Decl: ID(name='main'  )
-            FuncDecl: 
-                VarDecl: 
+        Decl: ID(name='main',  type=None  )   @ 7:6
+            FuncDecl:    @ 7:6
+                VarDecl:    @ 7:6
                     Type: ['void']   @ 7:1
-        Compound:    @ 7:1
-            Decl: ID(name='v'  )
-                VarDecl: 
+        Compound:    @ 7:14
+            Decl: ID(name='v',  type=None  )   @ 8:9
+                VarDecl:    @ 8:9
                     Type: ['int']   @ 8:5
                 ID: n   @ 8:13
             Assignment: =   @ 9:5
@@ -41,5 +41,3 @@ Program:
                     BinaryOp: *   @ 10:17
                         ID: n   @ 10:17
                         ID: n   @ 10:21
-            Return:    @ 11:5
-                Constant: int, 0   @ 11:12

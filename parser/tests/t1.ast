@@ -1,25 +1,25 @@
 Program: 
     GlobalDecl: 
-        Decl: ID(name='v'  )
-            ArrayDecl: 
-                VarDecl: 
+        Decl: ID(name='v',  type=None  )   @ 1:5
+            ArrayDecl:    @ 1:5
+                VarDecl:    @ 1:5
                     Type: ['int']   @ 1:1
             InitList:    @ 1:12
                 Constant: int, 1   @ 1:12
                 Constant: int, 2   @ 1:15
                 Constant: int, 3   @ 1:18
                 Constant: int, 4   @ 1:21
-    FuncDef: 
+    FuncDef:    @ 2:5
         Type: ['int']   @ 2:1
-        Decl: ID(name='main'  )
-            FuncDecl: 
-                VarDecl: 
+        Decl: ID(name='main',  type=None  )   @ 2:5
+            FuncDecl:    @ 2:5
+                VarDecl:    @ 2:5
                     Type: ['int']   @ 2:1
-        Compound:    @ 2:1
+        Compound:    @ 2:11
             For:    @ 3:5
                 DeclList:    @ 3:5
-                    Decl: ID(name='i'  )
-                        VarDecl: 
+                    Decl: ID(name='i',  type=None  )   @ 3:14
+                        VarDecl:    @ 3:14
                             Type: ['int']   @ 3:10
                         Constant: int, 1   @ 3:18
                 BinaryOp: <=   @ 3:21
@@ -32,3 +32,4 @@ Program:
                         ID: v   @ 4:15
                         ID: i   @ 4:17
             Return:    @ 5:5
+                Constant: int, 0   @ 5:12
