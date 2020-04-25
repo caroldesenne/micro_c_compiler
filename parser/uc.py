@@ -123,10 +123,10 @@ class Compiler:
         """
         self.parser = Parser()
         self.ast = self.parser.parse(self.code, '', debug)
-        if susy:
-            self.ast.show(showcoord=True)
-        elif ast_file is not None:
-            self.ast.show(buf=ast_file, showcoord=True)
+        #if susy:
+            #self.ast.show(showcoord=True)
+        #elif ast_file is not None:
+            #self.ast.show(buf=ast_file, showcoord=True)
 
     def _sema(self, susy, ast_file):
         """ Decorate AST with semantic actions. If ast_file != None,
@@ -158,8 +158,9 @@ class Compiler:
         self._parse(susy, ast_file, debug)
         if not errors_reported():
             print("Parse OK.")
-            #self._sema(susy, ast_file)
-            #print("Semantic checks OK.")
+            self._sema(susy, ast_file)
+            if not errors_reported():
+                print("Semantic checks OK.")
             #self._gen(susy, ast_file)
             #pprint(self.gen.code)
 
