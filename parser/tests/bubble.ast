@@ -119,3 +119,4 @@ Program:
                             ID: c   @ 20:17
                         Constant: string, " "   @ 20:21
             Return:    @ 21:5
+                Constant: int, 0   @ 21:12

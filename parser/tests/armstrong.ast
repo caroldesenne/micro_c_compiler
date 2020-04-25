@@ -119,3 +119,4 @@ Program:
                         ID: n   @ 33:13
                         Constant: string, " is not an Armstrong number.\n"   @ 33:16
             Return:    @ 34:5
+                Constant: int, 0   @ 34:12
