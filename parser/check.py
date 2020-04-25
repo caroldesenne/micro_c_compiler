@@ -226,13 +226,15 @@ class CheckProgramVisitor(NodeVisitor):
             isString = True
         # check init type (must be InitList)
         err = f"{node.coord.line}:{node.coord.column} - array initializer must be of array type."
-        assert isString or isinstance(node.init,InitList), err
+        assert isString or isinstance(node.init,InitList) or isinstance(node.init,ArrayRef), err
         # check if their sizes match
         ad = node.type
         if ad.size:
             err = f"{node.coord.line}:{node.coord.column} - array initializer size must match declaration."
             assert int(ad.size.value)==int(node.init.size), err
-        ad.size = node.init.size
+        # if size wasnt specified, set it
+        if ad.size==None:
+            ad.size = Constant(type='int', value=node.init.size)
 
     def visit_Compound(self,node):
         for i, child in enumerate(node.block_items or []):
@@ -416,6 +418,13 @@ class CheckProgramVisitor(NodeVisitor):
         # take same type as this array with an array level lower
         node.type = Type(at.names)
         node.type.arrayLevel = at.arrayLevel-1
+        # get element size        
+        if node.type.arrayLevel > 0:
+            innarray = node.name.type.type
+            size = innarray.size.value
+            node.size = size
+        else:
+            node.size = 1
 
     def visit_If(self,node):
         self.visit(node.cond)
