@@ -91,10 +91,9 @@ class Scopes(object):
     at the moment (and it corresponds to the scopes array size).
     '''
     def __init__(self):
-        root = SymbolTable()
-        self.scope = [root]
+        self.scope = []
         self.loopStack = []
-        self.depth = 1
+        self.depth = 0
 
     def pushLoop(self,loop):
         self.loopStack.append(loop)
@@ -191,7 +190,6 @@ class CheckProgramVisitor(NodeVisitor):
         self.scopes.popLevel()
 
     def visit_Decl(self,node):
-        self.visit(node.type)
         t = node.type
         sym = node.name.name # get ID from Decl (which is called name), then its name
         # check if symbol exists already, otherwise insert it in scope
@@ -204,21 +202,24 @@ class CheckProgramVisitor(NodeVisitor):
             if not node.isFunction: # this is the prototype case (FuncDecl outside a FuncDef)
                 self.scopes.popLevel()
 
-        if isinstance(node.type,PtrDecl):
+        elif isinstance(node.type,PtrDecl):
             # TODO
             assert False, "PtrDecl not implemented yet."
+            self.visit(node.type)
 
-        if node.init:
+        elif node.init:
+            self.visit(node.type)
             self.visit(node.init)
-
             if isinstance(node.type,ArrayDecl):
                 self.check_Decl_ArrayDecl(node)
-
             else:
                 # check if declaration type matches initializer type
                 td = getInnerMostType(node)
                 ti = getInnerMostType(node.init)
                 assert typesEqual(td,ti), f"{node.coord.line}:{node.coord.column} - declaration and initializer types must match."
+
+        else:
+            self.visit(node.type)
 
     def check_Decl_ArrayDecl(self,node):
         isString = False
@@ -287,11 +288,15 @@ class CheckProgramVisitor(NodeVisitor):
         assert typesEqual(t,bt), err
 
     def visit_ArrayDecl(self,node):
+        if self.scopes.depth==1:
+            node.isGlobal = True
         self.visit(node.type)
         t = getInnerMostType(node)
         t.arrayLevel += 1
 
     def visit_VarDecl(self,node):
+        if self.scopes.depth==1:
+            node.isGlobal = True
         self.visit(node.type)
 
     def visit_Type(self,node):
