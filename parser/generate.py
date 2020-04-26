@@ -1,5 +1,6 @@
 import ply.yacc as yacc
 import uctype
+from pprint import pprint
 from parser import Parser
 from collections import defaultdict
 from uc_ast import *
@@ -44,15 +45,14 @@ class GenerateCode(NodeVisitor):
         self.versions[self.fname] += 1
         return name
 
-    def output_to_file(ir_filename):
+    def output_to_file(self, ir_filename):
         '''
         outputs generated IR code to given file
         '''
         print("Outputting the IR to %s." % ir_filename)
         ir_file = open(ir_filename, 'w')
         for i,line in enumerate(self.code or []):
-            ir.file.write(line)
-            ir_file.write('\n')
+            pprint(line,ir_file)
 
     # You must implement visit_Nodename methods for all of the other
     # AST nodes.  In your code, you will need to make instructions
@@ -206,6 +206,7 @@ if __name__ == '__main__':
 
     import sys
 
+    # open source code file and read contents
     filename = sys.argv[1]
     code = open(filename).read()
     # parse code and generate AST
