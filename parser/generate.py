@@ -74,7 +74,6 @@ class GenerateCode(NodeVisitor):
 
         self.visit(node.decl.type)
         self.visit(node.compound_statement)
-        self.code.append(('end', ''))
 
     def visit_FuncDecl(self, node):
         # Check if function has parameters
@@ -96,7 +95,9 @@ class GenerateCode(NodeVisitor):
             self.visit(child)
 
     def visit_Decl(self, node):
-        target = self.new_temp(node.type.type)
+        self.visit(node.type)
+        #target = self.new_temp(node.type.type)
+        target = self.new_temp()
         self.temp_var_dict[node.name.name] = target
 
         # Make the SSA opcode and append to list of generated instructions
@@ -105,13 +106,13 @@ class GenerateCode(NodeVisitor):
 
         if node.init:
             self.visit(node.init)
-
             # target_store = self.new_temp(node.type.type)
             self.code.append(('store_' + getBasicType(node), node.init.gen_location, target))
 
     def visit_Return(self, node):
         # Create a new temporary variable name
-        target = self.new_temp(getInnerMostType(node.expr))
+        #target = self.new_temp(getInnerMostType(node.expr))
+        target = self.new_temp()
 
         self.visit(node.expr)
 
@@ -123,7 +124,8 @@ class GenerateCode(NodeVisitor):
 
     def visit_Constant(self, node):
         # Create a new temporary variable name
-        target = self.new_temp(node.type)
+        #target = self.new_temp(node.type)
+        target = self.new_temp()
 
         # Make the SSA opcode and append to list of generated instructions
         inst = ('literal_'+node.type.names[0], node.value, target)
@@ -142,7 +144,8 @@ class GenerateCode(NodeVisitor):
         self.visit(node.right)
 
         # Make a new temporary for storing the result
-        target = self.new_temp(getInnerMostType(node.type))
+        #target = self.new_temp(getInnerMostType(node.type))
+        target = self.new_temp()
 
         # Create the opcode and append to list
         opcode = binary_ops[node.op] + "_"+getBasicType(node.left)
@@ -166,21 +169,20 @@ class GenerateCode(NodeVisitor):
         inst = ('print_'+node.expr.type.name, node.expr.gen_location)
         self.code.append(inst)
 
-    def visit_VarDeclaration(self, node):
-        # allocate on stack memory
-        inst = ('alloc_'+node.type.name,
-                    node.id)
+    def visit_VarDecl(self, node):
+        tp = getBasicType(node)
+        vid = '@'+node.name.name
+        # if global store on heap 
+        if node.isGlobal:
+            inst = ('global_'+tp, vid)
+        # otherwise, allocate on stack memory
+        else:
+            inst = ('alloc_'+tp, vid)
         self.code.append(inst)
-        # store optional init val
-        if node.value:
-            self.visit(node.value)
-            inst = ('store_'+node.type.name,
-                    node.value.gen_location,
-                    node.id)
-            self.code.append(inst)
 
     def visit_LoadLocation(self, node):
-        target = self.new_temp(node.type)
+        #target = self.new_temp(node.type)
+        target = self.new_temp()
         inst = ('load_'+node.type.name,
                 node.name,
                 target)
@@ -196,11 +198,14 @@ class GenerateCode(NodeVisitor):
 
     def visit_UnaryOp(self, node):
         self.visit(node.left)
-        target = self.new_temp(node.type)
+        #target = self.new_temp(node.type)
+        target = self.new_temp()
         opcode = unary_ops[node.op] + "_" + node.left.type.name
         inst = (opcode, node.left.gen_location)
         self.code.append(inst)
         node.gen_location = target
+
+    # TODO: implement other visits
 
 if __name__ == '__main__':
 
