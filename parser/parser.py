@@ -356,11 +356,9 @@ class Parser():
         expression : assignment_expression
                    | expression COMMA assignment_expression
         """
-        if len(p)==2: # single expression
-            p[0] = p[1]
+        if len(p) == 2: # single expression
+            p[0] = ExprList([p[1]], coord=p[1].coord)
         else:
-            if not isinstance(p[1], ExprList):
-                p[1] = ExprList([p[1]],coord=p[1].coord)
             p[1].list.append(p[3])
             p[0] = p[1]
 
