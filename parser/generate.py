@@ -44,6 +44,16 @@ class GenerateCode(NodeVisitor):
         self.versions[self.fname] += 1
         return name
 
+    def output_to_file(ir_filename):
+        '''
+        outputs generated IR code to given file
+        '''
+        print("Outputting the IR to %s." % ir_filename)
+        ir_file = open(ir_filename, 'w')
+        for i,line in enumerate(self.code or []):
+            ir.file.write(line)
+            ir_file.write('\n')
+
     # You must implement visit_Nodename methods for all of the other
     # AST nodes.  In your code, you will need to make instructions
     # and append them to the self.code list.
@@ -192,12 +202,12 @@ class GenerateCode(NodeVisitor):
         self.code.append(inst)
         node.gen_location = target
 
-
 if __name__ == '__main__':
 
     import sys
 
-    code = open(sys.argv[1]).read()
+    filename = sys.argv[1]
+    code = open(filename).read()
     # parse code and generate AST
     p = Parser()
     ast = p.parse(code)
@@ -207,3 +217,5 @@ if __name__ == '__main__':
     # generate IR
     gencode = GenerateCode()
     gencode.visit_Program(ast)
+    ir_filename = filename[:-3] + '.code'
+    gencode.output_to_file(ir_filename)
