@@ -482,8 +482,10 @@ if __name__ == '__main__':
 
     import sys
 
-    p = Parser()
     code = open(sys.argv[1]).read()
+    # parse code and generate AST
+    p = Parser()
     ast = p.parse(code)
+    # perform semantic checks
     check = CheckProgramVisitor()
     check.visit_Program(ast)

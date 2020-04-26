@@ -43,7 +43,7 @@ class GenerateCode(NodeVisitor):
         name = "%" + "%d" % (self.versions[self.fname])
         self.versions[self.fname] += 1
         return name
-        
+
     # You must implement visit_Nodename methods for all of the other
     # AST nodes.  In your code, you will need to make instructions
     # and append them to the self.code list.
@@ -191,3 +191,19 @@ class GenerateCode(NodeVisitor):
         inst = (opcode, node.left.gen_location)
         self.code.append(inst)
         node.gen_location = target
+
+
+if __name__ == '__main__':
+
+    import sys
+
+    code = open(sys.argv[1]).read()
+    # parse code and generate AST
+    p = Parser()
+    ast = p.parse(code)
+    # perform semantic checks
+    check = CheckProgramVisitor()
+    check.visit_Program(ast)
+    # generate IR
+    gencode = GenerateCode()
+    gencode.visit_Program(ast)
