@@ -26,21 +26,24 @@ class GenerateCode(NodeVisitor):
         super(GenerateCode, self).__init__()
 
         # version dictionary for temporaries
-        self.versions = defaultdict(int)
+        self.fname = 'main'  # We use the function name as a key
+        self.versions = {self.fname:0}
 
         # The generated code (list of tuples)
         self.code = []
 
         self.temp_var_dict = {}
 
-    def new_temp(self, typeobj):
+    def new_temp(self):
         '''
-        Create a new temporary variable of a given type.
+        Create a new temporary variable of a given scope (function name).
         '''
-        name = "t_%d" % (self.versions[typeobj.names[0]])
-        self.versions[typeobj.names[0]] += 1
+        if self.fname not in self.versions:
+            self.versions[self.fname] = 0
+        name = "%" + "%d" % (self.versions[self.fname])
+        self.versions[self.fname] += 1
         return name
-
+        
     # You must implement visit_Nodename methods for all of the other
     # AST nodes.  In your code, you will need to make instructions
     # and append them to the self.code list.
