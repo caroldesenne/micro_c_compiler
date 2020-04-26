@@ -36,3 +36,8 @@ semantic:
 	python3 check.py tests/gdc.uc
 	python3 check.py tests/primes.uc
 	#python3 check.py tests/ptrFunction.uc
+
+gencode:
+	python3 generate.py tests/ir1.uc
+	python3 generate.py tests/ir2.uc
+	python3 generate.py tests/ir3.uc
