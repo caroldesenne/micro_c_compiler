@@ -25,14 +25,15 @@ unary_ops = {
 '''
 TODO:
 
-ArrayDecl
-ArrayRef
+ArrayDecl *
+ArrayRef *
+InitList *
+Read *
+('elem_type', source, index, target) # Load into target the address of source (array) indexed by index. *
+
+Fix others *
+
 Assert
-Break
-If
-InitList
-Read
-While
 
 '''
 
@@ -182,13 +183,64 @@ class GenerateCode(NodeVisitor):
         inst = ('jump', exit)
         self.code.append(inst)
 
+    def visit_If(self, node):
+        if_label = self.new_temp()
+        if node.else_st:
+            else_label = self.new_temp() # TODO ask: do I need to always create this label?
+        exit_label = self.new_temp()
+        # test and branch
+        self.visit(node.cond)
+        if node.else_st:
+            inst = ('cbranch', node.cond.temp_location, if_label, else_label)
+        else:
+            inst = ('cbranch', node.cond.temp_location, if_label, exit_label)
+        self.code.append(inst)
+        # if statement
+        inst = (if_label[1:],)
+        self.code.append(inst)
+        self.visit(node.statement)
+        inst = ('jump', exit_label)
+        self.code.append(inst)
+        # else statement
+        if node.else_st:
+            inst = (else_label[1:],)
+            self.code.append(inst)
+            self.visit(node.else_st)
+            inst = ('jump', exit_label) # TODO do I need to jump from end of else to exit of if?
+            self.code.append(inst)
+        # exit of if
+        inst = (exit_label[1:],)
+        self.code.append(inst)
+
+    def visit_While(self, node):
+        entry_label = self.new_temp()
+        body_label = self.new_temp()
+        exit_label = self.new_temp()
+        inst = (entry_label[1:],)
+        self.code.append(inst)
+        # check condition
+        self.visit(node.cond)
+        inst = ('cbranch', node.cond.temp_location, body_label, exit_label)
+        self.code.append(inst)
+        # start the while body
+        inst = (body_label[1:],)
+        self.code.append(inst)
+        # perform statement
+        self.visit(node.statement)
+        # jump back to beginning
+        inst = ('jump', entry_label[1:])
+        self.code.append(inst)
+        # or end for
+        inst = (exit_label[1:],)
+        self.code.append(inst)
+
     def visit_For(self, node):
         # TODO deal with scopes (there can be fors inside fors)
         entry_label = self.new_temp()
         body_label = self.new_temp()
         exit_label = self.new_temp()
-        # this will be used when breaking
-        node.exit_label = exit_label
+        # record this for break
+        self.temp_var_dict["exit_loop"] = exit_label
         self.visit(node.init)
         inst = (entry_label[1:],)
         self.code.append(inst)
@@ -196,7 +248,7 @@ class GenerateCode(NodeVisitor):
         self.visit(node.stop_cond)
         inst = ('cbranch', node.stop_cond.temp_location, body_label, exit_label)
         self.code.append(inst)
-        # start the function body
+        # start the for body
         inst = (body_label[1:],)
         self.code.append(inst)
         # perform statement and increment
@@ -207,6 +259,11 @@ class GenerateCode(NodeVisitor):
         self.code.append(inst)
         # or end for
         inst = (exit_label[1:],)
+        self.code.append(inst)
+
+    def visit_Break(self, node):
+        target = self.temp_var_dict["exit_loop"]
+        inst = ('jump', target)
         self.code.append(inst)
 
     def visit_DeclList(self, node):
@@ -220,7 +277,6 @@ class GenerateCode(NodeVisitor):
         # Make the SSA opcode and append to list of generated instructions
         inst = ('literal_'+node.type.names[0], node.value, target)
         self.code.append(inst)
-
         # Save the name of the temporary variable where the value was placed
         node.temp_location = target
 
@@ -298,6 +354,12 @@ class GenerateCode(NodeVisitor):
         inst = (opcode, node.expression.temp_location)
         self.code.append(inst)
         node.temp_location = target
+
+    def visit_Read(self, node):
+        self.visit(node.expression)
+        # TODO who is source?
+        source = 'TODO'
+        inst = ('read_'+getBasicType(node.expression), source)
 
     def visit_Type(self, node):
         pass
