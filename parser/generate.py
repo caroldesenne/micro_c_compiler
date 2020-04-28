@@ -225,11 +225,11 @@ class GenerateCode(NodeVisitor):
         node.temp_location = node.list[0].temp_location
 
     def visit_Print(self, node):
-        # Visit the expression
-        self.visit(node.expr)
-
-        # Create the opcode and append to list
-        inst = ('print_'+node.expr.type.name, node.expr.temp_location)
+        if node.expr: # expression is not None
+            self.visit(node.expr)
+            inst = ('print_'+node.expr.type.name, node.expr.temp_location)
+        else:
+            inst = ('print_void',)
         self.code.append(inst)
 
     def visit_VarDecl(self, node):
