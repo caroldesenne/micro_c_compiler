@@ -32,9 +32,6 @@ Read *
 ('elem_type', source, index, target) # Load into target the address of source (array) indexed by index. *
 
 Fix others *
-
-Assert
-
 '''
 
 class GenerateCode(NodeVisitor):
@@ -179,6 +176,29 @@ class GenerateCode(NodeVisitor):
             inst = ('store_'+bt, res, ret)
             self.code.append(inst)
         # jump to exit of function
+        exit = self.temp_var_dict["exit_func"]
+        inst = ('jump', exit)
+        self.code.append(inst)
+
+    def visit_Assert(self, node):
+        self.visit(node.expr)
+        true_label = self.new_temp()
+        false_label = self.new_temp()
+        exit_label = self.new_temp()
+        # branch between true and false assertion
+        inst = ('cbranch', node.expr.temp_location, true_label, false_label)
+        self.code.append(inst)
+        # true branch
+        inst = (true_label[1:],)
+        self.code.append(inst)
+        inst = ('jump', exit_label)
+        self.code.append(inst)
+        # false branch
+        inst = (false_label[1:],)
+        self.code.append(inst)
+        fail = f"assertion_fail on {node.expr.coord.line}:{node.expr.coord.column}"
+        inst = ('print_string', fail)
+        self.code.append(inst)
         exit = self.temp_var_dict["exit_func"]
         inst = ('jump', exit)
         self.code.append(inst)
