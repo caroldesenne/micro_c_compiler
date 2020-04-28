@@ -200,11 +200,12 @@ class ParamList(Node):
     attr_names = ()
 
 class ArrayDecl(Node):
-    __slots__ = ('type','size','coord')
+    __slots__ = ('type','size','isGlobal','coord')
 
     def __init__(self, type, s, coord=None):
         self.type = type
         self.size = s
+        self.isGlobal = False
         self.coord = coord
 
     def children(self):
@@ -252,13 +253,12 @@ class FuncCall(Node):
     attr_names = ()
 
 class ID(Node):
-    #__slots__ = ('name','type', 'gen_location', 'coord')
-    __slots__ = ('name','type','coord')
+    __slots__ = ('name','type', 'gen_location', 'coord')
 
     def __init__(self,name,coord=None):
         self.name = name
         self.type = None
-        #self.gen_location = None
+        self.gen_location = None
         self.coord = coord
 
     def children(self):
@@ -387,11 +387,12 @@ class Type(Node):
     attr_names = ('names', )
 
 class VarDecl(Node):
-    __slots__ = ('name','type','coord')
+    __slots__ = ('name','type','isGlobal','coord')
 
     def __init__(self, name, coord=None):
         self.name = name
         self.type = None
+        self.isGlobal = False
         self.coord = coord
 
     def children(self):
