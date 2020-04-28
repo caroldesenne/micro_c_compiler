@@ -31,7 +31,6 @@ DeclList
 For
 If
 InitList
-Print
 Read
 While
 
@@ -101,7 +100,7 @@ class GenerateCode(NodeVisitor):
         
         # insert exit label
         exit = self.temp_var_dict["exit_func"]
-        inst = (exit,)
+        inst = (exit[1:],)
         self.code.append(inst)
         # insert return instruction
         bt = getBasicType(node)
@@ -284,9 +283,6 @@ class GenerateCode(NodeVisitor):
         pass
 
 if __name__ == '__main__':
-
-    import sys
-
     # open source code file and read contents
     filename = sys.argv[1]
     code = open(filename).read()
