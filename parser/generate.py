@@ -230,7 +230,12 @@ class GenerateCode(NodeVisitor):
 
     def visit_Assignment(self, node):
         self.visit(node.value)
-        tmp = self.temp_var_dict[node.assignee.name]
+        # The assignee can be of two types: ID or ArrayRef
+        if isinstance(node.assignee,ID):
+            tmp = self.temp_var_dict[node.assignee.name]
+        elif isinstance(node.assignee,ArrayRef):
+            self.visit(node.assignee)
+            tmp = node.assignee.temp_location
         self.temp_location = tmp
         t = getBasicType(node)
         inst = ('store_'+t, node.value.temp_location, tmp)
