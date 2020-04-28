@@ -28,15 +28,11 @@ ArrayRef
 Assert
 Break
 DeclList
-EmptyStatement
-ExprList
 For
 If
 InitList
 Print
-PtrDecl
 Read
-Type
 While
 
 '''
@@ -96,14 +92,31 @@ class GenerateCode(NodeVisitor):
             self.visit(child)
 
     def visit_FuncDef(self, node):
-        self.code.append(('define', '_{}'.format(node.decl.name.name)))
+        self.visit(node.decl)
 
-        self.visit(node.decl.type)
+        for i, child in enumerate(node.decl_list or []):
+            self.visit(child)
+
         self.visit(node.compound_statement)
+        
+        # insert exit label
+        exit = self.temp_var_dict["exit_func"]
+        inst = (exit,)
+        self.code.append(inst)
+        # insert return instruction
+        bt = getBasicType(node)
+        if bt=='void':
+            inst = ('return_void',)
+        else:
+            rvalue = self.new_temp()
+            ret = self.temp_var_dict["return"]
+            inst = ('load_'+bt, ret, rvalue)
+            self.code.append(inst)
+            inst = ('return_'+bt, rvalue)
+        self.code.append(inst)
 
     def visit_FuncDecl(self, node):
-        # Check if function has parameters
-        if node.args is not None:
+        if node.args:
             self.visit(node.args)
 
     def visit_FuncCall(self, node):
@@ -135,25 +148,39 @@ class GenerateCode(NodeVisitor):
             self.visit(child)
 
     def visit_Decl(self, node):
-        self.visit(node.type)
-        target = node.type.temp_location
-        self.temp_var_dict[node.name.name] = target
+        if isinstance(node.type, FuncDecl):
+            if node.isFunction: # TODO this is inside a FuncDef (that is, it is NOT a prototype) how about prototypes???
+                inst = ('define', node.name.name)
+                self.code.append(inst)
+                self.visit(node.type)
+                return_label = self.new_temp()
+                exit_label = self.new_temp()
+                self.temp_var_dict["return"] = return_label
+                self.temp_var_dict["exit_func"] = exit_label
+            else:
+                assert False, "IMPLEMENT PROTOTYPE CASE"
 
-        # Make the SSA opcode and append to list of generated instructions
-        #inst = ('alloc_' + getBasicType(node.type), target)
-        #self.code.append(inst)
-
-        if node.init:
-            self.visit(node.init)
-            # target_store = self.new_temp(node.type.type)
-            self.code.append(('store_' + getBasicType(node), node.init.temp_location, target))
+        else: # can be ArrayDecl or VarDecl
+            self.visit(node.type)
+            target = node.type.temp_location
+            if node.init:
+                self.visit(node.init)
+                #target_store = self.new_temp(node.type.type)
+                inst = ('store_' + getBasicType(node), node.init.temp_location, target)
+                self.code.append(inst)
 
     def visit_Return(self, node):
-        target = self.new_temp()
-        self.visit(node.expr)
-        self.code.append(('store_' + getBasicType(node.expr), node.expr.temp_location, target))
-        # Make the SSA opcode and append to list of generated instructions
-        inst = ('return_' + getBasicType(node), target)
+        bt = getBasicType(node)
+        # store return value
+        if bt != 'void':
+            self.visit(node.expr)
+            res = node.expr.temp_location
+            ret = self.temp_var_dict["return"]
+            inst = ('store_'+bt, res, ret)
+            self.code.append(inst)
+        # jump to exit of function
+        exit = self.temp_var_dict["exit_func"]
+        inst = ('jump', exit)
         self.code.append(inst)
 
     def visit_Constant(self, node):
@@ -210,10 +237,12 @@ class GenerateCode(NodeVisitor):
         tp = getBasicType(node)
         tmp = self.new_temp()
         node.temp_location = tmp
-        vid = '@'+node.name.name
+        vid = node.name.name
+        # store this variable in the dictionary
+        self.temp_var_dict[vid] = tmp
         # if global store on heap 
         if node.isGlobal:
-            inst = ('global_'+tp, vid)
+            inst = ('global_'+tp, '@'+vid)
         # otherwise, allocate on stack memory
         else:
             inst = ('alloc_'+tp, tmp)
@@ -222,9 +251,7 @@ class GenerateCode(NodeVisitor):
     def visit_LoadLocation(self, node):
         #target = self.new_temp(node.type)
         target = self.new_temp()
-        inst = ('load_'+node.type.name,
-                node.name,
-                target)
+        inst = ('load_'+node.type.name, node.name, target)
         self.code.append(inst)
         node.temp_location = target
 
@@ -249,6 +276,12 @@ class GenerateCode(NodeVisitor):
         inst = (opcode, node.left.temp_location)
         self.code.append(inst)
         node.temp_location = target
+
+    def visit_Type(self, node):
+        pass
+
+    def visit_EmptyStatement(self, node):
+        pass
 
 if __name__ == '__main__':
 
