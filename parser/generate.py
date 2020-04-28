@@ -25,33 +25,18 @@ TODO:
 ArrayDecl
 ArrayRef
 Assert
-Assignment
-BinaryOp
 Break
 Cast
-Compound
-Constant
-Decl
 DeclList
 EmptyStatement
 ExprList
 For
-FuncCall
-FuncDecl
-FuncDef
-GlobalDecl
-ID
 If
 InitList
-ParamList
 Print
-Program
 PtrDecl
 Read
-Return
 Type
-VarDecl
-UnaryOp
 While
 
 '''
@@ -192,13 +177,10 @@ class GenerateCode(NodeVisitor):
         # Store location of the result on the node
         node.gen_location = target
 
-    def visit_Assignment(self, node):
-        self.visit(node.value)
-
         inst = ('store_' + getBasicType(node.value), node.value.gen_location, self.temp_var_dict[node.assignee.name])
         self.code.append(inst)
 
-    def visit_PrintStatement(self, node):
+    def visit_Print(self, node):
         # Visit the expression
         self.visit(node.expr)
 
@@ -226,7 +208,7 @@ class GenerateCode(NodeVisitor):
         self.code.append(inst)
         node.gen_location = target
 
-    def visit_AssignmentStatement(self, node):
+    def visit_Assignment(self, node):
         self.visit(node.value)
         inst = ('store_'+node.value.type.name,
                 node.value.gen_location,
@@ -241,8 +223,6 @@ class GenerateCode(NodeVisitor):
         inst = (opcode, node.left.gen_location)
         self.code.append(inst)
         node.gen_location = target
-
-    # TODO: implement other visits
 
 if __name__ == '__main__':
 
