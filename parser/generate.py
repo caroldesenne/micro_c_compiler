@@ -247,13 +247,6 @@ class GenerateCode(NodeVisitor):
             inst = ('alloc_'+tp, tmp)
         self.code.append(inst)
 
-    def visit_LoadLocation(self, node):
-        #target = self.new_temp(node.type)
-        target = self.new_temp()
-        inst = ('load_'+node.type.name, node.name, target)
-        self.code.append(inst)
-        node.temp_location = target
-
     def visit_Assignment(self, node):
         self.visit(node.value)
         # The assignee can be of two types: ID or ArrayRef
