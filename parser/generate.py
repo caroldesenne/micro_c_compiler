@@ -164,21 +164,18 @@ class GenerateCode(NodeVisitor):
         # Visit the left and right expressions
         self.visit(node.left)
         self.visit(node.right)
-
         # Make a new temporary for storing the result
         #target = self.new_temp(getInnerMostType(node.type))
         target = self.new_temp()
-
         # Create the opcode and append to list
-        opcode = binary_ops[node.op] + "_"+getBasicType(node.left)
+        opcode = binary_ops[node.op]+"_"+getBasicType(node)
         inst = (opcode, node.left.gen_location, node.right.gen_location, target)
         self.code.append(inst)
-
         # Store location of the result on the node
         node.gen_location = target
 
-        inst = ('store_' + getBasicType(node.value), node.value.gen_location, self.temp_var_dict[node.assignee.name])
-        self.code.append(inst)
+        #inst = ('store_' + getBasicType(node.value), node.value.gen_location, self.temp_var_dict[node.assignee.name])
+        #self.code.append(inst)
 
     def visit_Print(self, node):
         # Visit the expression
