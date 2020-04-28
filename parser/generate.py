@@ -19,6 +19,43 @@ unary_ops = {
     '-': 'uneg',
 }
 
+'''
+TODO:
+
+ArrayDecl
+ArrayRef
+Assert
+Assignment
+BinaryOp
+Break
+Cast
+Compound
+Constant
+Decl
+DeclList
+EmptyStatement
+ExprList
+For
+FuncCall
+FuncDecl
+FuncDef
+GlobalDecl
+ID
+If
+InitList
+ParamList
+Print
+Program
+PtrDecl
+Read
+Return
+Type
+VarDecl
+UnaryOp
+While
+
+'''
+
 class GenerateCode(NodeVisitor):
     '''
     Node visitor class that creates 3-address encoded instruction sequences.
