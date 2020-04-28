@@ -235,13 +235,13 @@ class ArrayRef(Node):
     attr_names = ()
 
 class FuncCall(Node):
-    __slots__ = ('name','params','type','gen_location', 'coord')
+    __slots__ = ('name','params','type','temp_location', 'coord')
 
     def __init__(self, name, params, coord=None):
         self.name = name
         self.params = params
         self.type = None
-        self.gen_location = None
+        self.temp_location = None
         self.coord = coord
 
     def children(self):
@@ -253,12 +253,12 @@ class FuncCall(Node):
     attr_names = ()
 
 class ID(Node):
-    __slots__ = ('name','type', 'gen_location', 'coord')
+    __slots__ = ('name','type', 'temp_location', 'coord')
 
     def __init__(self,name,coord=None):
         self.name = name
         self.type = None
-        self.gen_location = None
+        self.temp_location = None
         self.coord = coord
 
     def children(self):
@@ -268,13 +268,14 @@ class ID(Node):
     attr_names = ('name', )
 
 class Assignment(Node):
-    __slots__ = ('op','assignee','value','type','coord')
+    __slots__ = ('op','assignee','value','type','temp_location','coord')
 
     def __init__(self,op,ass,v,coord=None):
         self.op = op
         self.assignee = ass
         self.value = v
         self.type = None
+        self.temp_location = None
         self.coord = coord
 
     def children(self):
@@ -301,14 +302,14 @@ class PtrDecl(Node):
     attr_names = ()
 
 class BinaryOp(Node):
-    __slots__ = ('op', 'left', 'right', 'type', 'gen_location', 'coord')
+    __slots__ = ('op', 'left', 'right', 'type', 'temp_location', 'coord')
 
     def __init__(self, op, left, right, coord=None):
         self.op = op
         self.left = left
         self.right = right
         self.type = type
-        self.gen_location = None
+        self.temp_location = None
         self.coord = coord
 
     def children(self):
@@ -320,11 +321,12 @@ class BinaryOp(Node):
     attr_names = ('op', )
 
 class Cast(Node):
-    __slots__ = ('type','expression','coord')
+    __slots__ = ('type','expression','temp_location','coord')
 
     def __init__(self, t, exp, coord=None):
         self.type = t
         self.expression = exp
+        self.temp_location = None
         self.coord = coord
 
     def children(self):
@@ -352,13 +354,13 @@ class UnaryOp(Node):
     attr_names = ('op', )
 
 class Constant(Node):
-    __slots__ = ('type', 'value', 'size', 'gen_location', 'coord')
+    __slots__ = ('type', 'value', 'size', 'temp_location', 'coord')
 
     def __init__(self, type, value, coord=None):
         self.type = type
         self.value = value
         self.coord = coord
-        self.gen_location = None
+        self.temp_location = None
         if(self.type=='string'):
             self.size = len(value)-2
         else:
@@ -387,12 +389,13 @@ class Type(Node):
     attr_names = ('names', )
 
 class VarDecl(Node):
-    __slots__ = ('name','type','isGlobal','coord')
+    __slots__ = ('name','type','isGlobal','temp_location','coord')
 
     def __init__(self, name, coord=None):
         self.name = name
         self.type = None
         self.isGlobal = False
+        self.temp_location = None
         self.coord = coord
 
     def children(self):
@@ -507,11 +510,12 @@ class For(Node):
     attr_names = ()
 
 class ExprList(Node):
-    __slots__ = ('list','type','coord')
+    __slots__ = ('list','type','temp_location','coord')
 
     def __init__(self,list,coord=None):
         self.list = list
         self.type = None
+        self.temp_location = None
         self.coord = coord
 
     def children(self):
