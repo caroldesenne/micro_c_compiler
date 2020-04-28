@@ -454,8 +454,8 @@ class CheckProgramVisitor(NodeVisitor):
     def visit_Cast(self,node):
         if node.expression:
             self.visit(node.expression)
-        t = self.scopes.find(node.type)
-        assert t!=None, f"{node.coord.line}:{node.coord.column} - must specify cast type."
+        t = getBasicType(node.type)
+        assert t != None, f"{node.coord.line}:{node.coord.column} - must specify cast type."
 
     def visit_PtrDecl(self,node):
         node.type = Type(names=['pointer'])
