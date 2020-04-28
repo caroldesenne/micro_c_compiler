@@ -16,8 +16,10 @@ binary_ops = {
 }
 
 unary_ops = {
-    '+': 'uadd',
-    '-': 'uneg',
+    '++': 'uadd',
+    '--': 'uneg',
+    'p++': 'puadd',
+    'p--': 'puneg',
 }
 
 '''
@@ -27,8 +29,6 @@ ArrayDecl
 ArrayRef
 Assert
 Break
-DeclList
-For
 If
 InitList
 Read
@@ -182,6 +182,37 @@ class GenerateCode(NodeVisitor):
         inst = ('jump', exit)
         self.code.append(inst)
 
+    def visit_For(self, node):
+        # TODO deal with scopes (there can be fors inside fors)
+        entry_label = self.new_temp()
+        body_label = self.new_temp()
+        exit_label = self.new_temp()
+        # this will be used when breaking
+        node.exit_label = exit_label
+        self.visit(node.init)
+        inst = (entry_label[1:],)
+        self.code.append(inst)
+        # check condition
+        self.visit(node.stop_cond)
+        inst = ('cbranch', node.stop_cond.temp_location, body_label, exit_label)
+        self.code.append(inst)
+        # start the function body
+        inst = (body_label[1:],)
+        self.code.append(inst)
+        # perform statement and increment
+        self.visit(node.statement)
+        self.visit(node.increment)
+        # jump back to beginning
+        inst = ('jump', entry_label[1:])
+        self.code.append(inst)
+        # or end for
+        inst = (exit_label[1:],)
+        self.code.append(inst)
+
+    def visit_DeclList(self, node):
+        for i, child in enumerate(node.decls or []):
+            self.visit(child)
+
     def visit_Constant(self, node):
         # Create a new temporary variable name
         #target = self.new_temp(node.type)
@@ -206,18 +237,17 @@ class GenerateCode(NodeVisitor):
         # Visit the left and right expressions
         self.visit(node.left)
         self.visit(node.right)
-        # Make a new temporary for storing the result
-        #target = self.new_temp(getInnerMostType(node.type))
         target = self.new_temp()
-        # Create the opcode and append to list
-        opcode = binary_ops[node.op]+"_"+getBasicType(node)
+        # Binary operation opcode
+        if node.op in binary_ops:
+            opcode = binary_ops[node.op]+"_"+getBasicType(node)
+        else:
+            opcode = node.op
+        # Relational opcode
         inst = (opcode, node.left.temp_location, node.right.temp_location, target)
         self.code.append(inst)
         # Store location of the result on the node
         node.temp_location = target
-
-        #inst = ('store_' + getBasicType(node.value), node.value.temp_location, self.temp_var_dict[node.assignee.name])
-        #self.code.append(inst)
 
     def visit_ExprList(self, node):
         for i, child in enumerate(node.list or []):
@@ -261,11 +291,11 @@ class GenerateCode(NodeVisitor):
         self.code.append(inst)
 
     def visit_UnaryOp(self, node):
-        self.visit(node.left)
-        #target = self.new_temp(node.type)
+        # TODO: check i++, ++i and split this into more operations # TODO FIX THIS GUY
+        self.visit(node.expression)
         target = self.new_temp()
-        opcode = unary_ops[node.op] + "_" + node.left.type.name
-        inst = (opcode, node.left.temp_location)
+        opcode = unary_ops[node.op] + "_" + getBasicType(node.expression.type)
+        inst = (opcode, node.expression.temp_location)
         self.code.append(inst)
         node.temp_location = target
 
