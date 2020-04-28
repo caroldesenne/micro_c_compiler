@@ -1,3 +1,4 @@
+import sys
 import ply.yacc as yacc
 import uctype
 from pprint import pprint
@@ -26,7 +27,6 @@ ArrayDecl
 ArrayRef
 Assert
 Break
-Cast
 DeclList
 EmptyStatement
 ExprList
@@ -67,14 +67,18 @@ class GenerateCode(NodeVisitor):
         self.versions[self.fname] += 1
         return name
 
-    def output_to_file(self, ir_filename):
+    def output(self, ir_filename=None):
         '''
-        outputs generated IR code to given file
+        outputs generated IR code to given file. If no file is given, output to stdout
         '''
-        print("Outputting the IR to %s." % ir_filename)
-        ir_file = open(ir_filename, 'w')
+        if ir_filename:
+            print("Outputting IR to %s." % ir_filename)
+            buf = open(ir_filename, 'w')
+        else:
+            print("Printing IR:\n\n")
+            buf = sys.stdout
         for i,line in enumerate(self.code or []):
-            pprint(line,ir_file)
+            pprint(line,buf)
 
     # You must implement visit_Nodename methods for all of the other
     # AST nodes.  In your code, you will need to make instructions
@@ -112,34 +116,42 @@ class GenerateCode(NodeVisitor):
         for i, child in enumerate(node.list or []):
             self.visit(child)
 
+    def visit_Cast(self, node):
+        self.visit(node.expression)
+        target = self.new_temp()
+        node.temp_location = target
+        if getBasicType(node.expression)=='int' and getBasicType(node)=='float':
+            cast = 'sitofp'
+        elif getBasicType(node.expression)=='float' and getBasicType(node)=='int':
+            cast = 'fptosi'
+        else:
+            err = f"{node.coord.line}:{node.coord.column} - bad cast operation: should be from int to float or vice-versa only."
+            assert False, err
+        inst = (cast,node.expression.temp_location,target)
+        self.code.append(inst)
+
     def visit_Compound(self, node):
         for i, child in enumerate(node.block_items or []):
             self.visit(child)
 
     def visit_Decl(self, node):
         self.visit(node.type)
-        #target = self.new_temp(node.type.type)
-        target = self.new_temp()
+        target = node.type.temp_location
         self.temp_var_dict[node.name.name] = target
 
         # Make the SSA opcode and append to list of generated instructions
-        inst = ('alloc_' + getBasicType(node.type), target)
-        self.code.append(inst)
+        #inst = ('alloc_' + getBasicType(node.type), target)
+        #self.code.append(inst)
 
         if node.init:
             self.visit(node.init)
             # target_store = self.new_temp(node.type.type)
-            self.code.append(('store_' + getBasicType(node), node.init.gen_location, target))
+            self.code.append(('store_' + getBasicType(node), node.init.temp_location, target))
 
     def visit_Return(self, node):
-        # Create a new temporary variable name
-        #target = self.new_temp(getInnerMostType(node.expr))
         target = self.new_temp()
-
         self.visit(node.expr)
-
-        self.code.append(('store_' + getBasicType(node.expr), node.expr.gen_location, target))
-
+        self.code.append(('store_' + getBasicType(node.expr), node.expr.temp_location, target))
         # Make the SSA opcode and append to list of generated instructions
         inst = ('return_' + getBasicType(node), target)
         self.code.append(inst)
@@ -148,17 +160,21 @@ class GenerateCode(NodeVisitor):
         # Create a new temporary variable name
         #target = self.new_temp(node.type)
         target = self.new_temp()
-
         # Make the SSA opcode and append to list of generated instructions
         inst = ('literal_'+node.type.names[0], node.value, target)
         self.code.append(inst)
 
         # Save the name of the temporary variable where the value was placed
-        node.gen_location = target
+        node.temp_location = target
 
     def visit_ID(self, node):
-        node.gen_location = self.temp_var_dict[node.name]
-        return node.gen_location
+        tmp = self.new_temp()
+        node.temp_location = tmp
+        source = self.temp_var_dict[node.name]
+        tp = getBasicType(node)
+        # load this variable in a new temp
+        inst = ('load_'+tp,source,tmp)
+        self.code.append(inst)
 
     def visit_BinaryOp(self, node):
         # Visit the left and right expressions
@@ -169,31 +185,38 @@ class GenerateCode(NodeVisitor):
         target = self.new_temp()
         # Create the opcode and append to list
         opcode = binary_ops[node.op]+"_"+getBasicType(node)
-        inst = (opcode, node.left.gen_location, node.right.gen_location, target)
+        inst = (opcode, node.left.temp_location, node.right.temp_location, target)
         self.code.append(inst)
         # Store location of the result on the node
-        node.gen_location = target
+        node.temp_location = target
 
-        #inst = ('store_' + getBasicType(node.value), node.value.gen_location, self.temp_var_dict[node.assignee.name])
+        #inst = ('store_' + getBasicType(node.value), node.value.temp_location, self.temp_var_dict[node.assignee.name])
         #self.code.append(inst)
+
+    def visit_ExprList(self, node):
+        for i, child in enumerate(node.list or []):
+            self.visit(child)
+        node.temp_location = node.list[0].temp_location
 
     def visit_Print(self, node):
         # Visit the expression
         self.visit(node.expr)
 
         # Create the opcode and append to list
-        inst = ('print_'+node.expr.type.name, node.expr.gen_location)
+        inst = ('print_'+node.expr.type.name, node.expr.temp_location)
         self.code.append(inst)
 
     def visit_VarDecl(self, node):
         tp = getBasicType(node)
+        tmp = self.new_temp()
+        node.temp_location = tmp
         vid = '@'+node.name.name
         # if global store on heap 
         if node.isGlobal:
             inst = ('global_'+tp, vid)
         # otherwise, allocate on stack memory
         else:
-            inst = ('alloc_'+tp, vid)
+            inst = ('alloc_'+tp, tmp)
         self.code.append(inst)
 
     def visit_LoadLocation(self, node):
@@ -203,13 +226,14 @@ class GenerateCode(NodeVisitor):
                 node.name,
                 target)
         self.code.append(inst)
-        node.gen_location = target
+        node.temp_location = target
 
     def visit_Assignment(self, node):
         self.visit(node.value)
-        inst = ('store_'+node.value.type.name,
-                node.value.gen_location,
-                node.location)
+        tmp = self.temp_var_dict[node.assignee.name]
+        self.temp_location = tmp
+        t = getBasicType(node)
+        inst = ('store_'+t, node.value.temp_location, tmp)
         self.code.append(inst)
 
     def visit_UnaryOp(self, node):
@@ -217,9 +241,9 @@ class GenerateCode(NodeVisitor):
         #target = self.new_temp(node.type)
         target = self.new_temp()
         opcode = unary_ops[node.op] + "_" + node.left.type.name
-        inst = (opcode, node.left.gen_location)
+        inst = (opcode, node.left.temp_location)
         self.code.append(inst)
-        node.gen_location = target
+        node.temp_location = target
 
 if __name__ == '__main__':
 
@@ -238,4 +262,4 @@ if __name__ == '__main__':
     gencode = GenerateCode()
     gencode.visit_Program(ast)
     ir_filename = filename[:-3] + '.code'
-    gencode.output_to_file(ir_filename)
+    gencode.output(ir_filename)
