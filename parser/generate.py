@@ -49,7 +49,17 @@ class Labels(object):
     def __init__(self):
         self.scope = []
         self.depth = 0
+        self.loopStack = []
         self.constants = 0
+
+    def insertExitLoop(self,label):
+        self.loopStack.append(label)
+
+    def popExitLoop(self):
+        self.loopStack.pop()
+
+    def getExitLoop(self):
+        return self.loopStack[-1]
 
     def pushLevel(self):
         s = SymbolTable()
@@ -179,12 +189,14 @@ class GenerateCode(NodeVisitor):
             self.visit(node.args)
 
     def visit_FuncCall(self, node):
+        # TODO TEST THIS
         for param in node.params.list:
             self.code.append(('param_' + getBasicType(param), param.name))
 
         self.code.append(('call', node.name.name))
 
     def visit_ParamList(self, node):
+        # TODO TEST THIS
         for i, child in enumerate(node.list or []):
             self.visit(child)
 
@@ -287,7 +299,9 @@ class GenerateCode(NodeVisitor):
         entry_label = self.new_temp()
         body_label = self.new_temp()
         exit_label = self.new_temp()
-        # TODO: do I need to insert this label as an exit_loop for the break to find? If yes, need to push new scope here?
+        # record this label for break
+        self.labels.insertExitLoop(exit_label)
+        # start of the while
         self.code.append((entry_label[1:],))
         # check condition
         self.visit(node.cond)
@@ -300,6 +314,7 @@ class GenerateCode(NodeVisitor):
         self.code.append(('jump', entry_label[1:]))
         # or end for
         self.code.append((exit_label[1:],))
+        self.labels.popExitLoop()
 
     def visit_For(self, node):
         self.labels.pushLevel()
@@ -307,7 +322,8 @@ class GenerateCode(NodeVisitor):
         body_label = self.new_temp()
         exit_label = self.new_temp()
         # record this for break
-        self.labels.insert("exit_loop",exit_label)
+        self.labels.insertExitLoop(exit_label)
+        # start of the for loop
         self.visit(node.init)
         self.code.append((entry_label[1:],))
         # check condition
@@ -322,10 +338,11 @@ class GenerateCode(NodeVisitor):
         self.code.append(('jump', entry_label[1:]))
         # or end for
         self.code.append((exit_label[1:],))
+        self.labels.popExitLoop()
         self.labels.popLevel()
 
     def visit_Break(self, node):
-        target = self.labels.find("exit_loop")
+        target = self.labels.getExitLoop()
         self.code.append(('jump', target))
 
     def visit_DeclList(self, node):
@@ -366,6 +383,7 @@ class GenerateCode(NodeVisitor):
         node.temp_location = node.list[0].temp_location
 
     def visit_Print(self, node):
+        # TODO can we have more than one expression to be printed? Should we have multiple prints then?
         if node.expr: # expression is not None
             self.visit(node.expr)
             inst = ('print_'+node.expr.type.name, node.expr.temp_location)
@@ -416,6 +434,7 @@ class GenerateCode(NodeVisitor):
             node.temp_location = target
 
     def visit_Read(self, node):
+        # TODO test this
         self.visit(node.expression)
         for exp in node.expression: # this is a list
             bt = getBasicType(exp)
