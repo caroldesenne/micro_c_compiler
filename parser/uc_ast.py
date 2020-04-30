@@ -253,12 +253,13 @@ class FuncCall(Node):
     attr_names = ()
 
 class ID(Node):
-    __slots__ = ('name','type', 'temp_location', 'coord')
+    __slots__ = ('name','type','temp_location','source','coord')
 
     def __init__(self,name,coord=None):
         self.name = name
         self.type = None
         self.temp_location = None
+        self.source = None
         self.coord = coord
 
     def children(self):
@@ -338,12 +339,13 @@ class Cast(Node):
     attr_names = ()
 
 class UnaryOp(Node):
-    __slots__ = ('op','expression','type','coord')
+    __slots__ = ('op','expression','type','temp_location','coord')
 
     def __init__(self, op, exp, coord=None):
         self.op = op
         self.expression = exp
         self.type = None
+        self.temp_location = None
         self.coord = coord
 
     def children(self):
