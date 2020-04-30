@@ -155,7 +155,7 @@ class GenerateCode(NodeVisitor):
                 self.temp_var_dict["return"] = return_label
                 self.temp_var_dict["exit_func"] = exit_label
             else:
-                assert False, "IMPLEMENT PROTOTYPE CASE"
+                pass # do nothing for prototype
 
         else: # can be ArrayDecl or VarDecl
             self.visit(node.type)
