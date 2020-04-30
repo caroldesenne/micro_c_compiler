@@ -28,11 +28,58 @@ TODO:
 ArrayDecl *
 ArrayRef *
 InitList *
-Read *
-('elem_type', source, index, target) # Load into target the address of source (array) indexed by index. *
-
 Fix others *
 '''
+
+class Labels(object):
+    '''
+    Class representing all the labels in a program (both local and global).
+    Each scope level is represented by a symbol table, and they are assembled in a list.
+    The first element of the list is the root scope (global variables) and we go into 
+    deeper scopes as we go through the array. Depth represents the maximal scope depth we are in
+    at the moment.
+    '''
+    def __init__(self):
+        self.scope = []
+        self.depth = 0
+
+    def pushLevel(self):
+        s = SymbolTable()
+        self.scope.append(s)
+        self.depth += 1
+
+    def popLevel(self):
+        self.scope.pop()
+        self.depth -= 1
+
+    def insertGlobal(self,sym,t):
+        '''
+        insert inserts a new symbol in the global symbol table (which is
+        the one represented by self.scope[0]).
+        '''
+        s = self.scope[0]
+        s.add(sym,t)
+
+    def insert(self,sym,t):
+        '''
+        insert inserts a new symbol in the symbol table of the current scope (which is
+        the one represented by depth, or self.scope[self.depth-1]).
+        '''
+        s = self.scope[self.depth-1]
+        s.add(sym,t)
+
+    def find(self,sym):
+        '''
+        find tries to find a symbol in the current scope or in previous scopes. If it finds it,
+        return the corresponding found, otherwise returns None.
+        '''
+        currentDepth = self.depth
+        while(currentDepth > 0):
+            s = self.scope[currentDepth-1]
+            if s.lookup(sym):
+                return s.lookup(sym)
+            currentDepth -= 1
+        return None
 
 class GenerateCode(NodeVisitor):
     '''
@@ -40,15 +87,16 @@ class GenerateCode(NodeVisitor):
     '''
     def __init__(self):
         super(GenerateCode, self).__init__()
-
         # version dictionary for temporaries
         self.fname = 'main'  # We use the function name as a key
         self.versions = {self.fname:0}
-
         # The generated code (list of tuples)
+        self.globals = []
         self.code = []
+        self.labels = Labels()
 
-        self.temp_var_dict = {}
+    def mergeCode(self):
+        self.code = self.globals + self.code
 
     def new_temp(self):
         '''
@@ -81,8 +129,11 @@ class GenerateCode(NodeVisitor):
     # on the names of the AST nodes you've defined.
 
     def visit_Program(self, node):
+        self.labels.pushLevel()
         for i, child in enumerate(node.gdecls or []):
             self.visit(child)
+        self.labels.popLevel()
+        self.mergeCode()
 
     def visit_GlobalDecl(self, node):
         for i, child in enumerate(node.decls or []):
@@ -97,7 +148,7 @@ class GenerateCode(NodeVisitor):
         self.visit(node.compound_statement)
         
         # insert exit label
-        exit = self.temp_var_dict["exit_func"]
+        exit = self.labels.find("exit_func")
         inst = (exit[1:],)
         self.code.append(inst)
         # insert return instruction
@@ -106,11 +157,12 @@ class GenerateCode(NodeVisitor):
             inst = ('return_void',)
         else:
             rvalue = self.new_temp()
-            ret = self.temp_var_dict["return"]
+            ret = self.labels.find("return")
             inst = ('load_'+bt, ret, rvalue)
             self.code.append(inst)
             inst = ('return_'+bt, rvalue)
         self.code.append(inst)
+        self.labels.popLevel()
 
     def visit_FuncDecl(self, node):
         if node.args:
@@ -146,14 +198,15 @@ class GenerateCode(NodeVisitor):
 
     def visit_Decl(self, node):
         if isinstance(node.type, FuncDecl):
-            if node.isFunction: # TODO this is inside a FuncDef (that is, it is NOT a prototype) how about prototypes???
+            if node.isFunction:
                 inst = ('define', node.name.name)
                 self.code.append(inst)
+                self.labels.pushLevel()
                 self.visit(node.type)
                 return_label = self.new_temp()
                 exit_label = self.new_temp()
-                self.temp_var_dict["return"] = return_label
-                self.temp_var_dict["exit_func"] = exit_label
+                self.labels.insert("return", return_label)
+                self.labels.insert("exit_func", exit_label)
             else:
                 pass # do nothing for prototype
 
@@ -172,11 +225,11 @@ class GenerateCode(NodeVisitor):
         if bt != 'void':
             self.visit(node.expr)
             res = node.expr.temp_location
-            ret = self.temp_var_dict["return"]
+            ret = self.labels.find("return")
             inst = ('store_'+bt, res, ret)
             self.code.append(inst)
         # jump to exit of function
-        exit = self.temp_var_dict["exit_func"]
+        exit = self.labels.find("exit_func")
         inst = ('jump', exit)
         self.code.append(inst)
 
@@ -196,41 +249,38 @@ class GenerateCode(NodeVisitor):
         # false branch
         inst = (false_label[1:],)
         self.code.append(inst)
+        # TODO alloc this string as a global variable
         fail = f"assertion_fail on {node.expr.coord.line}:{node.expr.coord.column}"
         inst = ('print_string', fail)
         self.code.append(inst)
-        exit = self.temp_var_dict["exit_func"]
+        exit = self.labels.find("exit_func")
         inst = ('jump', exit)
         self.code.append(inst)
 
     def visit_If(self, node):
-        if_label = self.new_temp()
-        if node.else_st:
-            else_label = self.new_temp() # TODO ask: do I need to always create this label?
+        true_label = self.new_temp()
+        false_label = self.new_temp()
         exit_label = self.new_temp()
         # test and branch
         self.visit(node.cond)
-        if node.else_st:
-            inst = ('cbranch', node.cond.temp_location, if_label, else_label)
-        else:
-            inst = ('cbranch', node.cond.temp_location, if_label, exit_label)
+        inst = ('cbranch', node.cond.temp_location, true_label, false_label)
         self.code.append(inst)
         # if statement
-        inst = (if_label[1:],)
+        inst = (true_label[1:],)
         self.code.append(inst)
         self.visit(node.statement)
-        inst = ('jump', exit_label)
-        self.code.append(inst)
-        # else statement
+        # else statement exists
         if node.else_st:
-            inst = (else_label[1:],)
+            inst = ('jump', exit_label)
+            self.code.append(inst)
+            inst = (false_label[1:],)
             self.code.append(inst)
             self.visit(node.else_st)
-            inst = ('jump', exit_label) # TODO do I need to jump from end of else to exit of if?
+            inst = (exit_label[1:],)
             self.code.append(inst)
-        # exit of if
-        inst = (exit_label[1:],)
-        self.code.append(inst)
+        else:
+            inst = (false_label[1:],)
+            self.code.append(inst)
 
     def visit_While(self, node):
         entry_label = self.new_temp()
@@ -255,12 +305,12 @@ class GenerateCode(NodeVisitor):
         self.code.append(inst)
 
     def visit_For(self, node):
-        # TODO deal with scopes (there can be fors inside fors)
+        self.labels.pushLevel()
         entry_label = self.new_temp()
         body_label = self.new_temp()
         exit_label = self.new_temp()
         # record this for break
-        self.temp_var_dict["exit_loop"] = exit_label
+        self.labels.insert("exit_loop",exit_label)
         self.visit(node.init)
         inst = (entry_label[1:],)
         self.code.append(inst)
@@ -280,9 +330,10 @@ class GenerateCode(NodeVisitor):
         # or end for
         inst = (exit_label[1:],)
         self.code.append(inst)
+        self.labels.popLevel()
 
     def visit_Break(self, node):
-        target = self.temp_var_dict["exit_loop"]
+        target = self.labels.find("exit_loop")
         inst = ('jump', target)
         self.code.append(inst)
 
@@ -303,7 +354,7 @@ class GenerateCode(NodeVisitor):
     def visit_ID(self, node):
         tmp = self.new_temp()
         node.temp_location = tmp
-        source = self.temp_var_dict[node.name]
+        source = self.labels.find(node.name)
         tp = getBasicType(node)
         # load this variable in a new temp
         inst = ('load_'+tp,source,tmp)
@@ -340,24 +391,25 @@ class GenerateCode(NodeVisitor):
 
     def visit_VarDecl(self, node):
         tp = getBasicType(node)
-        tmp = self.new_temp()
+        tmp = self.new_temp() # TODO do I need to ask for a new temp if it is global?? ask Marcio
         node.temp_location = tmp
         vid = node.name.name
-        # store this variable in the dictionary
-        self.temp_var_dict[vid] = tmp
         # if global store on heap 
         if node.isGlobal:
+            self.labels.insertGlobal(vid,tmp)
             inst = ('global_'+tp, '@'+vid)
+            self.globals.append(inst)
         # otherwise, allocate on stack memory
         else:
+            self.labels.insert(vid,tmp)
             inst = ('alloc_'+tp, tmp)
-        self.code.append(inst)
+            self.code.append(inst)
 
     def visit_Assignment(self, node):
         self.visit(node.value)
         # The assignee can be of two types: ID or ArrayRef
         if isinstance(node.assignee,ID):
-            tmp = self.temp_var_dict[node.assignee.name]
+            tmp = self.labels.find(node.assignee.name)
         elif isinstance(node.assignee,ArrayRef):
             self.visit(node.assignee)
             tmp = node.assignee.temp_location
@@ -367,7 +419,7 @@ class GenerateCode(NodeVisitor):
         self.code.append(inst)
 
     def visit_UnaryOp(self, node):
-        # TODO: check i++, ++i and split this into more operations # TODO FIX THIS GUY
+        # TODO: check i++, ++i and split this into more operations
         self.visit(node.expression)
         target = self.new_temp()
         opcode = unary_ops[node.op] + "_" + getBasicType(node.expression.type)
@@ -377,9 +429,15 @@ class GenerateCode(NodeVisitor):
 
     def visit_Read(self, node):
         self.visit(node.expression)
-        # TODO who is source?
-        source = 'TODO'
-        inst = ('read_'+getBasicType(node.expression), source)
+        for exp in node.expression: # this is a list
+            bt = getBasicType(exp)
+            # read in a temp
+            read_temp = self.new_temp()
+            inst = ('read_'+bt, read_temp)
+            self.code.append(inst)
+            # and store the value read in the exp location
+            inst = ('store_'+getBasicType(node.expression), read_temp, exp.temp_location)
+            self.code.append(inst)
 
     def visit_Type(self, node):
         pass
