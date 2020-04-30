@@ -155,19 +155,16 @@ class GenerateCode(NodeVisitor):
         
         # insert exit label
         exit = self.labels.find("exit_func")
-        inst = (exit[1:],)
-        self.code.append(inst)
+        self.code.append((exit[1:],))
         # insert return instruction
         bt = getBasicType(node)
         if bt=='void':
-            inst = ('return_void',)
+            self.code.append(('return_void',))
         else:
             rvalue = self.new_temp()
             ret = self.labels.find("return")
-            inst = ('load_'+bt, ret, rvalue)
-            self.code.append(inst)
-            inst = ('return_'+bt, rvalue)
-        self.code.append(inst)
+            self.code.append(('load_'+bt, ret, rvalue))
+            self.code.append(('return_'+bt, rvalue))
         self.labels.popLevel()
 
     def visit_FuncDecl(self, node):
@@ -195,8 +192,7 @@ class GenerateCode(NodeVisitor):
         else:
             err = f"{node.coord.line}:{node.coord.column} - bad cast operation: should be from int to float or vice-versa only."
             assert False, err
-        inst = (cast,node.expression.temp_location,target)
-        self.code.append(inst)
+        self.code.append((cast,node.expression.temp_location,target))
 
     def visit_Compound(self, node):
         for i, child in enumerate(node.block_items or []):
@@ -205,8 +201,7 @@ class GenerateCode(NodeVisitor):
     def visit_Decl(self, node):
         if isinstance(node.type, FuncDecl):
             if node.isFunction:
-                inst = ('define', node.name.name)
-                self.code.append(inst)
+                self.code.append(('define', node.name.name))
                 self.labels.pushLevel()
                 self.visit(node.type)
                 return_label = self.new_temp()
@@ -222,8 +217,7 @@ class GenerateCode(NodeVisitor):
             if node.init:
                 self.visit(node.init)
                 #target_store = self.new_temp(node.type.type)
-                inst = ('store_' + getBasicType(node), node.init.temp_location, target)
-                self.code.append(inst)
+                self.code.append(('store_' + getBasicType(node), node.init.temp_location, target))
 
     def visit_Return(self, node):
         bt = getBasicType(node)
@@ -232,12 +226,10 @@ class GenerateCode(NodeVisitor):
             self.visit(node.expr)
             res = node.expr.temp_location
             ret = self.labels.find("return")
-            inst = ('store_'+bt, res, ret)
-            self.code.append(inst)
+            self.code.append(('store_'+bt, res, ret))
         # jump to exit of function
         exit = self.labels.find("exit_func")
-        inst = ('jump', exit)
-        self.code.append(inst)
+        self.code.append(('jump', exit))
 
     def visit_Assert(self, node):
         self.visit(node.expr)
@@ -245,29 +237,21 @@ class GenerateCode(NodeVisitor):
         false_label = self.new_temp()
         exit_label = self.new_temp()
         # branch between true and false assertion
-        inst = ('cbranch', node.expr.temp_location, true_label, false_label)
-        self.code.append(inst)
+        self.code.append(('cbranch', node.expr.temp_location, true_label, false_label))
         # true branch
-        inst = (true_label[1:],)
-        self.code.append(inst)
-        inst = ('jump', exit_label)
-        self.code.append(inst)
+        self.code.append((true_label[1:],))
+        self.code.append(('jump', exit_label))
         # false branch
-        inst = (false_label[1:],)
-        self.code.append(inst)
+        self.code.append((false_label[1:],))
         # alloc the error string as a global variable
         const_name = self.labels.createConstant()
         fail = f"assertion_fail on {node.expr.coord.line}:{node.expr.coord.column}"
-        inst = ('global_string', const_name, fail)
-        self.globals.append(inst)
+        self.globals.append(('global_string', const_name, fail))
         # refer to the global constant to print the error
-        inst = ('print_string', const_name)
-        self.code.append(inst)
+        self.code.append(('print_string', const_name))
         exit = self.labels.find("exit_func")
-        inst = ('jump', exit)
-        self.code.append(inst)
-        inst = (exit_label[1:],)
-        self.code.append(inst)
+        self.code.append(('jump', exit))
+        self.code.append((exit_label[1:],))
 
     def visit_If(self, node):
         true_label = self.new_temp()
@@ -275,46 +259,36 @@ class GenerateCode(NodeVisitor):
         exit_label = self.new_temp()
         # test and branch
         self.visit(node.cond)
-        inst = ('cbranch', node.cond.temp_location, true_label, false_label)
-        self.code.append(inst)
+        self.code.append(('cbranch', node.cond.temp_location, true_label, false_label))
         # if statement
-        inst = (true_label[1:],)
-        self.code.append(inst)
+        self.code.append((true_label[1:],))
         self.visit(node.statement)
         # else statement exists
         if node.else_st:
-            inst = ('jump', exit_label)
-            self.code.append(inst)
-            inst = (false_label[1:],)
-            self.code.append(inst)
+            self.code.append(('jump', exit_label))
+            self.code.append((false_label[1:],))
             self.visit(node.else_st)
-            inst = (exit_label[1:],)
-            self.code.append(inst)
+            self.code.append((exit_label[1:],))
         else:
-            inst = (false_label[1:],)
-            self.code.append(inst)
+            self.code.append((false_label[1:],))
 
     def visit_While(self, node):
         entry_label = self.new_temp()
         body_label = self.new_temp()
         exit_label = self.new_temp()
-        inst = (entry_label[1:],)
-        self.code.append(inst)
+        # TODO: do I need to insert this label as an exit_loop for the break to find? If yes, need to push new scope here?
+        self.code.append((entry_label[1:],))
         # check condition
         self.visit(node.cond)
-        inst = ('cbranch', node.cond.temp_location, body_label, exit_label)
-        self.code.append(inst)
+        self.code.append(('cbranch', node.cond.temp_location, body_label, exit_label))
         # start the while body
-        inst = (body_label[1:],)
-        self.code.append(inst)
+        self.code.append((body_label[1:],))
         # perform statement
         self.visit(node.statement)
         # jump back to beginning
-        inst = ('jump', entry_label[1:])
-        self.code.append(inst)
+        self.code.append(('jump', entry_label[1:]))
         # or end for
-        inst = (exit_label[1:],)
-        self.code.append(inst)
+        self.code.append((exit_label[1:],))
 
     def visit_For(self, node):
         self.labels.pushLevel()
@@ -324,30 +298,24 @@ class GenerateCode(NodeVisitor):
         # record this for break
         self.labels.insert("exit_loop",exit_label)
         self.visit(node.init)
-        inst = (entry_label[1:],)
-        self.code.append(inst)
+        self.code.append((entry_label[1:],))
         # check condition
         self.visit(node.stop_cond)
-        inst = ('cbranch', node.stop_cond.temp_location, body_label, exit_label)
-        self.code.append(inst)
+        self.code.append(('cbranch', node.stop_cond.temp_location, body_label, exit_label))
         # start the for body
-        inst = (body_label[1:],)
-        self.code.append(inst)
+        self.code.append((body_label[1:],))
         # perform statement and increment
         self.visit(node.statement)
         self.visit(node.increment)
         # jump back to beginning
-        inst = ('jump', entry_label[1:])
-        self.code.append(inst)
+        self.code.append(('jump', entry_label[1:]))
         # or end for
-        inst = (exit_label[1:],)
-        self.code.append(inst)
+        self.code.append((exit_label[1:],))
         self.labels.popLevel()
 
     def visit_Break(self, node):
         target = self.labels.find("exit_loop")
-        inst = ('jump', target)
-        self.code.append(inst)
+        self.code.append(('jump', target))
 
     def visit_DeclList(self, node):
         for i, child in enumerate(node.decls or []):
@@ -355,11 +323,9 @@ class GenerateCode(NodeVisitor):
 
     def visit_Constant(self, node):
         # Create a new temporary variable name
-        #target = self.new_temp(node.type)
         target = self.new_temp()
         # Make the SSA opcode and append to list of generated instructions
-        inst = ('literal_'+node.type.names[0], node.value, target)
-        self.code.append(inst)
+        self.code.append(('literal_'+node.type.names[0], node.value, target))
         # Save the name of the temporary variable where the value was placed
         node.temp_location = target
 
@@ -369,8 +335,7 @@ class GenerateCode(NodeVisitor):
         source = self.labels.find(node.name)
         tp = getBasicType(node)
         # load this variable in a new temp
-        inst = ('load_'+tp,source,tmp)
-        self.code.append(inst)
+        self.code.append(('load_'+tp,source,tmp))
 
     def visit_BinaryOp(self, node):
         # Visit the left and right expressions
@@ -380,11 +345,9 @@ class GenerateCode(NodeVisitor):
         # Binary operation opcode
         if node.op in binary_ops:
             opcode = binary_ops[node.op]+"_"+getBasicType(node)
-        else:
+        else: # Relational opcode
             opcode = node.op
-        # Relational opcode
-        inst = (opcode, node.left.temp_location, node.right.temp_location, target)
-        self.code.append(inst)
+        self.code.append((opcode, node.left.temp_location, node.right.temp_location, target))
         # Store location of the result on the node
         node.temp_location = target
 
@@ -409,13 +372,11 @@ class GenerateCode(NodeVisitor):
         # if global store on heap 
         if node.isGlobal:
             self.labels.insertGlobal(vid,tmp) # TODO self.labels.insertGlobal(vid,'@vid')
-            inst = ('global_'+tp, '@'+vid)
-            self.globals.append(inst)
+            self.globals.append(('global_'+tp, '@'+vid))
         # otherwise, allocate on stack memory
         else:
             self.labels.insert(vid,tmp)
-            inst = ('alloc_'+tp, tmp)
-            self.code.append(inst)
+            self.code.append(('alloc_'+tp, tmp))
 
     def visit_Assignment(self, node):
         self.visit(node.value)
@@ -427,8 +388,7 @@ class GenerateCode(NodeVisitor):
             tmp = node.assignee.temp_location
         self.temp_location = tmp
         t = getBasicType(node)
-        inst = ('store_'+t, node.value.temp_location, tmp)
-        self.code.append(inst)
+        self.code.append(('store_'+t, node.value.temp_location, tmp))
 
     def visit_UnaryOp(self, node):
         # TODO: check i++, ++i and split this into more operations
@@ -445,11 +405,9 @@ class GenerateCode(NodeVisitor):
             bt = getBasicType(exp)
             # read in a temp
             read_temp = self.new_temp()
-            inst = ('read_'+bt, read_temp)
-            self.code.append(inst)
+            self.code.append(('read_'+bt, read_temp))
             # and store the value read in the exp location
-            inst = ('store_'+getBasicType(node.expression), read_temp, exp.temp_location)
-            self.code.append(inst)
+            self.code.append(('store_'+getBasicType(node.expression), read_temp, exp.temp_location))
 
     def visit_Type(self, node):
         pass
