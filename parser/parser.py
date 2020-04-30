@@ -159,7 +159,8 @@ class Parser():
         """
         string : STRING_LITERAL
         """
-        p[0] = Constant('string',p[1],coord=self._token_coord(p, 1))
+        s = p[1]
+        p[0] = Constant('string',s[1:-1],coord=self._token_coord(p, 1))
 
     def p_integer_constant(self, p):
         """

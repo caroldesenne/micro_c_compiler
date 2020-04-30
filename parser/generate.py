@@ -350,12 +350,19 @@ class GenerateCode(NodeVisitor):
             self.visit(child)
 
     def visit_Constant(self, node):
-        # Create a new temporary variable name
-        target = self.new_temp()
-        # Make the SSA opcode and append to list of generated instructions
-        self.code.append(('literal_'+node.type.names[0], node.value, target))
-        # Save the name of the temporary variable where the value was placed
-        node.temp_location = target
+        # if it is a string, save as global var
+        if getBasicType(node)=='string':
+            # alloc the error string as a global variable
+            const_name = self.labels.createConstant()
+            self.globals.append(('global_string', const_name, node.value))
+            node.temp_location = const_name
+        else:
+            # Create a new temporary variable name
+            target = self.new_temp()
+            # Make the SSA opcode and append to list of generated instructions
+            self.code.append(('literal_'+node.type.names[0], node.value, target))
+            # Save the name of the temporary variable where the value was placed
+            node.temp_location = target
 
     def visit_ID(self, node):
         tmp = self.new_temp()
@@ -383,13 +390,13 @@ class GenerateCode(NodeVisitor):
         node.temp_location = node.list[0].temp_location
 
     def visit_Print(self, node):
-        # TODO can we have more than one expression to be printed? Should we have multiple prints then?
         if node.expr: # expression is not None
-            self.visit(node.expr)
-            inst = ('print_'+node.expr.type.name, node.expr.temp_location)
+            for exp in node.expr.list:
+                self.visit(exp)
+                bt = getBasicType(exp)
+                self.code.append(('print_'+bt, exp.temp_location))
         else:
-            inst = ('print_void',)
-        self.code.append(inst)
+            self.code.append(('print_void',))
 
     def visit_VarDecl(self, node):
         tp = getBasicType(node)
