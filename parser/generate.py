@@ -54,7 +54,7 @@ class Labels(object):
         self.depth -= 1
 
     def createConstant(self):
-        s = '@.const.'+self.constants
+        s = '@.const.'+str(self.constants)
         self.constants += 1
         return s
 
@@ -210,14 +210,18 @@ class GenerateCode(NodeVisitor):
                 self.labels.insert("exit_func", exit_label)
             else:
                 pass # do nothing for prototype
-
         else: # can be ArrayDecl or VarDecl
             self.visit(node.type)
-            target = node.type.temp_location
             if node.init:
-                self.visit(node.init)
-                #target_store = self.new_temp(node.type.type)
-                self.code.append(('store_' + getBasicType(node), node.init.temp_location, target))
+                if(node.type.isGlobal): 
+                # if global, we need to pop last appended code and insert init on it
+                    line = self.globals.pop()
+                    init = str(node.init.value)
+                    self.globals.append((line[0],line[1],init))
+                else:
+                    self.visit(node.init)
+                    target = node.type.temp_location
+                    self.code.append(('store_' + getBasicType(node), node.init.temp_location, target))
 
     def visit_Return(self, node):
         bt = getBasicType(node)
@@ -366,15 +370,15 @@ class GenerateCode(NodeVisitor):
 
     def visit_VarDecl(self, node):
         tp = getBasicType(node)
-        tmp = self.new_temp() # TODO do I need to ask for a new temp if it is global?? ask Marcio
-        node.temp_location = tmp # TODO se nao precisa criar quando eh global, jogar isso no else
         vid = node.name.name
-        # if global store on heap 
+        # if global store on heap
         if node.isGlobal:
-            self.labels.insertGlobal(vid,tmp) # TODO self.labels.insertGlobal(vid,'@vid')
+            self.labels.insertGlobal(vid,'@'+vid)
             self.globals.append(('global_'+tp, '@'+vid))
         # otherwise, allocate on stack memory
         else:
+            tmp = self.new_temp()
+            node.temp_location = tmp
             self.labels.insert(vid,tmp)
             self.code.append(('alloc_'+tp, tmp))
 
