@@ -13,13 +13,21 @@ binary_ops = {
     '-': 'sub',
     '/': 'div',
     '%': 'mod',
+    '<': 'lt',
+    '<=': 'le',
+    '>=': 'ge',
+    '>': 'gt',
+    '==': 'eq',
+    '!=': 'ne',
+    '&&': 'and',
+    '||': 'or',
 }
 
 unary_ops = {
-    '++': 'uadd',
-    '--': 'uneg',
-    'p++': 'puadd',
-    'p--': 'puneg',
+    '++': 'add_int',
+    '--': 'sub_int',
+    'p++': 'add_int',
+    'p--': 'sub_int',
 }
 
 '''
@@ -28,7 +36,6 @@ TODO:
 ArrayDecl *
 ArrayRef *
 InitList *
-Fix others *
 '''
 
 class Labels(object):
@@ -335,8 +342,9 @@ class GenerateCode(NodeVisitor):
 
     def visit_ID(self, node):
         tmp = self.new_temp()
-        node.temp_location = tmp
         source = self.labels.find(node.name)
+        node.temp_location = tmp
+        node.source = source
         tp = getBasicType(node)
         # load this variable in a new temp
         self.code.append(('load_'+tp,source,tmp))
@@ -347,10 +355,7 @@ class GenerateCode(NodeVisitor):
         self.visit(node.right)
         target = self.new_temp()
         # Binary operation opcode
-        if node.op in binary_ops:
-            opcode = binary_ops[node.op]+"_"+getBasicType(node)
-        else: # Relational opcode
-            opcode = node.op
+        opcode = binary_ops[node.op]+"_"+getBasicType(node.left)
         self.code.append((opcode, node.left.temp_location, node.right.temp_location, target))
         # Store location of the result on the node
         node.temp_location = target
@@ -395,13 +400,20 @@ class GenerateCode(NodeVisitor):
         self.code.append(('store_'+t, node.value.temp_location, tmp))
 
     def visit_UnaryOp(self, node):
-        # TODO: check i++, ++i and split this into more operations
         self.visit(node.expression)
+        temp_label = node.expression.temp_location
         target = self.new_temp()
-        opcode = unary_ops[node.op] + "_" + getBasicType(node.expression.type)
-        inst = (opcode, node.expression.temp_location)
-        self.code.append(inst)
-        node.temp_location = target
+        # perform the operation (add or sub 1)
+        opcode = unary_ops[node.op]
+        self.code.append((opcode, temp_label, 1, target))
+        # store modified value back to original temp
+        source = node.expression.source
+        self.code.append(('store_int', target, source))
+        # save this nodes temp location
+        if node.op[0]=='p': # postifx_operation: save the initial temp_label value
+            node.temp_location = temp_label
+        else:
+            node.temp_location = target
 
     def visit_Read(self, node):
         self.visit(node.expression)
