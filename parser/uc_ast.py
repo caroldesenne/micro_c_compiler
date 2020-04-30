@@ -253,13 +253,12 @@ class FuncCall(Node):
     attr_names = ()
 
 class ID(Node):
-    __slots__ = ('name','type','temp_location','source','coord')
+    __slots__ = ('name','type','temp_location','coord')
 
     def __init__(self,name,coord=None):
         self.name = name
         self.type = None
         self.temp_location = None
-        self.source = None
         self.coord = coord
 
     def children(self):

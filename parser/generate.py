@@ -189,7 +189,7 @@ class GenerateCode(NodeVisitor):
             self.visit(node.args)
 
     def visit_FuncCall(self, node):
-        # TODO TEST THIS
+        # TODO FIX AND TEST THIS
         for param in node.params.list:
             self.code.append(('param_' + getBasicType(param), param.name))
 
@@ -200,6 +200,7 @@ class GenerateCode(NodeVisitor):
             self.visit(child)
 
     def visit_Cast(self, node):
+        # TODO FIX ID THING
         self.visit(node.expression)
         target = self.new_temp()
         node.temp_location = target
@@ -217,6 +218,7 @@ class GenerateCode(NodeVisitor):
             self.visit(child)
 
     def visit_Decl(self, node):
+        # TODO FIX ID THING
         if isinstance(node.type, FuncDecl):
             if node.isFunction:
                 self.code.append(('define', node.name.name))
@@ -242,6 +244,7 @@ class GenerateCode(NodeVisitor):
                     self.code.append(('store_' + getBasicType(node), node.init.temp_location, target))
 
     def visit_Return(self, node):
+        # TODO FIX ID THING
         bt = getBasicType(node)
         # store return value
         if bt != 'void':
@@ -254,6 +257,7 @@ class GenerateCode(NodeVisitor):
         self.code.append(('jump', exit))
 
     def visit_Assert(self, node):
+        # TODO FIX ID THING load things before using
         self.visit(node.expr)
         true_label = self.new_temp()
         false_label = self.new_temp()
@@ -372,6 +376,7 @@ class GenerateCode(NodeVisitor):
         # self.code.append(('load_'+tp,source,tmp))
 
     def visit_BinaryOp(self, node):
+        # TODO FIX ID THING
         # Visit the left and right expressions
         self.visit(node.left)
         self.visit(node.right)
@@ -388,6 +393,7 @@ class GenerateCode(NodeVisitor):
         node.temp_location = node.list[0].temp_location
 
     def visit_Print(self, node):
+        # TODO FIX ID THING: load before printing
         if node.expr: # expression is not None
             for exp in node.expr.list:
                 self.visit(exp)
@@ -397,6 +403,7 @@ class GenerateCode(NodeVisitor):
             self.code.append(('print_void',))
 
     def visit_VarDecl(self, node):
+        # TODO FIX ID THING
         tp = getBasicType(node)
         vid = node.name.name
         # if global store on heap
@@ -411,6 +418,7 @@ class GenerateCode(NodeVisitor):
             self.code.append(('alloc_'+tp, tmp))
 
     def visit_Assignment(self, node):
+        # TODO FIX ID THING
         self.visit(node.value)
         # The assignee can be of two types: ID or ArrayRef
         if isinstance(node.assignee,ID):
