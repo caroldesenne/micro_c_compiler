@@ -42,6 +42,7 @@ class Labels(object):
     def __init__(self):
         self.scope = []
         self.depth = 0
+        self.constants = 0
 
     def pushLevel(self):
         s = SymbolTable()
@@ -51,6 +52,11 @@ class Labels(object):
     def popLevel(self):
         self.scope.pop()
         self.depth -= 1
+
+    def createConstant(self):
+        s = '@.const.'+self.constants
+        self.constants += 1
+        return s
 
     def insertGlobal(self,sym,t):
         '''
@@ -249,12 +255,18 @@ class GenerateCode(NodeVisitor):
         # false branch
         inst = (false_label[1:],)
         self.code.append(inst)
-        # TODO alloc this string as a global variable
+        # alloc the error string as a global variable
+        const_name = self.labels.createConstant()
         fail = f"assertion_fail on {node.expr.coord.line}:{node.expr.coord.column}"
-        inst = ('print_string', fail)
+        inst = ('global_string', const_name, fail)
+        self.globals.append(inst)
+        # refer to the global constant to print the error
+        inst = ('print_string', const_name)
         self.code.append(inst)
         exit = self.labels.find("exit_func")
         inst = ('jump', exit)
+        self.code.append(inst)
+        inst = (exit_label[1:],)
         self.code.append(inst)
 
     def visit_If(self, node):
@@ -392,11 +404,11 @@ class GenerateCode(NodeVisitor):
     def visit_VarDecl(self, node):
         tp = getBasicType(node)
         tmp = self.new_temp() # TODO do I need to ask for a new temp if it is global?? ask Marcio
-        node.temp_location = tmp
+        node.temp_location = tmp # TODO se nao precisa criar quando eh global, jogar isso no else
         vid = node.name.name
         # if global store on heap 
         if node.isGlobal:
-            self.labels.insertGlobal(vid,tmp)
+            self.labels.insertGlobal(vid,tmp) # TODO self.labels.insertGlobal(vid,'@vid')
             inst = ('global_'+tp, '@'+vid)
             self.globals.append(inst)
         # otherwise, allocate on stack memory
