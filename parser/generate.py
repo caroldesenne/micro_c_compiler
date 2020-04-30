@@ -196,7 +196,6 @@ class GenerateCode(NodeVisitor):
         self.code.append(('call', node.name.name))
 
     def visit_ParamList(self, node):
-        # TODO TEST THIS
         for i, child in enumerate(node.list or []):
             self.visit(child)
 
@@ -365,13 +364,12 @@ class GenerateCode(NodeVisitor):
             node.temp_location = target
 
     def visit_ID(self, node):
-        tmp = self.new_temp()
         source = self.labels.find(node.name)
-        node.temp_location = tmp
-        node.source = source
-        tp = getBasicType(node)
-        # load this variable in a new temp
-        self.code.append(('load_'+tp,source,tmp))
+        node.temp_location = source
+        # TODO DO THIS ELEWHERE IN THE CODE the loads
+        # tmp = self.new_temp()
+        # tp = getBasicType(node)
+        # self.code.append(('load_'+tp,source,tmp))
 
     def visit_BinaryOp(self, node):
         # Visit the left and right expressions
@@ -426,13 +424,15 @@ class GenerateCode(NodeVisitor):
 
     def visit_UnaryOp(self, node):
         self.visit(node.expression)
-        temp_label = node.expression.temp_location
+        temp_label = self.new_temp()
         target = self.new_temp()
+        source = node.expression.temp_location
+        # load whatever was there
+        self.code.append(('load_int', source, temp_label))
         # perform the operation (add or sub 1)
         opcode = unary_ops[node.op]
         self.code.append((opcode, temp_label, 1, target))
         # store modified value back to original temp
-        source = node.expression.source
         self.code.append(('store_int', target, source))
         # save this nodes temp location
         if node.op[0]=='p': # postifx_operation: save the initial temp_label value
@@ -441,15 +441,14 @@ class GenerateCode(NodeVisitor):
             node.temp_location = target
 
     def visit_Read(self, node):
-        # TODO test this
-        self.visit(node.expression)
-        for exp in node.expression: # this is a list
+        for exp in node.expr.list:
+            self.visit(exp)
             bt = getBasicType(exp)
             # read in a temp
             read_temp = self.new_temp()
             self.code.append(('read_'+bt, read_temp))
             # and store the value read in the exp location
-            self.code.append(('store_'+getBasicType(node.expression), read_temp, exp.temp_location))
+            self.code.append(('store_'+getBasicType(exp), read_temp, exp.temp_location))
 
     def visit_Type(self, node):
         pass
