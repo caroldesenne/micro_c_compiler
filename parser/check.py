@@ -180,7 +180,7 @@ class CheckProgramVisitor(NodeVisitor):
         decl = node.decl
         while not isinstance(decl,Decl):
             decl = decl.type
-        decl.isFunction = True # new scope is pushed in visit_Decl()
+        decl.isPrototype = False # new scope is pushed in visit_Decl()
         self.visit(node.decl)
         # insert in scope expected return type
         self.scopes.insert("return",node.type)
@@ -190,25 +190,32 @@ class CheckProgramVisitor(NodeVisitor):
         self.scopes.popLevel()
 
     def visit_Decl(self,node):
-        t = node.type
         sym = node.name.name # get ID from Decl (which is called name), then its name
         # check if symbol exists already, otherwise insert it in scope
         alreadyDefined = f"{node.coord.line}:{node.coord.column} - symbol {sym} already defined in current scope."
-        assert self.scopes.insert(sym,t), alreadyDefined
 
         if isinstance(node.type,FuncDecl):
-            self.scopes.pushLevel() # TODO fazer push do escopo dentro de FuncDecl
+            node.type.isPrototype = node.isPrototype
+            self.scopes.pushLevel()
             self.visit(node.type)
-            if not node.isFunction: # this is the prototype case (FuncDecl outside a FuncDef)
+            if node.isPrototype: # this is the prototype case (FuncDecl outside a FuncDef)
                 self.scopes.popLevel()
+                assert self.scopes.insert(sym,node.type), alreadyDefined
+            else:
+                proto = self.scopes.find(sym)
+                if proto: # check if there is some prototype already defined
+                    assert proto.isPrototype, alreadyDefined # this proto is actually another function, not prototype
+                    # TODO test if prototype and function params match
 
-        elif isinstance(node.type,PtrDecl):
-            # TODO
+            return
+
+        if isinstance(node.type,PtrDecl):
             assert False, "PtrDecl not implemented yet."
-            self.visit(node.type)
+        
+        assert self.scopes.insert(sym,node.type), alreadyDefined
+        self.visit(node.type)
 
-        elif node.init:
-            self.visit(node.type)
+        if node.init:
             self.visit(node.init)
             if isinstance(node.type,ArrayDecl):
                 self.check_Decl_ArrayDecl(node)
@@ -217,9 +224,6 @@ class CheckProgramVisitor(NodeVisitor):
                 td = getInnerMostType(node)
                 ti = getInnerMostType(node.init)
                 assert typesEqual(td,ti), f"{node.coord.line}:{node.coord.column} - declaration and initializer types must match."
-
-        else:
-            self.visit(node.type)
 
     def check_Decl_ArrayDecl(self,node):
         isString = False

@@ -253,7 +253,9 @@ class GenerateCode(NodeVisitor):
 
     def visit_Decl(self, node):
         if isinstance(node.type, FuncDecl):
-            if node.isFunction:
+            if node.isPrototype:
+                pass # do nothing for prototype for now
+            else: # this is a function definition
                 self.code.append(('define', node.name.name))
                 return_label = self.new_temp()
                 exit_label = self.new_temp()
@@ -261,8 +263,6 @@ class GenerateCode(NodeVisitor):
                 self.visit(node.type)
                 self.labels.insert("return", return_label)
                 self.labels.insert("exit_func", exit_label)
-            else:
-                pass # do nothing for prototype
         else: # can be ArrayDecl or VarDecl
             self.visit(node.type)
             if node.init:

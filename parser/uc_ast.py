@@ -148,11 +148,12 @@ class DeclList(Node):
     attr_names = ()
 
 class FuncDecl(Node):
-    __slots__ = ('args', 'type', 'coord')
+    __slots__ = ('args', 'type', 'isPrototype','coord')
 
     def __init__(self, args, type, coord=None):
         self.args = args
         self.type = type
+        self.isPrototype = True
         self.coord = coord
 
     def children(self):
@@ -407,13 +408,13 @@ class VarDecl(Node):
     attr_names = ()
 
 class Decl(Node):
-    __slots__ = ('name', 'type', 'init', 'isFunction','coord')
+    __slots__ = ('name', 'type', 'init', 'isPrototype','coord')
 
     def __init__(self, name, type, init, coord=None):
         self.name = name
         self.type = type
         self.init = init
-        self.isFunction = False
+        self.isPrototype = True
         self.coord = coord
 
     def children(self):
