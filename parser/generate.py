@@ -213,12 +213,16 @@ class GenerateCode(NodeVisitor):
     def visit_FuncCall(self, node):
         bt = getBasicType(node)
         # load params
+        all_params = []
         for param in node.params.list:
             self.visit(param)
             tmp = param.temp_location
             if isinstance(param,ID):
                 tmp = self.loadExpression(param)
-            self.code.append(('param_' + getBasicType(param), tmp))
+            all_params.append(('param_' + getBasicType(param), tmp))
+        # put all params together
+        for p in all_params:
+            self.code.append(p)
         # load function and call it
         func = self.new_temp()
         result = self.new_temp()
@@ -432,7 +436,9 @@ class GenerateCode(NodeVisitor):
         if node.expr: # expression is not None
             for exp in node.expr.list:
                 self.visit(exp)
-                tmp = self.loadExpression(exp)
+                tmp = exp.temp_location
+                if isinstance(exp,ID):
+                    tmp = self.loadExpression(exp)
                 bt = getBasicType(exp)
                 self.code.append(('print_'+bt, tmp))
         else:

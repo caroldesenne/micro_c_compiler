@@ -164,6 +164,15 @@ class CheckProgramVisitor(NodeVisitor):
     def __init__(self):
         self.scopes = Scopes()
 
+    def checkArgumentsMatch(self,args1,args2,coord):
+        err = f"{coord.line}:{coord.column} - argument list sizes must be the same."
+        assert (args1==None and args2==None) or (len(args1)==len(args2)), err
+        for i, arg in enumerate(args1 or []):
+            err = f"{arg.coord.line}:{arg.coord.column} - arguments types must match."
+            pt = getInnerMostType(arg)
+            at = getInnerMostType(args2[i])
+            assert typesEqual(pt,at), err
+
     def visit_Program(self,node):
         self.scopes.pushLevel()
         for i, child in enumerate(node.gdecls or []):
@@ -203,10 +212,8 @@ class CheckProgramVisitor(NodeVisitor):
                 proto = self.scopes.find(sym)
                 if proto: # check if there is some prototype already defined
                     assert proto.isPrototype, alreadyDefined # this proto is actually another function, not prototype
-                    # TODO test if prototype and function params match
-                    
-                else:
-                    self.scopes.insert(sym,node.type)
+                    node.type.proto = proto # keep this value here for parameters and type checks later
+                self.scopes.insert(sym,node.type)
             # visit and deal with levels
             self.scopes.pushLevel()
             self.visit(node.type)
@@ -325,6 +332,14 @@ class CheckProgramVisitor(NodeVisitor):
         if node.args:
             self.visit(node.args)
         self.visit(node.type)
+        if node.proto: # check if everything matches with prototype
+            # check matching types
+            bt = getBasicType(node)
+            pbt = getBasicType(node.proto)
+            tmatch = f"{node.coord.line}:{node.coord.column} - prototype and function definition types must match."
+            assert bt==pbt, tmatch
+            # check parameter types and size
+            self.checkArgumentsMatch(node.args.list,node.proto.args.list,node.coord)
 
     def visit_ParamList(self,node):
         for i, child in enumerate(node.list or []):
@@ -347,6 +362,7 @@ class CheckProgramVisitor(NodeVisitor):
         assert bt=='bool', err
 
     def visit_FuncCall(self,node):
+        self.visit(node.params)
         self.visit(node.name)
         node.type = node.name.type
         func = self.scopes.find(node.name.name)
@@ -359,15 +375,8 @@ class CheckProgramVisitor(NodeVisitor):
             par_list = [node.params]
         else:
             par_list = node.params.list
-        err = f"{node.coord.line}:{node.coord.column} - number of arguments must match with function declaration."
-        assert len(arg_list)==len(par_list), err
-        # check arguments types match parameters type
-        for i, par in enumerate(par_list or []):
-            self.visit(par)
-            err = f"{par.coord.line}:{par.coord.column} - argument type doesn't match parameter in function declaration."
-            pt = getInnerMostType(par)
-            at = getInnerMostType(arg_list[i])
-            assert typesEqual(pt,at), err
+        # check arguments types match parameters type and list size matches declaration
+        self.checkArgumentsMatch(arg_list,par_list,node.coord)
 
     def visit_Constant(self,node):
         if not isinstance(node.type,Type):
