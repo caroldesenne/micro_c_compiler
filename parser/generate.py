@@ -211,11 +211,21 @@ class GenerateCode(NodeVisitor):
             self.visit(node.args)
 
     def visit_FuncCall(self, node):
-        # TODO FIX AND TEST THIS
+        bt = getBasicType(node)
+        # load params
         for param in node.params.list:
-            self.code.append(('param_' + getBasicType(param), param.name))
-
-        self.code.append(('call', node.name.name))
+            self.visit(param)
+            tmp = param.temp_location
+            if isinstance(param,ID):
+                tmp = self.loadExpression(param)
+            self.code.append(('param_' + getBasicType(param), tmp))
+        # load function and call it
+        func = self.new_temp()
+        result = self.new_temp()
+        self.code.append(('load_'+bt, node.name.name, func)) 
+        self.code.append(('call', func, result))
+        # store result label from call
+        node.temp_location = result
 
     def visit_ParamList(self, node):
         for i, child in enumerate(node.list or []):
@@ -245,10 +255,10 @@ class GenerateCode(NodeVisitor):
         if isinstance(node.type, FuncDecl):
             if node.isFunction:
                 self.code.append(('define', node.name.name))
-                self.labels.pushLevel()
-                self.visit(node.type)
                 return_label = self.new_temp()
                 exit_label = self.new_temp()
+                self.labels.pushLevel()
+                self.visit(node.type)
                 self.labels.insert("return", return_label)
                 self.labels.insert("exit_func", exit_label)
             else:
