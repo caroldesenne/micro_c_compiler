@@ -390,7 +390,7 @@ class GenerateCode(NodeVisitor):
         if getBasicType(node)=='string':
             # alloc the error string as a global variable
             const_name = self.labels.createConstant()
-            self.globals.append(('global_string', const_name, node.value))
+            self.globals.append(('global_string', const_name, node.value[1:-1]))
             node.temp_location = const_name
         else:
             # Create a new temporary variable name
