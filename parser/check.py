@@ -195,18 +195,23 @@ class CheckProgramVisitor(NodeVisitor):
         alreadyDefined = f"{node.coord.line}:{node.coord.column} - symbol {sym} already defined in current scope."
 
         if isinstance(node.type,FuncDecl):
+            # check names and parameter types
             node.type.isPrototype = node.isPrototype
-            self.scopes.pushLevel()
-            self.visit(node.type)
             if node.isPrototype: # this is the prototype case (FuncDecl outside a FuncDef)
-                self.scopes.popLevel()
                 assert self.scopes.insert(sym,node.type), alreadyDefined
             else:
                 proto = self.scopes.find(sym)
                 if proto: # check if there is some prototype already defined
                     assert proto.isPrototype, alreadyDefined # this proto is actually another function, not prototype
                     # TODO test if prototype and function params match
-
+                    
+                else:
+                    self.scopes.insert(sym,node.type)
+            # visit and deal with levels
+            self.scopes.pushLevel()
+            self.visit(node.type)
+            if node.isPrototype: # this is the prototype case (FuncDecl outside a FuncDef)
+                self.scopes.popLevel()
             return
 
         if isinstance(node.type,PtrDecl):
