@@ -23,11 +23,23 @@ binary_ops = {
     '||': 'or',
 }
 
+assignments = {
+    '+=': 'add',
+    '-=': 'sub',
+    '*=': 'mul',
+    '/=': 'div',
+    '%=': 'mod',
+}
+
 unary_ops = {
     '++': 'add_int',
     '--': 'sub_int',
     'p++': 'add_int',
     'p--': 'sub_int',
+    # TODO FIX UNARY EXPRESSIONS
+    #'-', : ?? 
+    #'+', : ?? 
+    #'!', : ?? 
 }
 
 '''
@@ -131,6 +143,16 @@ class GenerateCode(NodeVisitor):
         self.versions[self.fname] += 1
         return name
 
+    def loadExpression(self,exp):
+        '''
+        performs a load operation and returns the temporary
+        of the resulting load.
+        '''
+        tmp = self.new_temp()
+        bt = getBasicType(exp)
+        self.code.append(('load_'+bt,exp.temp_location,tmp))
+        return tmp
+
     def output(self, ir_filename=None):
         '''
         outputs generated IR code to given file. If no file is given, output to stdout
@@ -200,8 +222,10 @@ class GenerateCode(NodeVisitor):
             self.visit(child)
 
     def visit_Cast(self, node):
-        # TODO FIX ID THING
         self.visit(node.expression)
+        tmp = node.expression.temp_location
+        if isinstance(node.expression,ID):
+            tmp = self.loadExpression(node.expression)
         target = self.new_temp()
         node.temp_location = target
         if getBasicType(node.expression)=='int' and getBasicType(node)=='float':
@@ -211,14 +235,13 @@ class GenerateCode(NodeVisitor):
         else:
             err = f"{node.coord.line}:{node.coord.column} - bad cast operation: should be from int to float or vice-versa only."
             assert False, err
-        self.code.append((cast,node.expression.temp_location,target))
+        self.code.append((cast,tmp,target))
 
     def visit_Compound(self, node):
         for i, child in enumerate(node.block_items or []):
             self.visit(child)
 
     def visit_Decl(self, node):
-        # TODO FIX ID THING
         if isinstance(node.type, FuncDecl):
             if node.isFunction:
                 self.code.append(('define', node.name.name))
@@ -244,12 +267,13 @@ class GenerateCode(NodeVisitor):
                     self.code.append(('store_' + getBasicType(node), node.init.temp_location, target))
 
     def visit_Return(self, node):
-        # TODO FIX ID THING
         bt = getBasicType(node)
         # store return value
         if bt != 'void':
             self.visit(node.expr)
             res = node.expr.temp_location
+            if isinstance(node.expr,ID):
+                res = self.loadExpression(node.expr)
             ret = self.labels.find("return")
             self.code.append(('store_'+bt, res, ret))
         # jump to exit of function
@@ -257,7 +281,6 @@ class GenerateCode(NodeVisitor):
         self.code.append(('jump', exit))
 
     def visit_Assert(self, node):
-        # TODO FIX ID THING load things before using
         self.visit(node.expr)
         true_label = self.new_temp()
         false_label = self.new_temp()
@@ -370,20 +393,23 @@ class GenerateCode(NodeVisitor):
     def visit_ID(self, node):
         source = self.labels.find(node.name)
         node.temp_location = source
-        # TODO DO THIS ELEWHERE IN THE CODE the loads
-        # tmp = self.new_temp()
-        # tp = getBasicType(node)
-        # self.code.append(('load_'+tp,source,tmp))
 
     def visit_BinaryOp(self, node):
-        # TODO FIX ID THING
         # Visit the left and right expressions
         self.visit(node.left)
         self.visit(node.right)
+        # load both left and right
+        tmp1 = node.left.temp_location
+        tmp2 = node.right.temp_location
+        if isinstance(node.left,ID):
+            tmp1 = self.loadExpression(node.left)
+        if isinstance(node.right,ID):
+            tmp2 = self.loadExpression(node.right)
+        bt = getBasicType(node.left)
+        # perform the binary operation
         target = self.new_temp()
-        # Binary operation opcode
         opcode = binary_ops[node.op]+"_"+getBasicType(node.left)
-        self.code.append((opcode, node.left.temp_location, node.right.temp_location, target))
+        self.code.append((opcode, tmp1, tmp2, target))
         # Store location of the result on the node
         node.temp_location = target
 
@@ -393,17 +419,16 @@ class GenerateCode(NodeVisitor):
         node.temp_location = node.list[0].temp_location
 
     def visit_Print(self, node):
-        # TODO FIX ID THING: load before printing
         if node.expr: # expression is not None
             for exp in node.expr.list:
                 self.visit(exp)
+                tmp = self.loadExpression(exp)
                 bt = getBasicType(exp)
-                self.code.append(('print_'+bt, exp.temp_location))
+                self.code.append(('print_'+bt, tmp))
         else:
             self.code.append(('print_void',))
 
     def visit_VarDecl(self, node):
-        # TODO FIX ID THING
         tp = getBasicType(node)
         vid = node.name.name
         # if global store on heap
@@ -418,33 +443,40 @@ class GenerateCode(NodeVisitor):
             self.code.append(('alloc_'+tp, tmp))
 
     def visit_Assignment(self, node):
-        # TODO FIX ID THING
+        bt = getBasicType(node)
+        # load value
         self.visit(node.value)
+        val = node.value.temp_location
+        if isinstance(node.value, ID):
+            val = self.loadExpression(node.value)
         # The assignee can be of two types: ID or ArrayRef
-        if isinstance(node.assignee,ID):
-            tmp = self.labels.find(node.assignee.name)
-        elif isinstance(node.assignee,ArrayRef):
-            self.visit(node.assignee)
-            tmp = node.assignee.temp_location
-        self.temp_location = tmp
-        t = getBasicType(node)
-        self.code.append(('store_'+t, node.value.temp_location, tmp))
+        self.visit(node.assignee)
+        if node.op =='=':
+            tmp = val
+        else: # not a simple assignment, so need to perform operations
+            aux = self.loadExpression(node.assignee)
+            tmp = self.new_temp()
+            self.code.append((assignments[node.op]+'_'+bt,aux,val,tmp))
+        origin = node.assignee.temp_location
+        self.temp_location = origin
+        self.code.append(('store_'+bt, tmp, origin))
 
     def visit_UnaryOp(self, node):
         self.visit(node.expression)
-        temp_label = self.new_temp()
-        target = self.new_temp()
-        source = node.expression.temp_location
         # load whatever was there
-        self.code.append(('load_int', source, temp_label))
+        source = node.expression.temp_location
+        if isinstance(node.expression,ID):
+            source = self.loadExpression(node.expression)
         # perform the operation (add or sub 1)
         opcode = unary_ops[node.op]
-        self.code.append((opcode, temp_label, 1, target))
+        target = self.new_temp()
+        self.code.append((opcode, source, 1, target))
         # store modified value back to original temp
-        self.code.append(('store_int', target, source))
+        bt = getBasicType(node)
+        self.code.append(('store_'+bt, target, node.expression.temp_location))
         # save this nodes temp location
-        if node.op[0]=='p': # postifx_operation: save the initial temp_label value
-            node.temp_location = temp_label
+        if node.op[0]=='p': # postifx_operation: save the initial source value
+            node.temp_location = source
         else:
             node.temp_location = target
 
