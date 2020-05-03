@@ -198,35 +198,40 @@ class CheckProgramVisitor(NodeVisitor):
         self.visit(node.compound_statement)
         self.scopes.popLevel()
 
-    def visit_Decl(self,node):
-        sym = node.name.name # get ID from Decl (which is called name), then its name
-        # check if symbol exists already, otherwise insert it in scope
+    #######################################################################
+    # From here till Decl, all these functions are used for Decl purposes #
+    #######################################################################
+    def visit_Prototype(self,node): # this is the prototype case (FuncDecl outside a FuncDef)
+        sym = node.name.name
         alreadyDefined = f"{node.coord.line}:{node.coord.column} - symbol {sym} already defined in current scope."
-
-        if isinstance(node.type,FuncDecl):
-            # check names and parameter types
-            node.type.isPrototype = node.isPrototype
-            if node.isPrototype: # this is the prototype case (FuncDecl outside a FuncDef)
-                assert self.scopes.insert(sym,node.type), alreadyDefined
-            else:
-                proto = self.scopes.find(sym)
-                if proto: # check if there is some prototype already defined
-                    assert proto.isPrototype, alreadyDefined # this proto is actually another function, not prototype
-                    node.type.proto = proto # keep this value here for parameters and type checks later
-                self.scopes.insert(sym,node.type)
-            # visit and deal with levels
-            self.scopes.pushLevel()
-            self.visit(node.type)
-            if node.isPrototype: # this is the prototype case (FuncDecl outside a FuncDef)
-                self.scopes.popLevel()
-            return
-
-        if isinstance(node.type,PtrDecl):
-            assert False, "PtrDecl not implemented yet."
-        
         assert self.scopes.insert(sym,node.type), alreadyDefined
+        self.scopes.pushLevel()
+        self.visit(node.type)
+        self.scopes.popLevel()
+
+    def visit_FuncDefinition(self,node): # this is not a prototype
+        sym = node.name.name
+        alreadyDefined = f"{node.coord.line}:{node.coord.column} - symbol {sym} already defined in current scope."
+        proto = self.scopes.find(sym)
+        if proto: # check if there is some prototype already defined
+            assert proto.isPrototype, alreadyDefined # this proto is actually another function, not a prototype
+            node.type.proto = proto # keep this value here for parameters and type checks later
+        self.scopes.insert(sym,node.type)
+        self.scopes.pushLevel()
         self.visit(node.type)
 
+    def visit_DeclFuncDecl(self,node):
+        node.type.isPrototype = node.isPrototype
+        if node.isPrototype:
+            self.visit_Prototype(node)
+        else:
+            self.visit_FuncDefinition(node)
+
+    def visit_DeclVarOrArray(self,node):
+        sym = node.name.name # get ID from Decl (which is called name), then its name
+        alreadyDefined = f"{node.coord.line}:{node.coord.column} - symbol {sym} already defined in current scope."
+        assert self.scopes.insert(sym,node.type), alreadyDefined
+        self.visit(node.type)
         if node.init:
             self.visit(node.init)
             if isinstance(node.type,ArrayDecl):
@@ -236,6 +241,17 @@ class CheckProgramVisitor(NodeVisitor):
                 td = getInnerMostType(node)
                 ti = getInnerMostType(node.init)
                 assert typesEqual(td,ti), f"{node.coord.line}:{node.coord.column} - declaration and initializer types must match."
+
+    def visit_Decl(self,node):
+        if isinstance(node.type,FuncDecl):
+            self.visit_DeclFuncDecl(node)
+        elif isinstance(node.type,PtrDecl):
+            assert False, "PtrDecl not implemented yet."
+        else:
+            self.visit_DeclVarOrArray(node)
+    #######################################################################
+    #             Here ends the functions used for Decl purposes          #
+    #######################################################################
 
     def check_Decl_ArrayDecl(self,node):
         isString = False

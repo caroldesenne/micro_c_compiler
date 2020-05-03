@@ -255,18 +255,24 @@ class GenerateCode(NodeVisitor):
         for i, child in enumerate(node.block_items or []):
             self.visit(child)
 
+    #######################################################################
+    # From here till Decl, all these functions are used for Decl purposes #
+    #######################################################################
+    def visit_DeclFuncDecl(self,node):
+        if node.isPrototype:
+            pass # do nothing for prototype for now
+        else: # this is a function definition
+            self.code.append(('define', node.name.name))
+            return_label = self.new_temp()
+            exit_label = self.new_temp()
+            self.labels.pushLevel()
+            self.visit(node.type)
+            self.labels.insert("return", return_label)
+            self.labels.insert("exit_func", exit_label)
+
     def visit_Decl(self, node):
         if isinstance(node.type, FuncDecl):
-            if node.isPrototype:
-                pass # do nothing for prototype for now
-            else: # this is a function definition
-                self.code.append(('define', node.name.name))
-                return_label = self.new_temp()
-                exit_label = self.new_temp()
-                self.labels.pushLevel()
-                self.visit(node.type)
-                self.labels.insert("return", return_label)
-                self.labels.insert("exit_func", exit_label)
+            self.visit_DeclFuncDecl(node)
         else: # can be ArrayDecl or VarDecl
             self.visit(node.type)
             if node.init:
@@ -279,6 +285,9 @@ class GenerateCode(NodeVisitor):
                     self.visit(node.init)
                     target = node.type.temp_location
                     self.code.append(('store_' + getBasicType(node), node.init.temp_location, target))
+    #######################################################################
+    #             Here ends the functions used for Decl purposes          #
+    #######################################################################
 
     def visit_Return(self, node):
         bt = getBasicType(node)
