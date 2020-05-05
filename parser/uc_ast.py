@@ -166,13 +166,14 @@ class FuncDecl(Node):
     attr_names = ()
 
 class FuncDef(Node):
-    __slots__ = ('decl','type','decl_list','compound_statement','coord')
+    __slots__ = ('decl','type','param_list','decl_list','compound_statement','coord')
 
     def __init__(self, decl, type, dl, cs, coord=None):
         self.decl = decl
         self.type = type
         self.decl_list = dl
         self.compound_statement = cs
+        self.param_list = None
         self.coord = coord
 
     def children(self):
@@ -202,12 +203,13 @@ class ParamList(Node):
     attr_names = ()
 
 class ArrayDecl(Node):
-    __slots__ = ('type','size','isGlobal','coord')
+    __slots__ = ('type','size','isGlobal','temp_location','coord')
 
     def __init__(self, type, s, coord=None):
         self.type = type
         self.size = s
         self.isGlobal = False
+        self.temp_location = None
         self.coord = coord
 
     def children(self):
@@ -219,13 +221,14 @@ class ArrayDecl(Node):
     attr_names = ()
 
 class ArrayRef(Node):
-    __slots__ = ('name','access_value','type','size','coord')
+    __slots__ = ('name','access_value','type','size','temp_location','coord')
 
     def __init__(self, name, av, coord=None):
         self.name = name
         self.access_value = av
         self.type = None
         self.size = 0
+        self.temp_location = None
         self.coord = coord
 
     def children(self):
@@ -427,12 +430,13 @@ class Decl(Node):
     attr_names = ('name', )
 
 class InitList(Node):
-    __slots__ = ('inits','type','size','coord')
+    __slots__ = ('inits','type','size','temp_location','coord')
 
     def __init__(self, inits, coord=None):
         self.inits = inits
         self.type = None
         self.size = len(inits)
+        self.temp_location = None
         self.coord = coord
 
     def children(self):

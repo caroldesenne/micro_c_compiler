@@ -163,6 +163,7 @@ class CheckProgramVisitor(NodeVisitor):
     '''
     def __init__(self):
         self.scopes = Scopes()
+        self.declarations = []
 
     def checkArgumentsMatch(self,args1,args2,coord):
         err = f"{coord.line}:{coord.column} - argument list sizes must be the same."
@@ -183,20 +184,29 @@ class CheckProgramVisitor(NodeVisitor):
         for i, child in enumerate(node.decls or []):
             self.visit(child)
 
+    def copyDeclList(self,node):
+        node.decl_list = []
+        for d in self.declarations:
+            node.decl_list.append(d)
+        self.declarations = []
+
     def visit_FuncDef(self,node):
         self.visit(node.type)
-
         decl = node.decl
         while not isinstance(decl,Decl):
             decl = decl.type
         decl.isPrototype = False # new scope is pushed in visit_Decl()
         self.visit(node.decl)
+        # get parameter list from node.decl
+        node.param_list = node.decl.type.args
         # insert in scope expected return type
         self.scopes.insert("return",node.type)
-        for i, child in enumerate(node.decl_list or []):
-            self.visit(child)
+        #for i, child in enumerate(node.decl_list or []):
+        #    self.visit(child)
+        self.declarations = []
         self.visit(node.compound_statement)
         self.scopes.popLevel()
+        self.copyDeclList(node)
 
     #######################################################################
     # From here till Decl, all these functions are used for Decl purposes #
@@ -243,6 +253,7 @@ class CheckProgramVisitor(NodeVisitor):
                 assert typesEqual(td,ti), f"{node.coord.line}:{node.coord.column} - declaration and initializer types must match."
 
     def visit_Decl(self,node):
+        self.declarations.append(node)
         if isinstance(node.type,FuncDecl):
             self.visit_DeclFuncDecl(node)
         elif isinstance(node.type,PtrDecl):

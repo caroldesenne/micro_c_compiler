@@ -3,6 +3,7 @@ import ply.yacc as yacc
 import uctype
 from pprint import pprint
 from parser import Parser
+from enum import Enum
 from collections import defaultdict
 from uc_ast import *
 from check import *
@@ -36,19 +37,16 @@ unary_ops = {
     '--': 'sub_int',
     'p++': 'add_int',
     'p--': 'sub_int',
-    # TODO FIX UNARY EXPRESSIONS
-    #'-', : ?? 
-    #'+', : ?? 
-    #'!', : ?? 
+    '-' : 'sub_int', 
+    '+' : 'whatever',
+    '!' : 'not_bool',
 }
 
-'''
-TODO:
-
-ArrayDecl *
-ArrayRef *
-InitList *
-'''
+class Phase(Enum):
+    START = 0
+    ALLOC = 1
+    INIT = 2
+    STATEMENT = 3
 
 class Labels(object):
     '''
@@ -129,6 +127,7 @@ class GenerateCode(NodeVisitor):
         self.globals = []
         self.code = []
         self.labels = Labels()
+        self.phase = Phase.START
 
     def mergeCode(self):
         self.code = self.globals + self.code
@@ -150,7 +149,10 @@ class GenerateCode(NodeVisitor):
         '''
         tmp = self.new_temp()
         bt = getBasicType(exp)
-        self.code.append(('load_'+bt,exp.temp_location,tmp))
+        inst = 'load_'+bt
+        if isinstance(exp, ArrayRef):
+            inst += '_*'
+        self.code.append((inst,exp.temp_location,tmp))
         return tmp
 
     def output(self, ir_filename=None):
@@ -184,14 +186,52 @@ class GenerateCode(NodeVisitor):
         for i, child in enumerate(node.decls or []):
             self.visit(child)
 
-    def visit_FuncDef(self, node):
+    #############################################################################
+    # From here till FuncDef, all these functions are used for FuncDef purposes #
+    #############################################################################
+    def FuncDefStart(self,node):
+        self.phase = Phase.START
         self.visit(node.decl)
+        # reserve temps for the parameters of the function
+        if node.param_list:
+            for p in node.param_list.list:
+                aux = self.new_temp()
+        # reserve temp for return
+        return_label = self.new_temp()
+        self.labels.insert("return", return_label)
 
-        for i, child in enumerate(node.decl_list or []):
-            self.visit(child)
+    def FuncDefAlloc(self,node):
+        # Start allocation phase
+        self.phase = Phase.ALLOC
+        # alloc temps for arguments
+        self.visit(node.decl)
+        # reserve temp for exit label
+        exit_label = self.new_temp()
+        self.labels.insert("exit_func", exit_label)
+        # Go through all declarations
+        for i,d in enumerate(node.decl_list or []):
+            self.visit(d)
 
-        self.visit(node.compound_statement)
-        
+    def FuncDefInit(self,node):
+        self.phase = Phase.INIT
+        for i,d in enumerate(node.decl_list or []):
+            self.visit(d)
+
+    def FuncDefStatement(self,node):
+        # visit the statements
+        self.phase = Phase.STATEMENT
+        if node.compound_statement:
+            self.visit(node.compound_statement)
+
+    def visit_FuncDef(self,node):
+        # start new function with new temps
+        self.fname = node.decl.name.name
+        #####################################
+        self.FuncDefStart(node)
+        self.FuncDefAlloc(node)
+        # self.FuncDefInit(node)
+        self.FuncDefStatement(node)
+        ####################################
         # insert exit label
         exit = self.labels.find("exit_func")
         self.code.append((exit[1:],))
@@ -205,6 +245,9 @@ class GenerateCode(NodeVisitor):
             self.code.append(('load_'+bt, ret, rvalue))
             self.code.append(('return_'+bt, rvalue))
         self.labels.popLevel()
+    #######################################################################
+    #            Here end the functions used for FuncDef purposes         #
+    #######################################################################
 
     def visit_FuncDecl(self, node):
         if node.args:
@@ -217,7 +260,7 @@ class GenerateCode(NodeVisitor):
         for param in node.params.list:
             self.visit(param)
             tmp = param.temp_location
-            if isinstance(param,ID):
+            if isinstance(param,ID) or isinstance(param, ArrayRef):
                 tmp = self.loadExpression(param)
             all_params.append(('param_' + getBasicType(param), tmp))
         # put all params together
@@ -238,7 +281,10 @@ class GenerateCode(NodeVisitor):
     def visit_Cast(self, node):
         self.visit(node.expression)
         tmp = node.expression.temp_location
-        if isinstance(node.expression,ID):
+        # take expression out of list
+        if isinstance(node.expression, ExprList):
+            node.expression = node.expression.list[0]
+        if isinstance(node.expression,ID) or isinstance(node.expression, ArrayRef):
             tmp = self.loadExpression(node.expression)
         target = self.new_temp()
         node.temp_location = target
@@ -255,36 +301,79 @@ class GenerateCode(NodeVisitor):
         for i, child in enumerate(node.block_items or []):
             self.visit(child)
 
+    def visit_InitList(self,node):
+        # TODO
+        pass
+
+    def visit_ArrayDecl(self,node):
+        # TODO dimension 2
+        size = node.size.value
+        tp = getBasicType(node)
+        vid = node.type.name.name
+        # if global store on heap
+        if node.isGlobal:
+            self.labels.insertGlobal(vid,'@'+vid)
+            self.globals.append(('global_'+tp+'_'+str(size), '@'+vid))
+        # otherwise, allocate on stack memory
+        else:
+            tmp = self.new_temp()
+            node.temp_location = tmp
+            self.labels.insert(vid,tmp)
+            self.code.append(('alloc_'+tp+'_'+str(size), tmp))
+
+    def visit_ArrayRef(self,node):
+        self.visit(node.access_value)
+        if isinstance(node.access_value, ExprList):
+            node.access_value = node.access_value.list[0]
+        # get access value label
+        acc = node.access_value.temp_location
+        if isinstance(node.access_value, ID) or isinstance(node.access_value, ArrayRef):
+            acc = self.loadExpression(node.access_value)
+        # get base array label
+        base_array = node.name.type.temp_location
+        bt = getBasicType(node)
+        target = self.new_temp()
+        self.code.append(('elem_'+bt,base_array,acc,target))
+        node.temp_location = target
+
     #######################################################################
     # From here till Decl, all these functions are used for Decl purposes #
     #######################################################################
     def visit_DeclFuncDecl(self,node):
         if node.isPrototype:
-            pass # do nothing for prototype for now
-        else: # this is a function definition
-            self.code.append(('define', node.name.name))
-            return_label = self.new_temp()
-            exit_label = self.new_temp()
-            self.labels.pushLevel()
-            self.visit(node.type)
-            self.labels.insert("return", return_label)
-            self.labels.insert("exit_func", exit_label)
+            pass # do nothing for prototype
+        else: # this is a function definition    
+            if self.phase == Phase.START:
+                self.code.append(('define', '@'+node.name.name))
+                # return_label = self.new_temp()
+                # exit_label = self.new_temp()
+                self.labels.pushLevel()
+                # self.labels.insert("return", return_label)
+                # self.labels.insert("exit_func", exit_label)
+            else:
+                self.visit(node.type)
 
     def visit_Decl(self, node):
         if isinstance(node.type, FuncDecl):
             self.visit_DeclFuncDecl(node)
         else: # can be ArrayDecl or VarDecl
-            self.visit(node.type)
-            if node.init:
-                if(node.type.isGlobal): 
-                # if global, we need to pop last appended code and insert init on it
-                    line = self.globals.pop()
-                    init = str(node.init.value)
-                    self.globals.append((line[0],line[1],init))
-                else:
+            if node.type.isGlobal:
+            # if global, we need to pop last appended code and insert init on it
+                self.visit(node.type)
+                line = self.globals.pop()
+                init = str(node.init.value)
+                self.globals.append((line[0],line[1],init))
+            else:
+                if self.phase==Phase.ALLOC:
+                    self.visit(node.type)
+                elif node.init:
                     self.visit(node.init)
                     target = node.type.temp_location
-                    self.code.append(('store_' + getBasicType(node), node.init.temp_location, target))
+                    source = node.init.temp_location
+                    if isinstance(node.init,ID) or isinstance(node.init, ArrayRef):
+                        source = self.loadExpression(node.init)
+                    inst = 'store_'+getBasicType(node)
+                    self.code.append((inst, source, target))
     #######################################################################
     #             Here ends the functions used for Decl purposes          #
     #######################################################################
@@ -294,11 +383,15 @@ class GenerateCode(NodeVisitor):
         # store return value
         if bt != 'void':
             self.visit(node.expr)
+            # get return value from ExprList (it is always the first and unique element)
+            node.expr = node.expr.list[0]
             res = node.expr.temp_location
-            if isinstance(node.expr,ID):
+            if isinstance(node.expr,ID) or isinstance(node.expr, ArrayRef):
                 res = self.loadExpression(node.expr)
             ret = self.labels.find("return")
-            self.code.append(('store_'+bt, res, ret))
+            # store result
+            inst = 'store_'+bt
+            self.code.append((inst, res, ret))
         # jump to exit of function
         exit = self.labels.find("exit_func")
         self.code.append(('jump', exit))
@@ -424,9 +517,15 @@ class GenerateCode(NodeVisitor):
         # load both left and right
         tmp1 = node.left.temp_location
         tmp2 = node.right.temp_location
-        if isinstance(node.left,ID):
+        # take nodes out of lists
+        if isinstance(node.left, ExprList):
+            node.left = node.left.list[0]
+        if isinstance(node.right, ExprList):
+            node.right = node.right.list[0]
+        # load if ID
+        if isinstance(node.left,ID) or isinstance(node.left, ArrayRef):
             tmp1 = self.loadExpression(node.left)
-        if isinstance(node.right,ID):
+        if isinstance(node.right,ID) or isinstance(node.right, ArrayRef):
             tmp2 = self.loadExpression(node.right)
         bt = getBasicType(node.left)
         # perform the binary operation
@@ -446,7 +545,7 @@ class GenerateCode(NodeVisitor):
             for exp in node.expr.list:
                 self.visit(exp)
                 tmp = exp.temp_location
-                if isinstance(exp,ID):
+                if isinstance(exp,ID) or isinstance(exp, ArrayRef):
                     tmp = self.loadExpression(exp)
                 bt = getBasicType(exp)
                 self.code.append(('print_'+bt, tmp))
@@ -472,7 +571,8 @@ class GenerateCode(NodeVisitor):
         # load value
         self.visit(node.value)
         val = node.value.temp_location
-        if isinstance(node.value, ID):
+        # load ID
+        if isinstance(node.value, ID) or isinstance(node.value, ArrayRef):
             val = self.loadExpression(node.value)
         # The assignee can be of two types: ID or ArrayRef
         self.visit(node.assignee)
@@ -484,26 +584,72 @@ class GenerateCode(NodeVisitor):
             self.code.append((assignments[node.op]+'_'+bt,aux,val,tmp))
         origin = node.assignee.temp_location
         self.temp_location = origin
-        self.code.append(('store_'+bt, tmp, origin))
+        inst = 'store_'+bt
+        if isinstance(node.assignee, ArrayRef):
+            inst += '_*'
+        self.code.append((inst, tmp, origin))
 
-    def visit_UnaryOp(self, node):
-        self.visit(node.expression)
-        # load whatever was there
-        source = node.expression.temp_location
-        if isinstance(node.expression,ID):
-            source = self.loadExpression(node.expression)
+    #############################################################################
+    # From here till UnaryOp, all these functions are used for UnaryOp purposes #
+    #############################################################################
+    def plusPlusMinusMinus(self,node,source):
         # perform the operation (add or sub 1)
         opcode = unary_ops[node.op]
+        # load 1 in a new temp
+        one = self.new_temp()
+        self.code.append(('literal_int', 1, one))
         target = self.new_temp()
-        self.code.append((opcode, source, 1, target))
+        self.code.append((opcode, source, one, target))
         # store modified value back to original temp
         bt = getBasicType(node)
-        self.code.append(('store_'+bt, target, node.expression.temp_location))
+        inst = 'store_'+bt
+        if isinstance(node.expression, ArrayRef):
+            inst += '_*'
+        self.code.append((inst, target, node.expression.temp_location))
         # save this nodes temp location
         if node.op[0]=='p': # postifx_operation: save the initial source value
             node.temp_location = source
         else:
             node.temp_location = target
+
+    def minus(self,node,source):
+        bt = getBasicType(node)
+        # take the negative value of x: -x = 0-x
+        opcode = unary_ops[node.op]
+        # load 0 in a new temp
+        zero = self.new_temp()
+        self.code.append(('literal_'+bt, 0, zero))
+        target = self.new_temp()
+        self.code.append((opcode, zero, source, target))
+        node.temp_location = target
+
+    def notBool(self,node,source):
+        opcode = unary_ops[node.op]
+        target = self.new_temp()
+        self.code.append((opcode, source, target))
+        node.temp_location = target
+
+    def visit_UnaryOp(self, node):
+        self.visit(node.expression)
+        # load whatever was there
+        source = node.expression.temp_location
+        # take expression out of list
+        if isinstance(node.expression, ExprList):
+            node.expression = node.expression.list[0]
+        if isinstance(node.expression,ID) or isinstance(node.expression, ArrayRef):
+            source = self.loadExpression(node.expression)
+        # perform the unary operation
+        if node.op=='+':
+            node.temp_location = source
+        elif node.op=='-':
+            self.minus(node,source)
+        elif node.op=='!':
+            self.notBool(node,source)
+        else: # ++, --, p++, p--
+            self.plusPlusMinusMinus(node,source)
+    #######################################################################
+    #            Here end the functions used for UnaryOp purposes         #
+    #######################################################################
 
     def visit_Read(self, node):
         for exp in node.expr.list:
@@ -513,7 +659,10 @@ class GenerateCode(NodeVisitor):
             read_temp = self.new_temp()
             self.code.append(('read_'+bt, read_temp))
             # and store the value read in the exp location
-            self.code.append(('store_'+getBasicType(exp), read_temp, exp.temp_location))
+            inst = 'store_'+bt
+            if isinstance(exp, ArrayRef):
+                inst += '_*'
+            self.code.append((inst, read_temp, exp.temp_location))
 
     def visit_Type(self, node):
         pass
