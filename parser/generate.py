@@ -342,20 +342,67 @@ class GenerateCode(NodeVisitor):
             self.labels.insert(vid,tmp)
             self.code.append(('alloc_'+tp+size, tmp))
 
-    def visit_ArrayRef(self,node):
-        self.visit(node.access_value)
-        if isinstance(node.access_value, ExprList):
-            node.access_value = node.access_value.list[0]
-        # get access value label
-        acc = node.access_value.temp_location
-        if isinstance(node.access_value, ID) or isinstance(node.access_value, ArrayRef):
-            acc = self.loadExpression(node.access_value)
+    def visit_ArrayRef2D(self,node):
+        # v[i][j]
+        decl = node.name.name.type
+        # get size of inner array
+        self.visit(decl.size[1])
+        inSizeLabel = decl.size[1].temp_location
+
+        # get access value label i
+        i = node.name.access_value
+        self.visit(i)
+        if isinstance(i, ExprList):
+            i = i.list[0]
+        # load inner access value i
+        acc1 = i.temp_location
+        if isinstance(i, ID) or isinstance(i, ArrayRef):
+            acc1 = self.loadExpression(i)
+
+        # get to v[i]
+        mul_target = self.new_temp()
+        self.code.append(('mul_int',inSizeLabel,acc1,mul_target))
+
+        # get access value label j
+        j = node.access_value
+        self.visit(j)
+        if isinstance(j, ExprList):
+            j = j.list[0]
+        # load outer access value j
+        acc2 = j.temp_location
+        if isinstance(j, ID) or isinstance(j, ArrayRef):
+            acc2 = self.loadExpression(j)
+
+        # get to v[i][j]
+        add_target = self.new_temp()
+        self.code.append(('add_int',mul_target,acc2,add_target))
+        
         # get base array label
-        base_array = node.name.type.temp_location
-        bt = getBasicType(node)
+        base_array = decl.temp_location
         target = self.new_temp()
-        self.code.append(('elem_'+bt,base_array,acc,target))
+        bt = getBasicType(node)
+        self.code.append(('elem_'+bt,base_array,add_target,target))
         node.temp_location = target
+
+    def visit_ArrayRef(self,node):
+        # 2D array reference
+        if isinstance(node.name, ArrayRef):
+            self.visit_ArrayRef2D(node)
+        # 1D array reference
+        else:
+            self.visit(node.access_value)
+            if isinstance(node.access_value, ExprList):
+                node.access_value = node.access_value.list[0]
+            # get access value label
+            acc = node.access_value.temp_location
+            if isinstance(node.access_value, ID) or isinstance(node.access_value, ArrayRef):
+                acc = self.loadExpression(node.access_value)
+            # get base array label
+            base_array = node.name.type.temp_location
+            bt = getBasicType(node)
+            target = self.new_temp()
+            self.code.append(('elem_'+bt,base_array,acc,target))
+            node.temp_location = target
 
     #######################################################################
     # From here till Decl, all these functions are used for Decl purposes #

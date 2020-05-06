@@ -274,7 +274,9 @@ class CheckProgramVisitor(NodeVisitor):
         isString = False
         if getBasicType(node)=='char' and getBasicType(node.init)=='string':
             isString = True
-            node.type.size = [Constant(type='char', value=node.init.size)]
+            c = Constant(type='char', value=node.init.size)
+            self.visit(c)
+            node.type.size = [c]
         # check init type (must be InitList)
         err = f"{node.coord.line}:{node.coord.column} - array initializer must be of array type."
         assert isString or isinstance(node.init,InitList) or isinstance(node.init,ArrayRef), err
@@ -293,7 +295,9 @@ class CheckProgramVisitor(NodeVisitor):
         if ad.size==[]:
             init = node.init
             while isinstance(init, InitList):
-                ad.size.append(Constant(type='int', value=init.size))
+                c = Constant(type='int', value=init.size)
+                self.visit(c)
+                ad.size.append(c)
                 init = init.inits[0]
         if isinstance(node.init,InitList):
             node.init.sizes = ad.size
