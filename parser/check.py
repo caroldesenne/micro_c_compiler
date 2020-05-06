@@ -152,6 +152,12 @@ def getBasicType(node):
     t = getInnerMostType(node)
     return t.names[0]
 
+def getArrayName(node):
+    inner = node
+    while not isinstance(inner,VarDecl):
+        inner = inner.type
+    return inner.name.name
+
 def typesEqual(t1,t2):
     return t1.names==t2.names and t1.arrayLevel==t2.arrayLevel
 
@@ -268,17 +274,29 @@ class CheckProgramVisitor(NodeVisitor):
         isString = False
         if getBasicType(node)=='char' and getBasicType(node.init)=='string':
             isString = True
+            node.type.size = [Constant(type='char', value=node.init.size)]
         # check init type (must be InitList)
         err = f"{node.coord.line}:{node.coord.column} - array initializer must be of array type."
         assert isString or isinstance(node.init,InitList) or isinstance(node.init,ArrayRef), err
         # check if their sizes match
         ad = node.type
+        # test if initialization matches array sizes
         if ad.size:
             err = f"{node.coord.line}:{node.coord.column} - array initializer size must match declaration."
-            assert int(ad.size.value)==int(node.init.size), err
+            init = node.init
+            i = 0
+            while isinstance(init, InitList):
+                assert int(ad.size[i].value)==int(init.size), err
+                i += 1
+                init = init.inits
         # if size wasnt specified, set it
-        if ad.size==None:
-            ad.size = Constant(type='int', value=node.init.size)
+        if ad.size==[]:
+            init = node.init
+            while isinstance(init, InitList):
+                ad.size.append(Constant(type='int', value=init.size))
+                init = init.inits[0]
+        if isinstance(node.init,InitList):
+            node.init.sizes = ad.size
 
     def visit_Compound(self,node):
         for i, child in enumerate(node.block_items or []):
@@ -336,6 +354,11 @@ class CheckProgramVisitor(NodeVisitor):
         self.visit(node.type)
         t = getInnerMostType(node)
         t.arrayLevel += 1
+        # if there is a size, put it on a list and concatenate it with node.type.size (inner size)
+        if node.size:
+            node.size = [node.size]+node.type.size
+        else:
+            node.size = []
 
     def visit_VarDecl(self,node):
         if self.scopes.depth==1:
@@ -468,11 +491,10 @@ class CheckProgramVisitor(NodeVisitor):
         # take same type as this array with an array level lower
         node.type = Type(at.names)
         node.type.arrayLevel = at.arrayLevel-1
-        # get element size        
+        # get element size
         if node.type.arrayLevel > 0:
-            innarray = node.name.type.type
-            size = innarray.size.value
-            node.size = size
+            innarray = node.name.type
+            node.size = innarray.size[1:]
         else:
             node.size = 1
 

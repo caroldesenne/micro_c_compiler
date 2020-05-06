@@ -215,7 +215,7 @@ class ArrayDecl(Node):
     def children(self):
         nodelist = []
         if self.type is not None: nodelist.append(("type", self.type))
-        if self.size is not None: nodelist.append(("size", self.size))
+        # if self.size is not None: nodelist.append(("size", self.size))
         return tuple(nodelist)
 
     attr_names = ()
@@ -395,13 +395,14 @@ class Type(Node):
     attr_names = ('names', )
 
 class VarDecl(Node):
-    __slots__ = ('name','type','isGlobal','temp_location','coord')
+    __slots__ = ('name','type','isGlobal','temp_location','size','coord')
 
     def __init__(self, name, coord=None):
         self.name = name
         self.type = None
         self.isGlobal = False
         self.temp_location = None
+        self.size = []
         self.coord = coord
 
     def children(self):
@@ -430,13 +431,16 @@ class Decl(Node):
     attr_names = ('name', )
 
 class InitList(Node):
-    __slots__ = ('inits','type','size','temp_location','coord')
+    __slots__ = ('inits','type','size','sizes','temp_location','code','baseArray','coord')
 
     def __init__(self, inits, coord=None):
         self.inits = inits
         self.type = None
         self.size = len(inits)
+        self.sizes = []
         self.temp_location = None
+        self.code = []
+        self.baseArray = True
         self.coord = coord
 
     def children(self):

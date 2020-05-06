@@ -81,7 +81,7 @@ class Labels(object):
         self.depth -= 1
 
     def createConstant(self):
-        s = '@.const.'+str(self.constants)
+        s = '@.str.'+str(self.constants)
         self.constants += 1
         return s
 
@@ -302,24 +302,45 @@ class GenerateCode(NodeVisitor):
             self.visit(child)
 
     def visit_InitList(self,node):
-        # TODO
-        pass
+        arr = []
+        for e in node.inits:
+            if isinstance(e,Constant):
+                arr.append(e.value)
+            else:
+                e.baseArray = False
+                self.visit(e)
+                arr.append(e.code)
+        node.code = arr
+        if node.baseArray:
+            const_name = self.labels.createConstant()
+            bt = getBasicType(node)
+            sizes = self.buildArraySize(node.sizes)
+            self.globals.append(('global_'+bt+sizes,const_name,arr))
+            node.temp_location = const_name
+
+    def buildArraySize(self,list):
+        s = ''
+        acc = 1
+        for c in reversed(list):
+            acc *= c.value
+            s = '_'+str(acc)+s
+        return s
 
     def visit_ArrayDecl(self,node):
-        # TODO dimension 2
-        size = node.size.value
+        # build sizes string
+        size = self.buildArraySize(node.size)
         tp = getBasicType(node)
-        vid = node.type.name.name
+        vid = getArrayName(node)
         # if global store on heap
         if node.isGlobal:
             self.labels.insertGlobal(vid,'@'+vid)
-            self.globals.append(('global_'+tp+'_'+str(size), '@'+vid))
+            self.globals.append(('global_'+tp+size, '@'+vid))
         # otherwise, allocate on stack memory
         else:
             tmp = self.new_temp()
             node.temp_location = tmp
             self.labels.insert(vid,tmp)
-            self.code.append(('alloc_'+tp+'_'+str(size), tmp))
+            self.code.append(('alloc_'+tp+size, tmp))
 
     def visit_ArrayRef(self,node):
         self.visit(node.access_value)
@@ -373,6 +394,8 @@ class GenerateCode(NodeVisitor):
                     if isinstance(node.init,ID) or isinstance(node.init, ArrayRef):
                         source = self.loadExpression(node.init)
                     inst = 'store_'+getBasicType(node)
+                    if isinstance(node.type, ArrayDecl):
+                        inst += self.buildArraySize(node.type.size)
                     self.code.append((inst, source, target))
     #######################################################################
     #             Here ends the functions used for Decl purposes          #
