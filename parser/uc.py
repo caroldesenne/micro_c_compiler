@@ -12,6 +12,9 @@ import sys
 from contextlib import contextmanager
 from parser import Parser
 from check import CheckProgramVisitor
+from generate import GenerateCode
+
+from pprint import pprint
 
 """
 One of the most important (and difficult) parts of writing a compiler
@@ -120,10 +123,10 @@ class Compiler:
         """
         self.parser = Parser()
         self.ast = self.parser.parse(self.code, '', debug)
-        if susy:
-            self.ast.show(showcoord=True)
-        elif ast_file is not None:
-            self.ast.show(buf=ast_file, showcoord=True)
+        #if susy:
+            #self.ast.show(showcoord=True)
+        #elif ast_file is not None:
+            #self.ast.show(buf=ast_file, showcoord=True)
 
     def _sema(self, susy, ast_file):
         """ Decorate AST with semantic actions. If ast_file != None,
@@ -139,12 +142,26 @@ class Compiler:
         except AssertionError as e:
            error(None, e)
 
+    def _gen(self, susy, ast_file):
+        try:
+            self.gen = GenerateCode()
+            self.gen.visit(self.ast)
+            if susy:
+                self.ast.show(showcoord=True)
+            elif ast_file is not None:
+                self.ast.show(buf=ast_file, showcoord=True)
+        except AssertionError as e:
+           error(None, e)
+
     def _do_compile(self, susy, ast_file, debug):
         """ Compiles the code to the given file object. """
         self._parse(susy, ast_file, debug)
         if not errors_reported():
+            print("Parse OK.")
             self._sema(susy, ast_file)
-        # print("Semantic checks OK.")
+            if not errors_reported():
+                print("Semantic checks OK.")
+            self._gen(susy, ast_file)
 
     def compile(self, code, susy, ast_file, debug):
         """ Compiles the given code string """

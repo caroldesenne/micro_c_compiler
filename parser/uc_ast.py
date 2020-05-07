@@ -148,11 +148,13 @@ class DeclList(Node):
     attr_names = ()
 
 class FuncDecl(Node):
-    __slots__ = ('args', 'type', 'coord')
+    __slots__ = ('args', 'type', 'isPrototype','proto','coord')
 
     def __init__(self, args, type, coord=None):
         self.args = args
         self.type = type
+        self.isPrototype = True
+        self.proto = None
         self.coord = coord
 
     def children(self):
@@ -164,13 +166,14 @@ class FuncDecl(Node):
     attr_names = ()
 
 class FuncDef(Node):
-    __slots__ = ('decl','type','decl_list','compound_statement','coord')
+    __slots__ = ('decl','type','param_list','decl_list','compound_statement','coord')
 
     def __init__(self, decl, type, dl, cs, coord=None):
         self.decl = decl
         self.type = type
         self.decl_list = dl
         self.compound_statement = cs
+        self.param_list = None
         self.coord = coord
 
     def children(self):
@@ -200,29 +203,32 @@ class ParamList(Node):
     attr_names = ()
 
 class ArrayDecl(Node):
-    __slots__ = ('type','size','coord')
+    __slots__ = ('type','size','isGlobal','temp_location','coord')
 
     def __init__(self, type, s, coord=None):
         self.type = type
         self.size = s
+        self.isGlobal = False
+        self.temp_location = None
         self.coord = coord
 
     def children(self):
         nodelist = []
         if self.type is not None: nodelist.append(("type", self.type))
-        if self.size is not None: nodelist.append(("size", self.size))
+        # if self.size is not None: nodelist.append(("size", self.size))
         return tuple(nodelist)
 
     attr_names = ()
 
 class ArrayRef(Node):
-    __slots__ = ('name','access_value','type','size','coord')
+    __slots__ = ('name','access_value','type','size','temp_location','coord')
 
     def __init__(self, name, av, coord=None):
         self.name = name
         self.access_value = av
         self.type = None
         self.size = 0
+        self.temp_location = None
         self.coord = coord
 
     def children(self):
@@ -234,12 +240,13 @@ class ArrayRef(Node):
     attr_names = ()
 
 class FuncCall(Node):
-    __slots__ = ('name','params','type','coord')
+    __slots__ = ('name','params','type','temp_location', 'coord')
 
     def __init__(self, name, params, coord=None):
         self.name = name
         self.params = params
         self.type = None
+        self.temp_location = None
         self.coord = coord
 
     def children(self):
@@ -251,11 +258,12 @@ class FuncCall(Node):
     attr_names = ()
 
 class ID(Node):
-    __slots__ = ('name','type','coord')
+    __slots__ = ('name','type','temp_location','coord')
 
     def __init__(self,name,coord=None):
         self.name = name
         self.type = None
+        self.temp_location = None
         self.coord = coord
 
     def children(self):
@@ -265,13 +273,14 @@ class ID(Node):
     attr_names = ('name', )
 
 class Assignment(Node):
-    __slots__ = ('op','assignee','value','type','coord')
+    __slots__ = ('op','assignee','value','type','temp_location','coord')
 
     def __init__(self,op,ass,v,coord=None):
         self.op = op
         self.assignee = ass
         self.value = v
         self.type = None
+        self.temp_location = None
         self.coord = coord
 
     def children(self):
@@ -298,13 +307,14 @@ class PtrDecl(Node):
     attr_names = ()
 
 class BinaryOp(Node):
-    __slots__ = ('op', 'left', 'right', 'type', 'coord')
+    __slots__ = ('op', 'left', 'right', 'type', 'temp_location', 'coord')
 
     def __init__(self, op, left, right, coord=None):
         self.op = op
         self.left = left
         self.right = right
-        self.type = None
+        self.type = type
+        self.temp_location = None
         self.coord = coord
 
     def children(self):
@@ -316,11 +326,12 @@ class BinaryOp(Node):
     attr_names = ('op', )
 
 class Cast(Node):
-    __slots__ = ('type','expression','coord')
+    __slots__ = ('type','expression','temp_location','coord')
 
     def __init__(self, t, exp, coord=None):
         self.type = t
         self.expression = exp
+        self.temp_location = None
         self.coord = coord
 
     def children(self):
@@ -332,12 +343,13 @@ class Cast(Node):
     attr_names = ()
 
 class UnaryOp(Node):
-    __slots__ = ('op','expression','type','coord')
+    __slots__ = ('op','expression','type','temp_location','coord')
 
     def __init__(self, op, exp, coord=None):
         self.op = op
         self.expression = exp
         self.type = None
+        self.temp_location = None
         self.coord = coord
 
     def children(self):
@@ -348,12 +360,13 @@ class UnaryOp(Node):
     attr_names = ('op', )
 
 class Constant(Node):
-    __slots__ = ('type', 'value', 'size','coord')
+    __slots__ = ('type', 'value', 'size', 'temp_location', 'coord')
 
     def __init__(self, type, value, coord=None):
         self.type = type
         self.value = value
         self.coord = coord
+        self.temp_location = None
         if(self.type=='string'):
             self.size = len(value)-2
         else:
@@ -382,11 +395,14 @@ class Type(Node):
     attr_names = ('names', )
 
 class VarDecl(Node):
-    __slots__ = ('name','type','coord')
+    __slots__ = ('name','type','isGlobal','temp_location','size','coord')
 
     def __init__(self, name, coord=None):
         self.name = name
         self.type = None
+        self.isGlobal = False
+        self.temp_location = None
+        self.size = []
         self.coord = coord
 
     def children(self):
@@ -397,13 +413,13 @@ class VarDecl(Node):
     attr_names = ()
 
 class Decl(Node):
-    __slots__ = ('name', 'type', 'init', 'isFunction','coord')
+    __slots__ = ('name', 'type', 'init', 'isPrototype','coord')
 
     def __init__(self, name, type, init, coord=None):
         self.name = name
         self.type = type
         self.init = init
-        self.isFunction = False
+        self.isPrototype = True
         self.coord = coord
 
     def children(self):
@@ -415,12 +431,16 @@ class Decl(Node):
     attr_names = ('name', )
 
 class InitList(Node):
-    __slots__ = ('inits','type','size','coord')
+    __slots__ = ('inits','type','size','sizes','temp_location','code','baseArray','coord')
 
     def __init__(self, inits, coord=None):
         self.inits = inits
         self.type = None
         self.size = len(inits)
+        self.sizes = []
+        self.temp_location = None
+        self.code = []
+        self.baseArray = True
         self.coord = coord
 
     def children(self):
@@ -501,11 +521,12 @@ class For(Node):
     attr_names = ()
 
 class ExprList(Node):
-    __slots__ = ('list','type','coord')
+    __slots__ = ('list','type','temp_location','coord')
 
     def __init__(self,list,coord=None):
         self.list = list
         self.type = None
+        self.temp_location = None
         self.coord = coord
 
     def children(self):

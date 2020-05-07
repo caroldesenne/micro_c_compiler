@@ -165,7 +165,7 @@ class Parser():
         """
         integer_constant : INT_CONST
         """
-        p[0]= Constant('int',p[1],coord=self._token_coord(p, 1))
+        p[0]= Constant('int',int(p[1]),coord=self._token_coord(p, 1))
 
     def p_character_constant(self, p):
         """
@@ -177,7 +177,7 @@ class Parser():
         """
         floating_constant : FLOAT_CONST
         """
-        p[0]= Constant('float',p[1],coord=self._token_coord(p, 1))
+        p[0]= Constant('float',float(p[1]),coord=self._token_coord(p, 1))
 
     def p_type_specifier(self, p):
         """
@@ -296,7 +296,7 @@ class Parser():
         if len(p)==2:
             p[0] = p[1]
         else:
-            p[0] = Cast(p[2],p[4])
+            p[0] = Cast(p[2],p[4],coord=self._token_coord(p, 1))
 
     def p_unary_expression(self, p):
         """
@@ -356,11 +356,9 @@ class Parser():
         expression : assignment_expression
                    | expression COMMA assignment_expression
         """
-        if len(p)==2: # single expression
-            p[0] = p[1]
+        if len(p) == 2: # single expression
+            p[0] = ExprList([p[1]], coord=p[1].coord)
         else:
-            if not isinstance(p[1], ExprList):
-                p[1] = ExprList([p[1]],coord=p[1].coord)
             p[1].list.append(p[3])
             p[0] = p[1]
 

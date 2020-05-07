@@ -91,10 +91,9 @@ class Scopes(object):
     at the moment (and it corresponds to the scopes array size).
     '''
     def __init__(self):
-        root = SymbolTable()
-        self.scope = [root]
+        self.scope = []
         self.loopStack = []
-        self.depth = 1
+        self.depth = 0
 
     def pushLoop(self,loop):
         self.loopStack.append(loop)
@@ -153,6 +152,12 @@ def getBasicType(node):
     t = getInnerMostType(node)
     return t.names[0]
 
+def getArrayName(node):
+    inner = node
+    while not isinstance(inner,VarDecl):
+        inner = inner.type
+    return inner.name.name
+
 def typesEqual(t1,t2):
     return t1.names==t2.names and t1.arrayLevel==t2.arrayLevel
 
@@ -164,6 +169,16 @@ class CheckProgramVisitor(NodeVisitor):
     '''
     def __init__(self):
         self.scopes = Scopes()
+        self.declarations = []
+
+    def checkArgumentsMatch(self,args1,args2,coord):
+        err = f"{coord.line}:{coord.column} - argument list sizes must be the same."
+        assert (args1==None and args2==None) or (len(args1)==len(args2)), err
+        for i, arg in enumerate(args1 or []):
+            err = f"{arg.coord.line}:{arg.coord.column} - arguments types must match."
+            pt = getInnerMostType(arg)
+            at = getInnerMostType(args2[i])
+            assert typesEqual(pt,at), err
 
     def visit_Program(self,node):
         self.scopes.pushLevel()
@@ -175,64 +190,117 @@ class CheckProgramVisitor(NodeVisitor):
         for i, child in enumerate(node.decls or []):
             self.visit(child)
 
+    def copyDeclList(self,node):
+        node.decl_list = []
+        for d in self.declarations:
+            node.decl_list.append(d)
+        self.declarations = []
+
     def visit_FuncDef(self,node):
         self.visit(node.type)
-
         decl = node.decl
         while not isinstance(decl,Decl):
             decl = decl.type
-        decl.isFunction = True # new scope is pushed in visit_Decl()
+        decl.isPrototype = False # new scope is pushed in visit_Decl()
         self.visit(node.decl)
+        # get parameter list from node.decl
+        node.param_list = node.decl.type.args
         # insert in scope expected return type
         self.scopes.insert("return",node.type)
-        for i, child in enumerate(node.decl_list or []):
-            self.visit(child)
+        #for i, child in enumerate(node.decl_list or []):
+        #    self.visit(child)
+        self.declarations = []
         self.visit(node.compound_statement)
         self.scopes.popLevel()
+        self.copyDeclList(node)
 
-    def visit_Decl(self,node):
-        self.visit(node.type)
-        t = node.type
-        sym = node.name.name # get ID from Decl (which is called name), then its name
-        # check if symbol exists already, otherwise insert it in scope
+    #######################################################################
+    # From here till Decl, all these functions are used for Decl purposes #
+    #######################################################################
+    def visit_Prototype(self,node): # this is the prototype case (FuncDecl outside a FuncDef)
+        sym = node.name.name
         alreadyDefined = f"{node.coord.line}:{node.coord.column} - symbol {sym} already defined in current scope."
-        assert self.scopes.insert(sym,t), alreadyDefined
+        assert self.scopes.insert(sym,node.type), alreadyDefined
+        self.scopes.pushLevel()
+        self.visit(node.type)
+        self.scopes.popLevel()
 
-        if isinstance(node.type,FuncDecl):
-            self.scopes.pushLevel() # TODO fazer push do escopo dentro de FuncDecl 
-            self.visit(node.type)
-            if not node.isFunction: # this is the prototype case (FuncDecl outside a FuncDef)
-                self.scopes.popLevel()
+    def visit_FuncDefinition(self,node): # this is not a prototype
+        sym = node.name.name
+        alreadyDefined = f"{node.coord.line}:{node.coord.column} - symbol {sym} already defined in current scope."
+        proto = self.scopes.find(sym)
+        if proto: # check if there is some prototype already defined
+            assert proto.isPrototype, alreadyDefined # this proto is actually another function, not a prototype
+            node.type.proto = proto # keep this value here for parameters and type checks later
+        self.scopes.insert(sym,node.type)
+        self.scopes.pushLevel()
+        self.visit(node.type)
 
-        if isinstance(node.type,PtrDecl):
-            # TODO
-            assert False, "PtrDecl not implemented yet."
+    def visit_DeclFuncDecl(self,node):
+        node.type.isPrototype = node.isPrototype
+        if node.isPrototype:
+            self.visit_Prototype(node)
+        else:
+            self.visit_FuncDefinition(node)
 
+    def visit_DeclVarOrArray(self,node):
+        sym = node.name.name # get ID from Decl (which is called name), then its name
+        alreadyDefined = f"{node.coord.line}:{node.coord.column} - symbol {sym} already defined in current scope."
+        assert self.scopes.insert(sym,node.type), alreadyDefined
+        self.visit(node.type)
         if node.init:
             self.visit(node.init)
-
             if isinstance(node.type,ArrayDecl):
                 self.check_Decl_ArrayDecl(node)
-
             else:
                 # check if declaration type matches initializer type
                 td = getInnerMostType(node)
                 ti = getInnerMostType(node.init)
                 assert typesEqual(td,ti), f"{node.coord.line}:{node.coord.column} - declaration and initializer types must match."
 
+    def visit_Decl(self,node):
+        self.declarations.append(node)
+        if isinstance(node.type,FuncDecl):
+            self.visit_DeclFuncDecl(node)
+        elif isinstance(node.type,PtrDecl):
+            assert False, "PtrDecl not implemented yet."
+        else:
+            self.visit_DeclVarOrArray(node)
+    #######################################################################
+    #             Here ends the functions used for Decl purposes          #
+    #######################################################################
+
     def check_Decl_ArrayDecl(self,node):
         isString = False
         if getBasicType(node)=='char' and getBasicType(node.init)=='string':
             isString = True
+            c = Constant(type='char', value=node.init.size)
+            self.visit(c)
+            node.type.size = [c]
         # check init type (must be InitList)
         err = f"{node.coord.line}:{node.coord.column} - array initializer must be of array type."
         assert isString or isinstance(node.init,InitList) or isinstance(node.init,ArrayRef), err
         # check if their sizes match
         ad = node.type
+        # test if initialization matches array sizes
         if ad.size:
             err = f"{node.coord.line}:{node.coord.column} - array initializer size must match declaration."
-            assert int(ad.size.value)==int(node.init.size), err
-        ad.size = node.init.size
+            init = node.init
+            i = 0
+            while isinstance(init, InitList):
+                assert int(ad.size[i].value)==int(init.size), err
+                i += 1
+                init = init.inits
+        # if size wasnt specified, set it
+        if ad.size==[]:
+            init = node.init
+            while isinstance(init, InitList):
+                c = Constant(type='int', value=init.size)
+                self.visit(c)
+                ad.size.append(c)
+                init = init.inits[0]
+        if isinstance(node.init,InitList):
+            node.init.sizes = ad.size
 
     def visit_Compound(self,node):
         for i, child in enumerate(node.block_items or []):
@@ -285,11 +353,20 @@ class CheckProgramVisitor(NodeVisitor):
         assert typesEqual(t,bt), err
 
     def visit_ArrayDecl(self,node):
+        if self.scopes.depth==1:
+            node.isGlobal = True
         self.visit(node.type)
         t = getInnerMostType(node)
         t.arrayLevel += 1
+        # if there is a size, put it on a list and concatenate it with node.type.size (inner size)
+        if node.size:
+            node.size = [node.size]+node.type.size
+        else:
+            node.size = []
 
     def visit_VarDecl(self,node):
+        if self.scopes.depth==1:
+            node.isGlobal = True
         self.visit(node.type)
 
     def visit_Type(self,node):
@@ -309,6 +386,14 @@ class CheckProgramVisitor(NodeVisitor):
         if node.args:
             self.visit(node.args)
         self.visit(node.type)
+        if node.proto: # check if everything matches with prototype
+            # check matching types
+            bt = getBasicType(node)
+            pbt = getBasicType(node.proto)
+            tmatch = f"{node.coord.line}:{node.coord.column} - prototype and function definition types must match."
+            assert bt==pbt, tmatch
+            # check parameter types and size
+            self.checkArgumentsMatch(node.args.list,node.proto.args.list,node.coord)
 
     def visit_ParamList(self,node):
         for i, child in enumerate(node.list or []):
@@ -331,6 +416,7 @@ class CheckProgramVisitor(NodeVisitor):
         assert bt=='bool', err
 
     def visit_FuncCall(self,node):
+        self.visit(node.params)
         self.visit(node.name)
         node.type = node.name.type
         func = self.scopes.find(node.name.name)
@@ -343,15 +429,8 @@ class CheckProgramVisitor(NodeVisitor):
             par_list = [node.params]
         else:
             par_list = node.params.list
-        err = f"{node.coord.line}:{node.coord.column} - number of arguments must match with function declaration."
-        assert len(arg_list)==len(par_list), err
-        # check arguments types match parameters type
-        for i, par in enumerate(par_list or []):
-            self.visit(par)
-            err = f"{par.coord.line}:{par.coord.column} - argument type doesn't match parameter in function declaration."
-            pt = getInnerMostType(par)
-            at = getInnerMostType(arg_list[i])
-            assert typesEqual(pt,at), err
+        # check arguments types match parameters type and list size matches declaration
+        self.checkArgumentsMatch(arg_list,par_list,node.coord)
 
     def visit_Constant(self,node):
         if not isinstance(node.type,Type):
@@ -360,7 +439,7 @@ class CheckProgramVisitor(NodeVisitor):
 
     def visit_BinaryOp(self,node):
         self.visit(node.left)
-        self.visit(node.right)        
+        self.visit(node.right)
         # Make sure left and right operands have the same type
         binop = f"{node.coord.line}:{node.coord.column} - left ({node.left.type}) and right ({node.right.type}) sides of binary operation must have the same types."
         btr = getInnerMostType(node.left)
@@ -416,11 +495,10 @@ class CheckProgramVisitor(NodeVisitor):
         # take same type as this array with an array level lower
         node.type = Type(at.names)
         node.type.arrayLevel = at.arrayLevel-1
-        # get element size        
+        # get element size
         if node.type.arrayLevel > 0:
-            innarray = node.name.type.type
-            size = innarray.size.value
-            node.size = size
+            innarray = node.name.type
+            node.size = innarray.size[1:]
         else:
             node.size = 1
 
@@ -447,8 +525,8 @@ class CheckProgramVisitor(NodeVisitor):
     def visit_Cast(self,node):
         if node.expression:
             self.visit(node.expression)
-        t = self.scopes.find(node.type)
-        assert t!=None, f"{node.coord.line}:{node.coord.column} - must specify cast type."
+        t = getBasicType(node.type)
+        assert t != None, f"{node.coord.line}:{node.coord.column} - must specify cast type."
 
     def visit_PtrDecl(self,node):
         node.type = Type(names=['pointer'])
@@ -480,8 +558,10 @@ if __name__ == '__main__':
 
     import sys
 
-    p = Parser()
     code = open(sys.argv[1]).read()
+    # parse code and generate AST
+    p = Parser()
     ast = p.parse(code)
+    # perform semantic checks
     check = CheckProgramVisitor()
     check.visit_Program(ast)
