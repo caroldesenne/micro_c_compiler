@@ -161,8 +161,7 @@ class Compiler:
             self._sema(susy, ast_file)
             if not errors_reported():
                 print("Semantic checks OK.")
-            #self._gen(susy, ast_file)
-            #pprint(self.gen.code)
+            self._gen(susy, ast_file)
 
     def compile(self, code, susy, ast_file, debug):
         """ Compiles the given code string """

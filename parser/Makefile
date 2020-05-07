@@ -1,4 +1,6 @@
-all:
+all: semantic gencode
+
+uc:
 	python3 uc.py tests/t1.uc
 	python3 uc.py tests/t2.uc
 	python3 uc.py tests/t3.uc
@@ -9,7 +11,16 @@ all:
 	python3 uc.py tests/factorial.uc
 	python3 uc.py tests/gdc.uc
 	python3 uc.py tests/primes.uc
-	python3 uc.py tests/ptrFuncion.uc
+	#python3 uc.py tests/ptrFuncion.uc
+	python3 uc.py tests/ir1.uc
+	python3 uc.py tests/ir2.uc
+	python3 uc.py tests/ir3.uc
+	python3 uc.py tests/ir4.uc
+	python3 uc.py tests/ir5.uc
+	python3 uc.py tests/ir6.uc
+	python3 uc.py tests/ir7.uc
+	python3 uc.py tests/ir8.uc
+	python3 uc.py tests/ir9.uc
 
 clean:
 	rm parser.out parsetab.py
@@ -47,7 +58,6 @@ gencode:
 	python3 generate.py tests/ir7.uc
 	python3 generate.py tests/ir8.uc
 	python3 generate.py tests/ir9.uc
-
 	-diff tests/ir1.out tests/ir1.code
 	-diff tests/ir2.out tests/ir2.code
 	-diff tests/ir3.out tests/ir3.code
