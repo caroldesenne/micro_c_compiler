@@ -157,11 +157,13 @@ class Compiler:
         """ Compiles the code to the given file object. """
         self._parse(susy, ast_file, debug)
         if not errors_reported():
-            print("Parse OK.")
+            print("Parsing OK.")
             self._sema(susy, ast_file)
             if not errors_reported():
                 print("Semantic checks OK.")
-            self._gen(susy, ast_file)
+                self._gen(susy, ast_file)
+                if not errors_reported():
+                    print("Code Generation OK.")
 
     def compile(self, code, susy, ast_file, debug):
         """ Compiles the given code string """
@@ -210,7 +212,7 @@ def run_compiler():
         ast_file = None
         if emit_ast and not susy:
             ast_filename = source_filename[:-3] + '.ast'
-            print("Outputting the AST to %s." % ast_filename)
+            # print("Outputting the AST to %s." % ast_filename)
             ast_file = open(ast_filename, 'w')
             open_files.append(ast_file)
 
