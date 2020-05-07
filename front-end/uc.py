@@ -11,8 +11,8 @@
 import sys
 from contextlib import contextmanager
 from parser import Parser
-from check import CheckProgramVisitor
-from generate import GenerateCode
+from checker import CheckProgramVisitor
+from generator import GenerateCode
 
 from pprint import pprint
 

@@ -5,8 +5,8 @@ from pprint import pprint
 from parser import Parser
 from enum import Enum
 from collections import defaultdict
-from uc_ast import *
-from check import *
+from ast import *
+from checker import *
 
 binary_ops = {
     '+': 'add',

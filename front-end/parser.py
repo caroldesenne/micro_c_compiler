@@ -1,6 +1,6 @@
 import ply.yacc as yacc
 from lexer import Lexer
-from uc_ast import *
+from ast import *
 
 class Parser():
 

@@ -13,9 +13,9 @@
 import sys
 import ply.yacc as yacc
 from parser import Parser
-from uc_ast import *
-from check import *
-from generate import *
+from ast import *
+from checker import *
+from generator import *
 
 
 class Interpreter(object):

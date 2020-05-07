@@ -1,6 +1,8 @@
-all: semantic gencode
+all: semantic gencode clean
 
-uc:
+uc: uc_commands clean
+
+uc_commands:
 	python3 uc.py tests/t1.uc
 	python3 uc.py tests/t2.uc
 	python3 uc.py tests/t3.uc
@@ -23,41 +25,43 @@ uc:
 	python3 uc.py tests/ir9.uc
 
 clean:
-	rm parser.out parsetab.py
+	#rm parser.out parsetab.py
+	rm tests/*.ast
+	rm tests/*.code
 
 semantic:
-	python3 check.py tests/t1.uc
-	python3 check.py tests/t2.uc
-	python3 check.py tests/t3.uc
-	python3 check.py tests/t4.uc
-	python3 check.py tests/t5.uc
-	python3 check.py tests/test1.uc
-	python3 check.py tests/test2.uc
-	#python3 check.py tests/test3.uc
-	python3 check.py tests/test4.uc
-	#python3 check.py tests/test5.uc
-	#python3 check.py tests/test6.uc
-	python3 check.py tests/test7.uc
-	#python3 check.py tests/test8.uc
-	python3 check.py tests/armstrong.uc
-	python3 check.py tests/arrayRef.uc
-	python3 check.py tests/bubble.uc
-	python3 check.py tests/charArray.uc
-	python3 check.py tests/factorial.uc
-	python3 check.py tests/gdc.uc
-	python3 check.py tests/primes.uc
-	#python3 check.py tests/ptrFunction.uc
+	python3 checker.py tests/t1.uc
+	python3 checker.py tests/t2.uc
+	python3 checker.py tests/t3.uc
+	python3 checker.py tests/t4.uc
+	python3 checker.py tests/t5.uc
+	python3 checker.py tests/test1.uc
+	python3 checker.py tests/test2.uc
+	#python3 checker.py tests/test3.uc
+	python3 checker.py tests/test4.uc
+	#python3 checker.py tests/test5.uc
+	#python3 checker.py tests/test6.uc
+	python3 checker.py tests/test7.uc
+	#python3 checker.py tests/test8.uc
+	python3 checker.py tests/armstrong.uc
+	python3 checker.py tests/arrayRef.uc
+	python3 checker.py tests/bubble.uc
+	python3 checker.py tests/charArray.uc
+	python3 checker.py tests/factorial.uc
+	python3 checker.py tests/gdc.uc
+	python3 checker.py tests/primes.uc
+	#python3 checker.py tests/ptrFunction.uc
 
 gencode:
-	python3 generate.py tests/ir1.uc
-	python3 generate.py tests/ir2.uc
-	python3 generate.py tests/ir3.uc
-	python3 generate.py tests/ir4.uc
-	python3 generate.py tests/ir5.uc
-	python3 generate.py tests/ir6.uc
-	python3 generate.py tests/ir7.uc
-	python3 generate.py tests/ir8.uc
-	python3 generate.py tests/ir9.uc
+	python3 generator.py tests/ir1.uc
+	python3 generator.py tests/ir2.uc
+	python3 generator.py tests/ir3.uc
+	python3 generator.py tests/ir4.uc
+	python3 generator.py tests/ir5.uc
+	python3 generator.py tests/ir6.uc
+	python3 generator.py tests/ir7.uc
+	python3 generator.py tests/ir8.uc
+	python3 generator.py tests/ir9.uc
 	-diff tests/ir1.out tests/ir1.code
 	-diff tests/ir2.out tests/ir2.code
 	-diff tests/ir3.out tests/ir3.code

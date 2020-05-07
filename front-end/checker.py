@@ -1,7 +1,7 @@
 import ply.yacc as yacc
 import uctype
 from parser import Parser
-from uc_ast import *
+from ast import *
 
 class NodeVisitor(object):
     """ A base NodeVisitor class for visiting uc_ast nodes.
