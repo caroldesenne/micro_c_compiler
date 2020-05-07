@@ -259,6 +259,7 @@ class CheckProgramVisitor(NodeVisitor):
                 assert typesEqual(td,ti), f"{node.coord.line}:{node.coord.column} - declaration and initializer types must match."
 
     def visit_Decl(self,node):
+        self.visit(node.name)
         self.declarations.append(node)
         if isinstance(node.type,FuncDecl):
             self.visit_DeclFuncDecl(node)
@@ -483,7 +484,7 @@ class CheckProgramVisitor(NodeVisitor):
         self.visit(node.access_value)
         # check if this is an array
         at = getInnerMostType(node.name)
-        f"{node.coord.line}:{node.coord.column} - array reference to non array variable."
+        err = f"{node.coord.line}:{node.coord.column} - array reference to non array variable."
         assert at.arrayLevel > 0, err
         # check if there is an access value
         accNone = f"{node.coord.line}:{node.coord.column} - array access value must be specified."
