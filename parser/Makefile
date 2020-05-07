@@ -41,3 +41,19 @@ gencode:
 	python3 generate.py tests/ir1.uc
 	python3 generate.py tests/ir2.uc
 	python3 generate.py tests/ir3.uc
+	python3 generate.py tests/ir4.uc
+	python3 generate.py tests/ir5.uc
+	python3 generate.py tests/ir6.uc
+	python3 generate.py tests/ir7.uc
+	python3 generate.py tests/ir8.uc
+	python3 generate.py tests/ir9.uc
+
+	-diff tests/ir1.out tests/ir1.code
+	-diff tests/ir2.out tests/ir2.code
+	-diff tests/ir3.out tests/ir3.code
+	-diff tests/ir4.out tests/ir4.code
+	-diff tests/ir5.out tests/ir5.code
+	-diff tests/ir6.out tests/ir6.code
+	-diff tests/ir7.out tests/ir7.code
+	-diff tests/ir8.out tests/ir8.code
+	-diff tests/ir9.out tests/ir9.code

@@ -1,8 +1,4 @@
-int main() {
-  int x, y = 3;
-  float z = 4.5;
-  x = y + 5;
-  z = (float)x;
-  y = (int)z;
-  return 0;
+int x[2][2];
+void main(){
+ int y[] = {1, 2, 3};
 }

@@ -212,6 +212,16 @@ class GenerateCode(NodeVisitor):
         for i,d in enumerate(node.decl_list or []):
             self.visit(d)
 
+    def FuncDefStoreParams(self,node):
+        if node.param_list:
+            i = 0
+            j = len(node.param_list.list)+1
+            for p in node.param_list.list:
+                bt = getBasicType(p)
+                self.code.append(('store_'+bt,'%'+str(i),'%'+str(j)))
+                j += 1
+                i += 1
+
     def FuncDefInit(self,node):
         self.phase = Phase.INIT
         for i,d in enumerate(node.decl_list or []):
@@ -229,6 +239,7 @@ class GenerateCode(NodeVisitor):
         #####################################
         self.FuncDefStart(node)
         self.FuncDefAlloc(node)
+        self.FuncDefStoreParams(node)
         # self.FuncDefInit(node)
         self.FuncDefStatement(node)
         ####################################
@@ -266,11 +277,9 @@ class GenerateCode(NodeVisitor):
         # put all params together
         for p in all_params:
             self.code.append(p)
-        # load function and call it
-        func = self.new_temp()
+        # call function
         result = self.new_temp()
-        self.code.append(('load_'+bt, node.name.name, func)) 
-        self.code.append(('call', func, result))
+        self.code.append(('call', '@'+node.name.name, result))
         # store result label from call
         node.temp_location = result
 
@@ -427,10 +436,20 @@ class GenerateCode(NodeVisitor):
         else: # can be ArrayDecl or VarDecl
             if node.type.isGlobal:
             # if global, we need to pop last appended code and insert init on it
-                self.visit(node.type)
-                line = self.globals.pop()
-                init = str(node.init.value)
-                self.globals.append((line[0],line[1],init))
+                if isinstance(node.type, ArrayDecl):
+                    self.visit(node.type)
+                    if node.init:
+                        line = self.globals.pop()
+                        self.visit(node.init)
+                        aux = self.globals.pop()
+                        init = aux[2]
+                        self.globals.append((line[0],line[1],init))
+                else:
+                    self.visit(node.type)
+                    line = self.globals.pop()
+                    if node.init:
+                        init = node.init.value
+                        self.globals.append((line[0],line[1],init))
             else:
                 if self.phase==Phase.ALLOC:
                     self.visit(node.type)
@@ -523,7 +542,7 @@ class GenerateCode(NodeVisitor):
         # perform statement
         self.visit(node.statement)
         # jump back to beginning
-        self.code.append(('jump', entry_label[1:]))
+        self.code.append(('jump', entry_label))
         # or end for
         self.code.append((exit_label[1:],))
         self.labels.popExitLoop()
@@ -547,7 +566,7 @@ class GenerateCode(NodeVisitor):
         self.visit(node.statement)
         self.visit(node.increment)
         # jump back to beginning
-        self.code.append(('jump', entry_label[1:]))
+        self.code.append(('jump', entry_label))
         # or end for
         self.code.append((exit_label[1:],))
         self.labels.popExitLoop()
