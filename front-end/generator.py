@@ -390,11 +390,19 @@ class GenerateCode(NodeVisitor):
         self.code.append(('add_int',mul_target,acc2,add_target))
         
         # get base array label
-        base_array = decl.temp_location
+        base_array = self.getBaseArray(decl)
         target = self.new_temp()
         bt = getBasicType(node)
         self.code.append(('elem_'+bt,base_array,add_target,target))
         node.temp_location = target
+
+    def getBaseArray(self,node):
+        if node.isGlobal:
+            global_name = node.type.name.name
+            base_array = '@'+global_name
+        else:
+            base_array = node.temp_location
+        return base_array
 
     def visit_ArrayRef(self,node):
         # 2D array reference
@@ -410,7 +418,7 @@ class GenerateCode(NodeVisitor):
             if isinstance(node.access_value, ID) or isinstance(node.access_value, ArrayRef):
                 acc = self.loadExpression(node.access_value)
             # get base array label
-            base_array = node.name.type.temp_location
+            base_array = self.getBaseArray(node.name.type)
             bt = getBasicType(node)
             target = self.new_temp()
             self.code.append(('elem_'+bt,base_array,acc,target))
