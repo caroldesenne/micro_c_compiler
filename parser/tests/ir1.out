@@ -1,3 +1,4 @@
+('global_string', '@.str.0', '\n')
 ('global_int', '@n', 10)
 ('define', '@foo')
 ('alloc_int', '%3')

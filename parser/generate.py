@@ -177,6 +177,9 @@ class GenerateCode(NodeVisitor):
 
     def visit_Program(self, node):
         self.labels.pushLevel()
+        # add \n for printing strings, which is always:
+        # ('global_string', '@.str.0', '\n')
+        self.globals.append(('global_string',self.labels.createConstant(),'\n'))
         for i, child in enumerate(node.gdecls or []):
             self.visit(child)
         self.labels.popLevel()
@@ -640,6 +643,8 @@ class GenerateCode(NodeVisitor):
                 self.code.append(('print_'+bt, tmp))
         else:
             self.code.append(('print_void',))
+        # print an empty line after every print
+        self.code.append(('print_string', '@.str.0'))
 
     def visit_VarDecl(self, node):
         tp = getBasicType(node)
