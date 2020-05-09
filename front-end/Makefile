@@ -28,6 +28,7 @@ clean:
 	#rm parser.out parsetab.py
 	rm tests/*.ast
 	rm tests/*.code
+	rm tests/*.ir
 
 semantic:
 	python3 checker.py tests/t1.uc
