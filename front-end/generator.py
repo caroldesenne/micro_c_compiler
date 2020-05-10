@@ -1,6 +1,6 @@
 import sys
 import ply.yacc as yacc
-import uctype
+#import uctype
 from pprint import pprint
 from parser import Parser
 from enum import Enum
@@ -178,8 +178,9 @@ class GenerateCode(NodeVisitor):
     def visit_Program(self, node):
         self.labels.pushLevel()
         # add \n for printing strings, which is always:
+        # commenting this to match susy output
         # ('global_string', '@.str.0', '\n')
-        self.globals.append(('global_string',self.labels.createConstant(),'\n'))
+        # self.globals.append(('global_string',self.labels.createConstant(),'\n'))
         for i, child in enumerate(node.gdecls or []):
             self.visit(child)
         self.labels.popLevel()
@@ -652,7 +653,8 @@ class GenerateCode(NodeVisitor):
         else:
             self.code.append(('print_void',))
         # print an empty line after every print
-        self.code.append(('print_string', '@.str.0'))
+        # commenting this to match Susy output
+        # self.code.append(('print_string', '@.str.0'))
 
     def visit_VarDecl(self, node):
         tp = getBasicType(node)
