@@ -1,6 +1,6 @@
-all: semantic gencode clean
+all: semantic gencode
 
-uc: uc_commands clean
+uc: uc_commands
 
 uc_commands:
 	python3 uc.py tests/t1.uc
@@ -13,7 +13,6 @@ uc_commands:
 	python3 uc.py tests/factorial.uc
 	python3 uc.py tests/gdc.uc
 	python3 uc.py tests/primes.uc
-	#python3 uc.py tests/ptrFuncion.uc
 	python3 uc.py tests/ir1.uc
 	python3 uc.py tests/ir2.uc
 	python3 uc.py tests/ir3.uc
@@ -25,10 +24,10 @@ uc_commands:
 	python3 uc.py tests/ir9.uc
 
 clean:
-	#rm parser.out parsetab.py
-	rm tests/*.ast
-	rm tests/*.code
-	rm tests/*.ir
+	-rm parser.out parsetab.py
+	-rm tests/*.ast
+	-rm tests/*.code
+	-rm tests/*.ir
 
 semantic:
 	python3 checker.py tests/t1.uc
@@ -63,12 +62,12 @@ gencode:
 	python3 generator.py tests/ir7.uc
 	python3 generator.py tests/ir8.uc
 	python3 generator.py tests/ir9.uc
-	-diff tests/ir1.out tests/ir1.code
-	-diff tests/ir2.out tests/ir2.code
-	-diff tests/ir3.out tests/ir3.code
-	-diff tests/ir4.out tests/ir4.code
-	-diff tests/ir5.out tests/ir5.code
-	-diff tests/ir6.out tests/ir6.code
-	-diff tests/ir7.out tests/ir7.code
-	-diff tests/ir8.out tests/ir8.code
-	-diff tests/ir9.out tests/ir9.code
+	#-diff tests/ir1.out tests/ir1.code
+	#-diff tests/ir2.out tests/ir2.code
+	#-diff tests/ir3.out tests/ir3.code
+	#-diff tests/ir4.out tests/ir4.code
+	#-diff tests/ir5.out tests/ir5.code
+	#-diff tests/ir6.out tests/ir6.code
+	#-diff tests/ir7.out tests/ir7.code
+	#-diff tests/ir8.out tests/ir8.code
+	#-diff tests/ir9.out tests/ir9.code
