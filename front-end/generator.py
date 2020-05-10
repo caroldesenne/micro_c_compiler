@@ -1,12 +1,12 @@
 import sys
 import ply.yacc as yacc
-import uctype
+#import uctype
 from pprint import pprint
 from parser import Parser
 from enum import Enum
 from collections import defaultdict
-from uc_ast import *
-from check import *
+from ast import *
+from checker import *
 
 binary_ops = {
     '+': 'add',
@@ -177,6 +177,10 @@ class GenerateCode(NodeVisitor):
 
     def visit_Program(self, node):
         self.labels.pushLevel()
+        # add \n for printing strings, which is always:
+        # commenting this to match susy output
+        # ('global_string', '@.str.0', '\n')
+        # self.globals.append(('global_string',self.labels.createConstant(),'\n'))
         for i, child in enumerate(node.gdecls or []):
             self.visit(child)
         self.labels.popLevel()
@@ -387,11 +391,25 @@ class GenerateCode(NodeVisitor):
         self.code.append(('add_int',mul_target,acc2,add_target))
         
         # get base array label
-        base_array = decl.temp_location
+        base_array = self.getBaseArray(decl)
         target = self.new_temp()
         bt = getBasicType(node)
         self.code.append(('elem_'+bt,base_array,add_target,target))
         node.temp_location = target
+
+    def getArrayName(self,node):
+        t = node
+        while not isinstance(t,VarDecl):
+            t = t.type
+        return t.name.name
+
+    def getBaseArray(self,node):
+        if node.isGlobal:
+            global_name = getArrayName(node)
+            base_array = '@'+global_name
+        else:
+            base_array = node.temp_location
+        return base_array
 
     def visit_ArrayRef(self,node):
         # 2D array reference
@@ -407,7 +425,7 @@ class GenerateCode(NodeVisitor):
             if isinstance(node.access_value, ID) or isinstance(node.access_value, ArrayRef):
                 acc = self.loadExpression(node.access_value)
             # get base array label
-            base_array = node.name.type.temp_location
+            base_array = self.getBaseArray(node.name.type)
             bt = getBasicType(node)
             target = self.new_temp()
             self.code.append(('elem_'+bt,base_array,acc,target))
@@ -640,6 +658,9 @@ class GenerateCode(NodeVisitor):
                 self.code.append(('print_'+bt, tmp))
         else:
             self.code.append(('print_void',))
+        # print an empty line after every print
+        # commenting this to match Susy output
+        # self.code.append(('print_string', '@.str.0'))
 
     def visit_VarDecl(self, node):
         tp = getBasicType(node)

@@ -1,7 +1,71 @@
 import ply.yacc as yacc
-import uctype
+#import uctype
 from parser import Parser
-from uc_ast import *
+from ast import *
+
+class uCType(object):
+    '''
+    Class that represents a type in the uC language.  Types 
+    are declared as singleton instances of this type.
+    '''
+    def __init__(self, name, bin_ops=set(), un_ops=set(), bool_ops=set(), as_ops=set()):
+        self.name = name
+        self.bin_ops = bin_ops
+        self.un_ops = un_ops
+        self.bool_ops = bool_ops
+        self.assign_ops = as_ops
+
+
+# Create specific instances of types. You will need to add
+# appropriate arguments depending on your definition of uCType
+int_type = uCType(name     = "int",
+                  bin_ops  = {'+', '-', '*', '/','%','==','!=','<','>','<=','>='},
+                  un_ops   = {'-','+','--','++','p--','p++','*','&'},
+                  bool_ops = {'==','!=','<','>','<=','>='},
+                  as_ops   = {'=','+=','-=','*=','/=','%='}
+                 )
+
+float_type = uCType(name     = "float",
+                    bin_ops  = {'+', '-', '*', '/','%','==','!=','<','>','<=','>='},
+                    un_ops   = {'-','+','*','&'},
+                    bool_ops = {'==','!=','<','>','<=','>='},
+                    as_ops   = {'=','+=','-=','*=','/='}
+                   )
+
+boolean_type = uCType(name     = "bool",
+                      bin_ops  = {'==','!=','&&','||'},
+                      un_ops   = {'!','*','&'},
+                      bool_ops = {'==','!=','&&','||'},
+                      as_ops   = {}
+                     )
+
+char_type = uCType(name     = "char",
+                   bin_ops  = {'==','!='},
+                   un_ops   = {'*','&'},
+                   bool_ops = {'==','!='}, # TODO: sao so esses?
+                   as_ops   = {}
+                  )
+
+string_type = uCType(name     = "string",
+                     bin_ops  = {'==','!='},
+                     un_ops   = {},
+                     bool_ops = {'==','!='},
+                     as_ops   = {}
+                    )
+
+array_type = uCType(name = "array",
+                    bin_ops  = {'==','!='},
+                    un_ops   = {'*','&'},
+                    bool_ops = {'==','!='},
+                    as_ops   = {}
+                    )
+# TODO pointer
+pointer_type = uCType(name = "pointer",
+                      bin_ops  = {},
+                      un_ops   = {},
+                      bool_ops = {},
+                      as_ops   = {}
+                     )
 
 class NodeVisitor(object):
     """ A base NodeVisitor class for visiting uc_ast nodes.
@@ -68,13 +132,13 @@ class SymbolTable(object):
     def __init__(self):
         self.symtab = {}
         # Add built-in type names (int, float, char) to every symbol table
-        self.add("int",uctype.int_type)
-        self.add("float",uctype.float_type)
-        self.add("char",uctype.char_type)
-        self.add("string",uctype.string_type)
-        self.add("bool",uctype.boolean_type)
-        self.add("array",uctype.array_type)
-        self.add("pointer",uctype.pointer_type)
+        self.add("int",int_type)
+        self.add("float",float_type)
+        self.add("char",char_type)
+        self.add("string",string_type)
+        self.add("bool",boolean_type)
+        self.add("array",array_type)
+        self.add("pointer",pointer_type)
 
     def lookup(self, a):
         return self.symtab.get(a)
@@ -360,6 +424,7 @@ class CheckProgramVisitor(NodeVisitor):
         t.arrayLevel += 1
         # if there is a size, put it on a list and concatenate it with node.type.size (inner size)
         if node.size:
+            self.visit(node.size)
             node.size = [node.size]+node.type.size
         else:
             node.size = []
@@ -481,9 +546,11 @@ class CheckProgramVisitor(NodeVisitor):
     def visit_ArrayRef(self,node):
         self.visit(node.name)
         self.visit(node.access_value)
+        if node.size:
+            self.visit(node.size)
         # check if this is an array
         at = getInnerMostType(node.name)
-        f"{node.coord.line}:{node.coord.column} - array reference to non array variable."
+        err = f"{node.coord.line}:{node.coord.column} - array reference to non array variable."
         assert at.arrayLevel > 0, err
         # check if there is an access value
         accNone = f"{node.coord.line}:{node.coord.column} - array access value must be specified."
@@ -536,7 +603,7 @@ class CheckProgramVisitor(NodeVisitor):
         t = self.scopes.find(sym)
         # check if symbol exists
         notDefined = f"{node.coord.line}:{node.coord.column} - symbol {sym} not defined."
-        assert sym, notDefined
+        assert t, notDefined
         node.type = t
 
     def visit_EmptyStatement(self,node):

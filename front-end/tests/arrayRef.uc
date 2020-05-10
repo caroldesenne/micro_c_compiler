@@ -10,9 +10,8 @@ int main() {
   int e[] = c[1]; // check size
   int f[3] = c[1];
 
-  char g[3][4][5];
-  char h[4][5] = g[0];
-  char i[5] = h[2];
-  char j[] = h[0];
-  char k = h[0][1];
+  char g[4][5];
+  char h[4] = g[0];
+  char j = h[0];
+  char s = h[d[0]];
 }
