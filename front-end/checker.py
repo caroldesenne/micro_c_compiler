@@ -424,6 +424,7 @@ class CheckProgramVisitor(NodeVisitor):
         t.arrayLevel += 1
         # if there is a size, put it on a list and concatenate it with node.type.size (inner size)
         if node.size:
+            self.visit(node.size)
             node.size = [node.size]+node.type.size
         else:
             node.size = []
@@ -545,6 +546,8 @@ class CheckProgramVisitor(NodeVisitor):
     def visit_ArrayRef(self,node):
         self.visit(node.name)
         self.visit(node.access_value)
+        if node.size:
+            self.visit(node.size)
         # check if this is an array
         at = getInnerMostType(node.name)
         err = f"{node.coord.line}:{node.coord.column} - array reference to non array variable."

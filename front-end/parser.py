@@ -448,7 +448,8 @@ class Parser():
         decl_body : type_specifier init_declarator_list_opt
         """
         if p[2] is None:
-            decls = [Decl(name=None,type=p[1],init=None,coord=p[1].coord)]
+            decls = None
+            # decls = [Decl(name=None,type=p[1],init=None,coord=p[1].coord)]
         else:
             decls = self._build_declarations(spec=p[1],decls=p[2])
         p[0] = decls
