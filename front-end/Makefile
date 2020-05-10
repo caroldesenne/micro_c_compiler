@@ -22,6 +22,10 @@ uc_commands:
 	python3 uc.py tests/ir7.uc
 	python3 uc.py tests/ir8.uc
 	python3 uc.py tests/ir9.uc
+	python3 uc.py tests/susy11.uc
+	python3 uc.py tests/susy12.uc
+	python3 uc.py tests/susy19.uc
+	python3 uc.py tests/susy19_.uc
 
 clean:
 	-rm parser.out parsetab.py

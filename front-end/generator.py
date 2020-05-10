@@ -397,9 +397,15 @@ class GenerateCode(NodeVisitor):
         self.code.append(('elem_'+bt,base_array,add_target,target))
         node.temp_location = target
 
+    def getArrayName(self,node):
+        t = node
+        while not isinstance(t,VarDecl):
+            t = t.type
+        return t.name.name
+
     def getBaseArray(self,node):
         if node.isGlobal:
-            global_name = node.type.name.name
+            global_name = getArrayName(node)
             base_array = '@'+global_name
         else:
             base_array = node.temp_location
