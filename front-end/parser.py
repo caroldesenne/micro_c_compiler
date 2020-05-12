@@ -48,8 +48,16 @@ class Parser():
         # type in the list.
         # If all the types are basic, they're collected in the
         # Type holder.
-        t.type = typename
+        # make a copy of typename
+        t.type = self.copyType(typename)
         return decl
+
+    def copyType(self,typename):
+        n = Type(names= [])
+        n.arrayLevel = typename.arrayLevel
+        for t in typename.names:
+            n.names.append(t)
+        return n
 
     def _build_declarations(self, spec, decls):
         """ Builds a list of declarations all sharing the given specifiers.
