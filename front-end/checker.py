@@ -42,7 +42,7 @@ boolean_type = uCType(name     = "bool",
 char_type = uCType(name     = "char",
                    bin_ops  = {'==','!='},
                    un_ops   = {'*','&'},
-                   bool_ops = {'==','!='}, # TODO: sao so esses?
+                   bool_ops = {'==','!='},
                    as_ops   = {}
                   )
 
@@ -59,7 +59,6 @@ array_type = uCType(name = "array",
                     bool_ops = {'==','!='},
                     as_ops   = {}
                     )
-# TODO pointer
 pointer_type = uCType(name = "pointer",
                       bin_ops  = {},
                       un_ops   = {},
@@ -239,7 +238,9 @@ class CheckProgramVisitor(NodeVisitor):
         err = f"{coord.line}:{coord.column} - argument list sizes must be the same."
         assert (args1==None and args2==None) or (len(args1)==len(args2)), err
         for i, arg in enumerate(args1 or []):
-            err = f"{arg.coord.line}:{arg.coord.column} - arguments types must match."
+            pbt = getBasicType(arg)
+            abt = getBasicType(args2[i])
+            err = f"{arg.coord.line}:{arg.coord.column} - arguments types must match: expected {pbt}, got {abt}."
             pt = getInnerMostType(arg)
             at = getInnerMostType(args2[i])
             assert typesEqual(pt,at), err
@@ -320,7 +321,10 @@ class CheckProgramVisitor(NodeVisitor):
                 # check if declaration type matches initializer type
                 td = getInnerMostType(node)
                 ti = getInnerMostType(node.init)
-                assert typesEqual(td,ti), f"{node.coord.line}:{node.coord.column} - declaration and initializer types must match."
+                tdb = getBasicType(node)
+                tib = getBasicType(node.init)
+                err = f"{node.coord.line}:{node.coord.column} - declaration and initializer types must match: expected {tdb}, got {tib}."
+                assert typesEqual(td,ti), err
 
     def visit_Decl(self,node):
         self.declarations.append(node)
@@ -330,9 +334,6 @@ class CheckProgramVisitor(NodeVisitor):
             assert False, "PtrDecl not implemented yet."
         else:
             self.visit_DeclVarOrArray(node)
-    #######################################################################
-    #             Here ends the functions used for Decl purposes          #
-    #######################################################################
 
     def check_Decl_ArrayDecl(self,node):
         isString = False
@@ -365,6 +366,9 @@ class CheckProgramVisitor(NodeVisitor):
                 init = init.inits[0]
         if isinstance(node.init,InitList):
             node.init.sizes = ad.size
+    #######################################################################
+    #             Here ends the functions used for Decl purposes          #
+    #######################################################################
 
     def visit_Compound(self,node):
         for i, child in enumerate(node.block_items or []):
@@ -412,16 +416,18 @@ class CheckProgramVisitor(NodeVisitor):
             node.type = Type(names=['void'])
         # check return type matches function definition
         t = self.scopes.find("return")
-        bt = getInnerMostType(node)
-        err = f"{node.coord.line}:{node.coord.column} - wrong return type in function: expected {t}, got {bt}."
-        assert typesEqual(t,bt), err
+        rbt = getBasicType(t)
+        nt = getInnerMostType(node)
+        nbt = getBasicType(node)
+        err = f"{node.coord.line}:{node.coord.column} - wrong return type in function: expected {rbt}, got {nbt}."
+        assert typesEqual(t,nt), err
 
     def visit_ArrayDecl(self,node):
         if self.scopes.depth==1:
             node.isGlobal = True
         self.visit(node.type)
         t = getInnerMostType(node)
-        t.arrayLevel += 1
+        t.arrayLevel += 1        
         # if there is a size, put it on a list and concatenate it with node.type.size (inner size)
         if node.size:
             self.visit(node.size)
@@ -442,10 +448,12 @@ class CheckProgramVisitor(NodeVisitor):
             self.visit(node.inits[0])
             node.type = node.inits[0].type
         nt = getInnerMostType(node)
+        bnt = getBasicType(node)
         for i, child in enumerate(node.inits or []):
             self.visit(child)
             ct = getInnerMostType(child)
-            assert typesEqual(ct,nt), f"{child.coord.line}:{child.coord.column} - types in initializer list must all match."
+            bct = getBasicType(child)
+            assert typesEqual(ct,nt), f"{child.coord.line}:{child.coord.column} - types in initializer list must all match: expected {bnt}, got {bct}."
 
     def visit_FuncDecl(self,node):
         if node.args:
@@ -455,10 +463,10 @@ class CheckProgramVisitor(NodeVisitor):
             # check matching types
             bt = getBasicType(node)
             pbt = getBasicType(node.proto)
-            tmatch = f"{node.coord.line}:{node.coord.column} - prototype and function definition types must match."
+            tmatch = f"{node.coord.line}:{node.coord.column} - prototype and function definition types must match: expected {pbt}, got {bt}."
             assert bt==pbt, tmatch
             # check parameter types and size
-            self.checkArgumentsMatch(node.args.list,node.proto.args.list,node.coord)
+            self.checkArgumentsMatch(node.proto.args.list,node.args.list,node.coord)
 
     def visit_ParamList(self,node):
         for i, child in enumerate(node.list or []):
@@ -469,15 +477,19 @@ class CheckProgramVisitor(NodeVisitor):
         # Check that the types match
         self.visit(node.value)
         node.type = node.assignee.type
-        err = f"{node.coord.line}:{node.coord.column} - type mismatch in assignment: ({node.assignee.type},{node.value.type})."
         at = getInnerMostType(node.assignee)
+        bat = getBasicType(node.assignee)
         vt = getInnerMostType(node.value)
+        bvt = getBasicType(node.value)
+        err = f"{node.coord.line}:{node.coord.column} - type mismatch in assignment: expected {bat}, got {bvt}."
+        if bat==bvt and isinstance(node.assignee, ArrayRef):
+            err = f"{node.coord.line}:{node.coord.column} - bad type for array reference."
         assert typesEqual(at,vt), err
 
     def visit_Assert(self,node):
         self.visit(node.expr)
-        err = f"{node.coord.line}:{node.coord.column} - assert expression must be of type bool, got {node.expr.type}."
         bt = getBasicType(node.expr)
+        err = f"{node.coord.line}:{node.coord.column} - assert expression mismacth: expected bool, got {bt}."
         assert bt=='bool', err
 
     def visit_FuncCall(self,node):
@@ -506,10 +518,12 @@ class CheckProgramVisitor(NodeVisitor):
         self.visit(node.left)
         self.visit(node.right)
         # Make sure left and right operands have the same type
-        binop = f"{node.coord.line}:{node.coord.column} - left ({node.left.type}) and right ({node.right.type}) sides of binary operation must have the same types."
-        btr = getInnerMostType(node.left)
-        btl = getInnerMostType(node.right)
-        assert typesEqual(btr,btl), binop
+        tl = getInnerMostType(node.left)
+        tr = getInnerMostType(node.right)
+        btl = getBasicType(node.left)
+        btr = getBasicType(node.right)
+        binop = f"{node.coord.line}:{node.coord.column} - left and right sides of binary operation types mismatch: {btl} (left) and {btr} (right)."
+        assert typesEqual(tl,tr), binop
         # assign left type to node's type
         node.type = node.left.type
         gt = getInnerMostType(node)
@@ -518,9 +532,9 @@ class CheckProgramVisitor(NodeVisitor):
             bt = "array"
         t = self.scopes.find(bt)
         # check if type exists
-        assert t != None, f"{node.coord.line}:{node.coord.column} - inexistent type {node.type}."
+        assert t != None, f"{node.coord.line}:{node.coord.column} - non supported type {bt}."
         # make sure the operation is supported for this type
-        assert node.op in t.bin_ops, f"{node.coord.line}:{node.coord.column} - {node.op} binary operation not supported for type {node.type}."
+        assert node.op in t.bin_ops, f"{node.coord.line}:{node.coord.column} - {node.op} binary operation not supported for type {bt}."
         # verify if we are making a relational operation and assign bool type
         if node.op in t.bool_ops:
             node.type = Type(names=['bool'])
@@ -535,9 +549,9 @@ class CheckProgramVisitor(NodeVisitor):
             bt = "array"
         t = self.scopes.find(bt)
         # check if type exists
-        assert t != None, f"{node.coord.line}:{node.coord.column} - inexistent type {node.type}."
+        assert t != None, f"{node.coord.line}:{node.coord.column} - non supported type {bt}."
         # make sure the operation is supported for this type
-        assert node.op in t.un_ops, f"{node.coord.line}:{node.coord.column} - {node.op} unary operation not supported for type {node.type}."
+        assert node.op in t.un_ops, f"{node.coord.line}:{node.coord.column} - {node.op} unary operation not supported for type {bt}."
 
     def visit_Print(self,node):
         if node.expr:
@@ -556,8 +570,8 @@ class CheckProgramVisitor(NodeVisitor):
         accNone = f"{node.coord.line}:{node.coord.column} - array access value must be specified."
         assert node.access_value, accNone
         # check if the access value is an integer
-        accInt = f"{node.coord.line}:{node.coord.column} - array access value must be of type int."
         bt = getBasicType(node.access_value)
+        accInt = f"{node.coord.line}:{node.coord.column} - array access value type mismatch: expected int, got {bt}."
         assert bt=="int", accInt
         # take same type as this array with an array level lower
         node.type = Type(at.names)
@@ -583,6 +597,7 @@ class CheckProgramVisitor(NodeVisitor):
         for i, child in enumerate(node.list or []):
             self.visit(child)
         if node.list:
+            # TODO copy
             node.type = node.list[0].type
 
     def visit_Read(self,node):
