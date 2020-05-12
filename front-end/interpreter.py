@@ -396,6 +396,9 @@ class Interpreter(object):
     run_print_char = run_print_int
     run_print_bool = run_print_int
 
+    def run_print_void(self):
+        pass
+
     def run_read_int(self, source):
         global inputline
         self._get_input()
