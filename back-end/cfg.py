@@ -2,10 +2,14 @@ class Block(object):
     def __init__(self, label):
         self.instructions = []   # Instructions in the block
         self.next_block   = None # Link to the next block
+        self.parents      = []
         self.label        = label
 
     def append(self,instr):
         self.instructions.append(instr)
+
+    def add_parent(self, parent_block):
+        self.parents.append(parent_block)
 
     def __iter__(self):
         return iter(self.instructions)
@@ -30,9 +34,9 @@ class CFG():
     '''
     Get type from instruction (basically if label or not) and return label converted to int.
     '''
-    def get_code_type(self, code):
-        op = code[0]
-        if len(code) == 1:
+    def get_instruction_type(self, instruction):
+        op = instruction[0]
+        if len(instruction) == 1:
             return int(op)
         else:
             return op
@@ -48,15 +52,16 @@ class CFG():
 
     def print(self):
         for k, v in self.label_block_dict.items():
+            print('-------------------- Block {}:  --------------------'.format(k))
+            for code in v.instructions:
+                    print(code)
             try:
-                print('-------------------- Block {}:  --------------------'.format(k))
+                print('------ Parents -------')
+                for parent in v.parents:
+                    print(parent.label)
                 if isinstance(v, ConditionalBlock):
-                    for code in v.instructions:
-                        print(code)
                     print('---- true branch label', v.true_branch.label, 'false branch label', v.false_branch.label, '----')
-                else:
-                    for code in v.instructions:
-                        print(code)
+                elif isinstance(v, BasicBlock):
                     print('--------------------- jump', v.next_block.label, '----------------------')
             except:
                 pass
@@ -77,9 +82,9 @@ class CFG():
 
         cur_label = 0
         for index in range(len(self.gen_code)):
-            op = self.get_code_type(self.gen_code[index])
+            op = self.get_instruction_type(self.gen_code[index])
             if isinstance(op, int):
-                prev_op = self.get_code_type(self.gen_code[index-1])
+                prev_op = self.get_instruction_type(self.gen_code[index-1])
                 if prev_op == 'jump' or prev_op == 'cbranch':
                     label_blocktype_dict[cur_label] = prev_op
                 else:
@@ -100,7 +105,7 @@ class CFG():
 
         cur_block = self.first_block
         for index in range(len(self.gen_code)):
-            op = self.get_code_type(self.gen_code[index])
+            op = self.get_instruction_type(self.gen_code[index])
             # if we find a label, it means we are done with previous block
             if isinstance(op, int):
                 # creates next block
@@ -111,22 +116,28 @@ class CFG():
                 # link current block (next/jump/branch)
                 if label_blocktype_dict[cur_block.label] == 'basic':
                     cur_block.next_block = self.label_block_dict[next_label]
+                    self.label_block_dict[next_label].add_parent(cur_block)
+
                 elif label_blocktype_dict[cur_block.label] == 'jump':
                     # dirty way to get jump label from instruction
                     jump_label = int(self.gen_code[index-1][1][1:])
                     if jump_label not in self.label_block_dict.keys():
                         self.label_block_dict[jump_label] = self.new_block(label_blocktype_dict[jump_label], jump_label)
                     cur_block.next_block = self.label_block_dict[jump_label]
+                    self.label_block_dict[jump_label].add_parent(cur_block)
+
                 elif label_blocktype_dict[cur_block.label] == 'cbranch':
                     true_label  = int(self.gen_code[index-1][2][1:])
                     if true_label not in self.label_block_dict.keys():
                         self.label_block_dict[true_label] = self.new_block(label_blocktype_dict[true_label], true_label)
                     cur_block.true_branch  = self.label_block_dict[true_label]
+                    self.label_block_dict[true_label].add_parent(cur_block)
 
                     false_label = int(self.gen_code[index-1][3][1:])
                     if false_label not in self.label_block_dict.keys():
                         self.label_block_dict[false_label] = self.new_block(label_blocktype_dict[false_label], false_label)
                     cur_block.false_branch = self.label_block_dict[false_label]
+                    self.label_block_dict[false_label].add_parent(cur_block)
 
                 cur_block = self.label_block_dict[next_label]
             else:
