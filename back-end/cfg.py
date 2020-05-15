@@ -19,37 +19,7 @@ class ConditionalBlock(Block):
         self.true_branch  = None
         self.false_branch = None
 
-# class IfBlock(Block):
-#     '''
-#     Class for a basic-block representing an if-else.  There are
-#     two branches to handle each possibility.
-#     '''
-#     def __init__(self):
-#         super(IfBlock,self).__init__()
-#         self.if_branch   = None
-#         self.else_branch = None
-#         self.test        = None
-
-# class WhileBlock(Block):
-#     def __init__(self):
-#         super(WhileBlock, self).__init__()
-#         self.test = None
-#         self.body = None
-
-# class BlockVisitor(object):
-#     '''
-#     Class for visiting basic blocks.  Define a subclass and define
-#     methods such as visit_BasicBlock or visit_IfBlock to implement
-#     custom processing (similar to ASTs).
-#     '''
-#     def visit(self,block):
-#         while isinstance(block,Block):
-#             name = "visit_%s" % type(block).__name__
-#             if hasattr(self,name):
-#                 getattr(self,name)(block)
-#             block = block.next_block
-
-class BasicBlocks():
+class CFG():
     def __init__(self, gen_code):
         self.gen_code         = gen_code
         self.label_block_dict = {}
@@ -292,6 +262,6 @@ if __name__ == "__main__":
         ('load_int', '%0', '%89'),
         ('return_int', '%89'),
     ]
-    bbs = BasicBlocks(gc)
+    cfg = CFG(gc)
 
-    bbs.print()
+    cfg.print()
