@@ -6,3 +6,5 @@ parsetab.py
 __pycache__*
 *.ipynb
 test
+*.ast
+*.ir
