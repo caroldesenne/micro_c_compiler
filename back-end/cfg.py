@@ -5,6 +5,12 @@ class Block(object):
         self.parents      = []
         self.label        = label
 
+        # Reaching definition (rd) stuff
+        self.rd_gen  = set()
+        self.rd_kill = set()
+        self.rd_in   = set()
+        self.rd_out  = set()
+
     def append(self,instr):
         self.instructions.append(instr)
 
@@ -143,6 +149,59 @@ class CFG():
             else:
                 cur_block.append(self.gen_code[index])
 
+    # check if instruction will generate kill or gen
+    # TODO: Improve, check all cases
+    def gen_kill_not_empty(self, instruction):
+        if len(instruction[0]) < 3:
+            return False
+        else:
+            return True
+
+    # Gets defs for a temp
+    def get_defs(self, target):
+        defs = []
+        for label, block in self.label_block_dict.items():
+            for instr_pos, instruction in enumerate(block.instructions):
+                if self.get_target_instr(instruction) == target:
+                    defs.append((label, instr_pos))
+
+        return set(defs)
+
+    # TODO: Improve, check all cases
+    def get_target_instr(self, instruction):
+        if len(instruction) == 3 or len(instruction) == 4:
+            return instruction[-1]
+        else:
+            return None
+
+    def compute_rd_gen_kill(self, block):
+        # gen[pn]  = gen[n]  U (gen[p] − kill[n])
+        # kill[pn] = kill[p] U kill[n]
+
+        # Compute Kill
+        for instr_pos, instruction in enumerate(block.instructions):
+            if self.gen_kill_not_empty(instruction):
+                target = self.get_target_instr(instruction)
+                if target is not None:
+                    defs   = self.get_defs(target)
+                    kill   = defs - set([(block.label, instr_pos)])
+                    block.rd_kill = block.rd_kill.union(kill)
+
+        # Compute Gen
+        for instr_pos, instruction in enumerate(block.instructions):
+            if self.gen_kill_not_empty(instruction):
+                target = self.get_target_instr(instruction)
+                gen    = set([(block.label, instr_pos)])
+                # TODO: Check, not sure if we can simply use kill from entire block
+                # Expand formula for 3 lines, just to be sure
+                block.rd_gen = block.rd_gen.union(gen - block.rd_kill)
+
+
+    def optimize(self):
+        for label, block in self.label_block_dict.items():
+            self.compute_rd_gen_kill(block)
+            print(label, block.rd_gen, block.rd_kill)
+
 if __name__ == "__main__":
     # hardcoded bubble sort example for now
     gc = [
@@ -276,3 +335,5 @@ if __name__ == "__main__":
     cfg = CFG(gc)
 
     cfg.print()
+
+    cfg.optimize()
