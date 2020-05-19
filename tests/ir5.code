@@ -1,4 +1,3 @@
-('global_string', '@.str.0', '\n')
 ('define', '@main')
 ('alloc_int', '%2')
 ('alloc_int', '%3')
