@@ -3,7 +3,7 @@ from pprint import pprint
 from parser import Parser
 from ast import *
 from checker import CheckProgramVisitor
-from genertor import GenerateCode
+from generator import GenerateCode
 
 class Block(object):
     def __init__(self, label):
@@ -49,7 +49,8 @@ class CFG():
     '''
     def get_instruction_type(self, instruction):
         op = instruction[0]
-        if len(instruction) == 1:
+        # Not all instructions that have length 1 are labels. Ohter option is: ('return_void',)
+        if (len(instruction) == 1) and (instruction[0]!='return_void'):
             return int(op)
         else:
             return op
