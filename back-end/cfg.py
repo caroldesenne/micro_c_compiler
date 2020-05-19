@@ -94,7 +94,7 @@ class CFG():
         for k, v in self.label_block_dict.items():
             print('-------------------- Block {}:  --------------------'.format(k))
             for code in v.instructions:
-                    print(code)
+                print(code)
             try:
                 print('------ Parents -------')
                 for parent in v.parents:
