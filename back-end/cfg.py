@@ -128,7 +128,6 @@ class CFG():
             op = self.get_instruction_type(self.gen_code[index])
             if isinstance(op, int):
                 prev_op = self.get_instruction_type(self.gen_code[index-1])
-                print(cur_label,  prev_op)
                 if prev_op == 'jump' or prev_op == 'cbranch':
                     self.label_blocktype_dict[cur_label] = prev_op
                 else:
@@ -169,8 +168,6 @@ class CFG():
                     self.label_block_dict[jump_label].add_parent(cur_block)
 
                 elif self.label_blocktype_dict[cur_block.label] == 'cbranch':
-                    print(cur_block.label, self.label_blocktype_dict[cur_block.label])
-                    print(self.gen_code[index-1])
                     true_label  = int(self.gen_code[index-1][2][1:])
                     self.create_block_if_inexistent(true_label)
                     cur_block.true_branch  = self.label_block_dict[true_label]
