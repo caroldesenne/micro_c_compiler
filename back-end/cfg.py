@@ -49,8 +49,8 @@ class CFG():
     '''
     def get_instruction_type(self, instruction):
         op = instruction[0]
-        # Not all instructions that have length 1 are labels. Ohter option is: ('return_void',)
-        if (len(instruction) == 1) and (instruction[0]!='return_void'):
+        # Not all instructions that have length 1 are labels. Other option is: ('return_void',)
+        if (len(instruction) == 1) and (op != 'return_void'):
             return int(op)
         else:
             return op
@@ -176,11 +176,13 @@ class CFG():
 
     # check if instruction will generate kill or gen
     # TODO: Improve, check all cases
-    def gen_kill_not_empty(self, instruction):
-        if len(instruction[0]) < 3:
-            return False
-        else:
+    def instruction_has_gen_kill(self, instruction):
+        op = instruction[0]
+        instr_without_type = op.split('_')[0]
+        if instr_without_type in ['load','store','literal','elem','get','add','sub','mul','div','mod'] or op == 'call':
             return True
+        else:
+            return False
 
     # Gets defs for a temp
     def get_defs(self, target):
@@ -192,9 +194,10 @@ class CFG():
 
         return set(defs)
 
-    # TODO: Improve, check all cases
     def get_target_instr(self, instruction):
-        if len(instruction) == 3 or len(instruction) == 4:
+        if (len(instruction) == 4) or \
+           (len(instruction) == 3 and instruction != 'global_type') or \
+           (len(instruction) == 2 and instruction not in ['alloc_type','fptosi','sitofp','define','param_type','read_type','print_type']):
             return instruction[-1]
         else:
             return None
@@ -205,7 +208,7 @@ class CFG():
 
         # Compute Kill
         for instr_pos, instruction in enumerate(block.instructions):
-            if self.gen_kill_not_empty(instruction):
+            if self.instruction_has_gen_kill(instruction):
                 target = self.get_target_instr(instruction)
                 if target is not None:
                     defs   = self.get_defs(target)
@@ -214,18 +217,73 @@ class CFG():
 
         # Compute Gen
         for instr_pos, instruction in enumerate(block.instructions):
-            if self.gen_kill_not_empty(instruction):
+            if self.instruction_has_gen_kill(instruction):
                 target = self.get_target_instr(instruction)
                 gen    = set([(block.label, instr_pos)])
                 # TODO: Check, not sure if we can simply use kill from entire block
                 # Expand formula for 3 lines, just to be sure
                 block.rd_gen = block.rd_gen.union(gen - block.rd_kill)
 
+    def compute_rd_in_out(self):
+        # Initialize
+        for label, block in self.label_block_dict.items():
+            block.rd_out = set()
+
+        # put all blocks into the changed set
+        # B is all blocks in graph,
+        changed_set = set(self.label_block_dict.values())
+
+        # Iterate
+        while (len(changed_set) != 0):
+            # choose a block b in Changed;
+            # remove it from the changed set
+            block = changed_set.pop()
+
+            # init IN[b] to be empty
+            block.rd_in = set()
+
+            # calculate IN[b] from predecessors' OUT[p]
+            # for all blocks p in predecessors(b)
+            for pred_block in block.parents:
+                block.rd_in = block.rd_in.union(pred_block.rd_out)
+
+            # save old OUT[b]
+            old_out = block.rd_out
+
+            # update OUT[b] using transfer function f_b(): OUT[b] = GEN[b] Union (IN[b] - KILL[b])
+            block.rd_out = block.rd_gen.union(block.rd_in - block.rd_kill)
+
+            # any change to OUT[b] compared to previous value?
+            if (block.rd_out != old_out): # compare oldout vs. OUT[b]
+                # if yes, put all successors of b into the changed set
+                if isinstance(block, BasicBlock):
+                    changed_set = changed_set.union(set([block.next_block]))
+                elif isinstance(block, ConditionalBlock):
+                    changed_set = changed_set.union(set([block.true_branch, block.false_branch]))
+
+                # Check if None was inserted (block with next/branch to None)
+                changed_set.discard(None)
+
+
 
     def optimize(self):
         for label, block in self.label_block_dict.items():
             self.compute_rd_gen_kill(block)
-            print(label, block.rd_gen, block.rd_kill)
+        self.compute_rd_in_out()
+
+
+        print('=========================== GEN and KILL ===========================')
+        for label, block in self.label_block_dict.items():
+            print('Block ', label)
+            print('GEN : ', block.rd_gen)
+            print('KILL: ', block.rd_kill)
+
+        print('============================ IN and OUT ============================')
+        for label, block in self.label_block_dict.items():
+            print('Block ', label)
+            print('IN : ', block.rd_in)
+            print('OUT: ', block.rd_out)
+
 
 if __name__ == "__main__":
     # open source code file and read contents
@@ -248,6 +306,6 @@ if __name__ == "__main__":
     # output result of CFG to file
     cfg_filename = filename[:-3] + '.cfg'
     cfg.output(cfg_filename)
-    
+
     # perform optimizations
     cfg.optimize()
