@@ -72,27 +72,19 @@ class CFG():
         '''
         outputs generated IR code to given file. If no file is given, output to stdout
         '''
+        aux = sys.stdout
         if ir_filename:
             print("Outputting CFG to %s." % ir_filename)
-            buf = open(ir_filename, 'w')
-        else:
-            print("Printing CFG:\n\n")
-            buf = sys.stdout
-
+            sys.stdout = open(ir_filename, 'w')
+    
         for k, v in self.label_block_dict.items():
-            pprint('-------------------- Block {}:  --------------------'.format(k),buf)
+            print()
+            print("Block {}".format(k))
             for code in v.instructions:
-                    pprint(code,buf)
-            try:
-                pprint('------ Parents -------',buf)
-                for parent in v.parents:
-                    pprint(parent.label,buf)
-                if isinstance(v, ConditionalBlock):
-                    pprint('---- true branch label', v.true_branch.label, 'false branch label', v.false_branch.label, '----',buf)
-                elif isinstance(v, BasicBlock):
-                    pprint('--------------------- jump', v.next_block.label, '----------------------',buf)
-            except:
-                pass
+                print("    "+str(code))
+            if isinstance(v, BasicBlock) and v.next_block:
+                print("Next block {}".format(v.next_block.label))
+        sys.stdout = aux
 
     def print(self):
         for k, v in self.label_block_dict.items():
@@ -251,7 +243,8 @@ if __name__ == "__main__":
 
     cfg = CFG(gencode.code)
     # remove this print in the future
-    cfg.print()
+    #cfg.print()
+    cfg.output()
     # output result of CFG to file
     cfg_filename = filename[:-3] + '.cfg'
     cfg.output(cfg_filename)
