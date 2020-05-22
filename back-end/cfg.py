@@ -18,6 +18,12 @@ class Block(object):
         self.rd_in   = set()
         self.rd_out  = set()
 
+        # Reaching definition (rd) stuff
+        self.live_gen  = set()
+        self.live_kill = set()
+        self.live_in   = set()
+        self.live_out  = set()
+
     def append(self,instr):
         self.instructions.append(instr)
 
@@ -168,28 +174,6 @@ class CFG():
                 cur_block = self.label_block_dict[next_label]
             cur_block.append(self.gen_code[index])
 
-
-    # check if instruction will generate kill or gen
-    def instruction_has_gen_kill(self, instruction):
-        op = instruction[0]
-        instr_without_type = op.split('_')[0]
-        if instr_without_type in ['load','store','literal','elem','get','add','sub','mul','div','mod'] or\
-           instr_without_type in ['ne','eq','lt','le','gt','ge'] or\
-           op == 'call':
-            return True
-        else:
-            return False
-
-    # Gets defs for a temp
-    def get_defs(self, target):
-        defs = []
-        for label, block in self.label_block_dict.items():
-            for instr_pos, instruction in enumerate(block.instructions):
-                if self.get_target_instr(instruction) == target:
-                    defs.append((label, instr_pos))
-
-        return set(defs)
-
     def get_target_instr(self, instruction):
         if (len(instruction) == 4) or \
            (len(instruction) == 3 and instruction != 'global_type') or \
@@ -198,27 +182,41 @@ class CFG():
         else:
             return None
 
+    # check if instruction will generate kill or gen for Reaching definitions
+    def instruction_has_rd_gen_kill(self, instruction):
+        op = instruction[0]
+        op_without_type = op.split('_')[0]
+        if op_without_type in ['load','store','literal','elem','get','add','sub','mul','div','mod'] or\
+           op_without_type in ['ne','eq','lt','le','gt','ge'] or\
+           (op == 'call' and len(instruction) == 3):
+            return True
+        else:
+            return False
+
+    # Gets defs for a temp
+    def get_rd_defs(self, target):
+        defs = []
+        for label, block in self.label_block_dict.items():
+            for instr_pos, instruction in enumerate(block.instructions):
+                if self.get_target_instr(instruction) == target:
+                    defs.append((label, instr_pos))
+
+        return set(defs)
+
     def compute_rd_gen_kill(self, block):
         # gen[pn]  = gen[n]  U (gen[p] − kill[n])
         # kill[pn] = kill[p] U kill[n]
 
-        # Compute Kill
         for instr_pos, instruction in enumerate(block.instructions):
-            if self.instruction_has_gen_kill(instruction):
+            if self.instruction_has_rd_gen_kill(instruction):
                 target = self.get_target_instr(instruction)
-                if target is not None:
-                    defs   = self.get_defs(target)
-                    kill   = defs - set([(block.label, instr_pos)])
-                    block.rd_kill = block.rd_kill.union(kill)
-
-        # Compute Gen
-        for instr_pos, instruction in enumerate(block.instructions):
-            if self.instruction_has_gen_kill(instruction):
-                target = self.get_target_instr(instruction)
-                gen    = set([(block.label, instr_pos)])
-                # TODO: Check, not sure if we can simply use kill from entire block
-                # Expand formula for 3 lines, just to be sure
-                block.rd_gen = block.rd_gen.union(gen - block.rd_kill)
+                # Compute Kill
+                defs          = self.get_rd_defs(target)
+                kill          = defs - set([(block.label, instr_pos)])
+                block.rd_kill = block.rd_kill.union(kill)
+                # Compute Gen
+                gen          = set([(block.label, instr_pos)])
+                block.rd_gen = gen.union(block.rd_gen - kill)
 
     def compute_rd_in_out(self):
         # Initialize
@@ -260,24 +258,74 @@ class CFG():
                 # Check if None was inserted (block with next/branch to None)
                 changed_set.discard(None)
 
+    # return gen from instruction (Liveness) -- return (gen_set, kill_set)
+    def instruction_live_gen_kill(self, instruction):
+        op = instruction[0]
+        op_without_type = op.split('_')[0]
+        if op_without_type in ['add','sub','mul','div','mod']:
+            return set([instruction[1], instruction[2]]), set([instruction[3]])
+        # TODO: get params
+        if op == 'call' and len(instruction) == 2:
+            return set(), set()
+        if op == 'call' and len(instruction) == 3:
+            return set(), set([instruction[2]])
+        #TODO: Check kill
+        if op_without_type in ['ne','eq','lt','le','gt','ge']:
+            return set([instruction[1], instruction[2]]), set([instruction[3]])
+        if op_without_type == 'elem':
+            return set([instruction[2]]), set([instruction[3]])
+        return set(), set()
+        #TODO: 'load','store','literal','get'
+
+    def compute_live_gen_kill(self, block):
+        # gen[pn]  = gen[p]  U (gen[n] − kill[p])
+        # kill[pn] = kill[p] U kill[n]
+
+        # Compute Gen and Kill (backwards)
+        for instr_pos, instruction in reversed(list(enumerate(block.instructions))):
+            gen, kill       = self.instruction_live_gen_kill(instruction)
+            block.live_gen  = block.live_gen.union(gen - block.live_kill)
+            block.live_kill = block.live_gen.union(kill)
+
+    #TODO
+    def compute_live_in_out(self):
+        pass
 
     # Run Reaching Definitions and Liveness analysis
     def analyze(self):
+        # Reaching Definitions
         for label, block in self.label_block_dict.items():
             self.compute_rd_gen_kill(block)
         self.compute_rd_in_out()
 
-        # print('=========================== GEN and KILL ===========================')
+        # Liveness
+        for label, block in self.label_block_dict.items():
+            self.compute_live_gen_kill(block)
+        self.compute_live_in_out()
+
+        # print('=========================== RD: GEN and KILL ===========================')
         # for label, block in self.label_block_dict.items():
         #     print('Block ', label)
         #     print('GEN : ', block.rd_gen)
         #     print('KILL: ', block.rd_kill)
 
-        # print('============================ IN and OUT ============================')
+        # print('============================ RD: IN and OUT ============================')
         # for label, block in self.label_block_dict.items():
         #     print('Block ', label)
         #     print('IN : ', block.rd_in)
         #     print('OUT: ', block.rd_out)
+
+        # print('=========================== LIVE: GEN and KILL ===========================')
+        # for label, block in self.label_block_dict.items():
+        #     print('Block ', label)
+        #     print('GEN : ', block.live_gen)
+        #     print('KILL: ', block.live_kill)
+
+        # print('============================ LIVE: IN and OUT ============================')
+        # for label, block in self.label_block_dict.items():
+        #     print('Block ', label)
+        #     print('IN : ', block.live_in)
+        #     print('OUT: ', block.live_out)
 
     def optimize(self):
         pass
