@@ -38,10 +38,11 @@ class ConditionalBlock(Block):
 
 class CFG():
     def __init__(self, gen_code):
-        self.gen_code         = gen_code
-        self.label_block_dict = {}
+        self.gen_code             = gen_code
+        self.label_block_dict     = {}
         self.label_blocktype_dict = {}
-        self.first_block      = None
+        self.first_block          = None
+
         self.create_blocks()
 
     '''
@@ -68,15 +69,10 @@ class CFG():
         if label not in self.label_block_dict.keys():
             self.label_block_dict[label] = self.new_block(self.label_blocktype_dict[label], label)
 
-    def output(self, ir_filename=None):
+    def output(self):
         '''
         outputs generated IR code to given file. If no file is given, output to stdout
         '''
-        aux = sys.stdout
-        if ir_filename:
-            print("Outputting CFG to %s." % ir_filename)
-            sys.stdout = open(ir_filename, 'w')
-    
         for k, v in self.label_block_dict.items():
             print()
             print("Block {}".format(k))
@@ -84,7 +80,6 @@ class CFG():
                 print("    "+str(code))
             if isinstance(v, BasicBlock) and v.next_block:
                 print("Next block {}".format(v.next_block.label))
-        sys.stdout = aux
 
     def print(self):
         for k, v in self.label_block_dict.items():
@@ -171,15 +166,16 @@ class CFG():
                     self.label_block_dict[false_label].add_parent(cur_block)
 
                 cur_block = self.label_block_dict[next_label]
-            else:
-                cur_block.append(self.gen_code[index])
+            cur_block.append(self.gen_code[index])
+
 
     # check if instruction will generate kill or gen
-    # TODO: Improve, check all cases
     def instruction_has_gen_kill(self, instruction):
         op = instruction[0]
         instr_without_type = op.split('_')[0]
-        if instr_without_type in ['load','store','literal','elem','get','add','sub','mul','div','mod'] or op == 'call':
+        if instr_without_type in ['load','store','literal','elem','get','add','sub','mul','div','mod'] or\
+           instr_without_type in ['ne','eq','lt','le','gt','ge'] or\
+           op == 'call':
             return True
         else:
             return False
@@ -265,25 +261,65 @@ class CFG():
                 changed_set.discard(None)
 
 
-
-    def optimize(self):
+    # Run Reaching Definitions and Liveness analysis
+    def analyze(self):
         for label, block in self.label_block_dict.items():
             self.compute_rd_gen_kill(block)
         self.compute_rd_in_out()
 
+        # print('=========================== GEN and KILL ===========================')
+        # for label, block in self.label_block_dict.items():
+        #     print('Block ', label)
+        #     print('GEN : ', block.rd_gen)
+        #     print('KILL: ', block.rd_kill)
 
-        print('=========================== GEN and KILL ===========================')
-        for label, block in self.label_block_dict.items():
-            print('Block ', label)
-            print('GEN : ', block.rd_gen)
-            print('KILL: ', block.rd_kill)
+        # print('============================ IN and OUT ============================')
+        # for label, block in self.label_block_dict.items():
+        #     print('Block ', label)
+        #     print('IN : ', block.rd_in)
+        #     print('OUT: ', block.rd_out)
 
-        print('============================ IN and OUT ============================')
-        for label, block in self.label_block_dict.items():
-            print('Block ', label)
-            print('IN : ', block.rd_in)
-            print('OUT: ', block.rd_out)
+    def optimize(self):
+        pass
 
+class CFG_Program():
+    def __init__(self, gen_code):
+        self.gen_code      = gen_code
+        self.func_cfg_dict = {}
+
+        self.create_cfgs()
+
+    def create_cfgs(self):
+        function_code_dict = {}
+
+        self.gen_code.append(('define',''))
+
+        cur_function   = '__global'
+        start_function = 0
+        for instr_pos, instruction in enumerate(self.gen_code):
+            if instruction[0] == 'define':
+                function_code = self.gen_code[start_function:instr_pos]
+                self.func_cfg_dict[cur_function] = CFG(function_code)
+                cur_function   = instruction[1]
+                start_function = instr_pos
+
+        del self.gen_code[-1]
+
+    def output(self, ir_filename=None):
+        aux = sys.stdout
+        if ir_filename:
+            print("Outputting CFG to %s." % ir_filename)
+            sys.stdout = open(ir_filename, 'w')
+
+        for function, cfg in self.func_cfg_dict.items():
+            print('====================== ' + function + ' ======================')
+            cfg.output()
+        sys.stdout = aux
+
+    def optimize(self):
+        for _, cfg in self.func_cfg_dict.items():
+            cfg.analyze()
+            cfg.optimize()
 
 if __name__ == "__main__":
     # open source code file and read contents
@@ -299,7 +335,7 @@ if __name__ == "__main__":
     gencode = GenerateCode()
     gencode.visit_Program(ast)
 
-    cfg = CFG(gencode.code)
+    cfg = CFG_Program(gencode.code)
     # remove this print in the future
     #cfg.print()
     cfg.output()
