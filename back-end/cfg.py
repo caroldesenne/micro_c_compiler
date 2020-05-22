@@ -87,6 +87,42 @@ class CFG():
             if isinstance(v, BasicBlock) and v.next_block:
                 print("Next block {}".format(v.next_block.label))
 
+    def output_rd(self):
+        '''
+        outputs generated IR code to given file. If no file is given, output to stdout
+        '''
+        print('=========================== RD: GEN and KILL ===========================')
+        for label, block in self.label_block_dict.items():
+            print()
+            print('Block ', label)
+            print('    GEN : ', block.rd_gen)
+            print('    KILL: ', block.rd_kill)
+
+        print('============================ RD: IN and OUT ============================')
+        for label, block in self.label_block_dict.items():
+            print()
+            print('Block ', label)
+            print('    IN : ', block.rd_in)
+            print('    OUT: ', block.rd_out)
+
+    def output_liveness(self):
+        '''
+        outputs generated IR code to given file. If no file is given, output to stdout
+        '''
+        print('=========================== LIVENESS: GEN and KILL ===========================')
+        for label, block in self.label_block_dict.items():
+            print()
+            print('Block ', label)
+            print('    GEN : ', block.live_gen)
+            print('    KILL: ', block.live_kill)
+
+        print('============================ LIVENESS: IN and OUT ============================')
+        for label, block in self.label_block_dict.items():
+            print()
+            print('Block ', label)
+            print('    IN : ', block.live_in)
+            print('    OUT: ', block.live_out)
+
     def print(self):
         for k, v in self.label_block_dict.items():
             print('-------------------- Block {}:  --------------------'.format(k))
@@ -303,30 +339,6 @@ class CFG():
             self.compute_live_gen_kill(block)
         self.compute_live_in_out()
 
-        # print('=========================== RD: GEN and KILL ===========================')
-        # for label, block in self.label_block_dict.items():
-        #     print('Block ', label)
-        #     print('GEN : ', block.rd_gen)
-        #     print('KILL: ', block.rd_kill)
-
-        # print('============================ RD: IN and OUT ============================')
-        # for label, block in self.label_block_dict.items():
-        #     print('Block ', label)
-        #     print('IN : ', block.rd_in)
-        #     print('OUT: ', block.rd_out)
-
-        # print('=========================== LIVE: GEN and KILL ===========================')
-        # for label, block in self.label_block_dict.items():
-        #     print('Block ', label)
-        #     print('GEN : ', block.live_gen)
-        #     print('KILL: ', block.live_kill)
-
-        # print('============================ LIVE: IN and OUT ============================')
-        # for label, block in self.label_block_dict.items():
-        #     print('Block ', label)
-        #     print('IN : ', block.live_in)
-        #     print('OUT: ', block.live_out)
-
     def optimize(self):
         pass
 
@@ -362,6 +374,14 @@ class CFG_Program():
         for function, cfg in self.func_cfg_dict.items():
             print('====================== ' + function + ' ======================')
             cfg.output()
+
+        for function, cfg in self.func_cfg_dict.items():
+            print('============================== RD ANALYSIS =============================')
+            cfg.output_rd()
+
+        # for function, cfg in self.func_cfg_dict.items():
+        #     print('============================== LIVENESS ANALYSIS =============================')
+        #     cfg.output_liveness()
         sys.stdout = aux
 
     def optimize(self):
@@ -386,10 +406,11 @@ if __name__ == "__main__":
     cfg = CFG_Program(gencode.code)
     # remove this print in the future
     #cfg.print()
+    cfg.optimize()
     cfg.output()
     # output result of CFG to file
     cfg_filename = filename[:-3] + '.cfg'
     cfg.output(cfg_filename)
 
     # perform optimizations
-    cfg.optimize()
+    # cfg.optimize()
