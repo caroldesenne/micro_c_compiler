@@ -82,8 +82,8 @@ class CFG():
         for k, v in self.label_block_dict.items():
             print()
             print("Block {}".format(k))
-            for code in v.instructions:
-                print("    "+str(code))
+            for line,code in enumerate(v.instructions):
+                print("    "+str(line)+": "+str(code))
             if isinstance(v, BasicBlock) and v.next_block:
                 print("Next block {}".format(v.next_block.label))
 
