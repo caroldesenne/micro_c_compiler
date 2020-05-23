@@ -245,11 +245,15 @@ class CFG():
         # gen[pn]  = gen[n]  U (gen[p] − kill[n])
         # kill[pn] = kill[p] U kill[n]
 
+        target_defs_dict = {}
+
         for instr_pos, instruction in enumerate(block.instructions):
             if self.instruction_has_rd_gen_kill(instruction):
                 target = self.get_target_instr(instruction)
                 # Compute Kill
-                defs          = self.get_rd_defs(target)
+                if target not in target_defs_dict.keys():
+                    target_defs_dict[target] = self.get_rd_defs(target)
+                defs = target_defs_dict[target]
                 kill          = defs - set([(block.label, instr_pos)])
                 block.rd_kill = block.rd_kill.union(kill)
                 # Compute Gen
