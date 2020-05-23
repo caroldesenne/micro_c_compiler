@@ -113,15 +113,15 @@ class CFG():
         for label, block in self.label_block_dict.items():
             print()
             print('Block ', label)
-            print('    GEN : ', block.live_gen)
-            print('    KILL: ', block.live_kill)
+            print('    GEN : ', sorted(list(block.live_gen), key=lambda x: (x[0], x[1])))
+            print('    KILL: ', sorted(list(block.live_kill), key=lambda x: (x[0], x[1])))
 
         print('============================ LIVENESS: IN and OUT ============================')
         for label, block in self.label_block_dict.items():
             print()
             print('Block ', label)
-            print('    IN : ', block.live_in)
-            print('    OUT: ', block.live_out)
+            print('    IN : ', sorted(list(block.live_in), key=lambda x: (x[0], x[1])))
+            print('    OUT: ', sorted(list(block.live_out), key=lambda x: (x[0], x[1])))
 
     def print(self):
         for k, v in self.label_block_dict.items():
