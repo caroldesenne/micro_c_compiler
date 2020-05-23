@@ -393,12 +393,14 @@ class CFG_Program():
             cfg.output()
 
         for function, cfg in self.func_cfg_dict.items():
-            print('============================== RD ANALYSIS =============================')
+            print('====================== RD ANALYSIS for ' + function + ' ======================')
             cfg.output_rd()
+            print('\n\n\n')
 
         for function, cfg in self.func_cfg_dict.items():
-            print('============================== LIVENESS ANALYSIS =============================')
+            print('====================== LIVENESS ANALYSIS for ' + function + ' ======================')
             cfg.output_liveness()
+            print('\n\n\n')
         sys.stdout = aux
 
     def optimize(self):
