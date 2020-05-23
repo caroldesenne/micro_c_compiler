@@ -211,9 +211,11 @@ class CFG():
             cur_block.append(self.gen_code[index])
 
     def get_target_instr(self, instruction):
+        op = instruction[0]
+        op_without_type = op.split('_')[0]
         if (len(instruction) == 4) or \
-           (len(instruction) == 3 and instruction != 'global_type') or \
-           (len(instruction) == 2 and instruction not in ['alloc_type','fptosi','sitofp','define','param_type','read_type','print_type']):
+           (len(instruction) == 3 and op_without_type != 'global') or \
+           (len(instruction) == 2 and op_without_type not in ['alloc','fptosi','sitofp','define','param','read','print','return']):
             return instruction[-1]
         else:
             return None
