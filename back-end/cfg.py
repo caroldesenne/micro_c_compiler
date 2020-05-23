@@ -294,24 +294,41 @@ class CFG():
                 # Check if None was inserted (block with next/branch to None)
                 changed_set.discard(None)
 
-    # return gen from instruction (Liveness) -- return (gen_set, kill_set)
+    # return gen and kill from instruction (Liveness) -- return (gen_set, kill_set)
     def instruction_live_gen_kill(self, instruction):
         op = instruction[0]
         op_without_type = op.split('_')[0]
+        # binary op
         if op_without_type in ['add','sub','mul','div','mod']:
             return set([instruction[1], instruction[2]]), set([instruction[3]])
-        # TODO: get params
-        if op == 'call' and len(instruction) == 2:
-            return set(), set()
+        # Params
+        if op_without_type == 'param':
+            return set([instruction[1]]), set()
+        # Function call (if it has a target)
         if op == 'call' and len(instruction) == 3:
             return set(), set([instruction[2]])
-        #TODO: Check kill
+        # Comparison op
         if op_without_type in ['ne','eq','lt','le','gt','ge']:
             return set([instruction[1], instruction[2]]), set([instruction[3]])
+        # Conditional Branch and Jump
+        if op == 'cbranch' or op == 'jump':
+            return set([instruction[1]]), set()
+        # t <- M[b[i]]
         if op_without_type == 'elem':
-            return set([instruction[2]]), set([instruction[3]])
+            return set([instruction[1], instruction[2]]), set([instruction[3]])
+        if op_without_type == 'load':
+            return set([instruction[1]]), set([instruction[2]])
+        # M[a] <- b
+        if op_without_type == 'store':
+            return set([instruction[1], instruction[2]]), set()
+        # t <- C
+        if op_without_type == 'literal':
+            return set(), set([instruction[2]])
+        if op_without_type == 'get':
+            return set([instruction[1]]), set([instruction[2]])
+        # Everything else
         return set(), set()
-        #TODO: 'load','store','literal','get'
+
 
     def compute_live_gen_kill(self, block):
         # gen[pn]  = gen[p]  U (gen[n] − kill[p])
@@ -321,7 +338,7 @@ class CFG():
         for instr_pos, instruction in reversed(list(enumerate(block.instructions))):
             gen, kill       = self.instruction_live_gen_kill(instruction)
             block.live_gen  = block.live_gen.union(gen - block.live_kill)
-            block.live_kill = block.live_gen.union(kill)
+            block.live_kill = block.live_kill.union(kill)
 
     #TODO
     def compute_live_in_out(self):
@@ -379,9 +396,9 @@ class CFG_Program():
             print('============================== RD ANALYSIS =============================')
             cfg.output_rd()
 
-        # for function, cfg in self.func_cfg_dict.items():
-        #     print('============================== LIVENESS ANALYSIS =============================')
-        #     cfg.output_liveness()
+        for function, cfg in self.func_cfg_dict.items():
+            print('============================== LIVENESS ANALYSIS =============================')
+            cfg.output_liveness()
         sys.stdout = aux
 
     def optimize(self):
