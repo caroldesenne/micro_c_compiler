@@ -14,4 +14,6 @@ int main() {
   char h[4] = g[0];
   char j = h[0];
   char s = h[d[0]];
+
+  return 0;
 }
