@@ -305,7 +305,7 @@ class CFG():
         op = instruction[0]
         op_without_type = op.split('_')[0]
         # binary op
-        if op_without_type in ['add','sub','mul','div','mod']:
+        if op_without_type in ['add','sub','mul','div','mod'] or op_without_type in ['ne','eq','lt','le','gt','ge']:
             return set([instruction[1], instruction[2]]), set([instruction[3]])
         # Params
         if op_without_type == 'param':
@@ -313,16 +313,13 @@ class CFG():
         # Function call (if it has a target)
         if op == 'call' and len(instruction) == 3:
             return set(), set([instruction[2]])
-        # Comparison op
-        if op_without_type in ['ne','eq','lt','le','gt','ge']:
-            return set([instruction[1], instruction[2]]), set([instruction[3]])
         # Conditional Branch and Jump
         if op == 'cbranch' or op == 'jump':
             return set([instruction[1]]), set()
         # t <- M[b[i]]
         if op_without_type == 'elem':
             return set([instruction[1], instruction[2]]), set([instruction[3]])
-        if op_without_type == 'load':
+        if op_without_type in ['load','get']:
             return set([instruction[1]]), set([instruction[2]])
         # M[a] <- b
         if op_without_type == 'store':
@@ -330,8 +327,6 @@ class CFG():
         # t <- C
         if op_without_type == 'literal':
             return set(), set([instruction[2]])
-        if op_without_type == 'get':
-            return set([instruction[1]]), set([instruction[2]])
         # Everything else
         return set(), set()
 
