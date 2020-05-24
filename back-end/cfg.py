@@ -346,9 +346,35 @@ class CFG():
             block.live_gen  = block.live_gen.union(gen - block.live_kill)
             block.live_kill = block.live_kill.union(kill)
 
-    #TODO
     def compute_live_in_out(self):
-        pass
+        # Initialize
+        for label, block in self.label_block_dict.items():
+            block.live_in  = set()
+            block.live_out = set()
+
+        done = False
+        # Iterate
+        while (not done):
+            done = True
+            for label, block in self.label_block_dict.items():
+                old_in  = block.live_in
+                old_out = block.live_out
+
+                block.live_in = block.live_gen.union(block.live_out - block.live_kill)
+
+                if isinstance(block, BasicBlock):
+                    if block.next_block:
+                        block.live_out = block.next_block.live_in
+                elif isinstance(block, ConditionalBlock):
+                    if block.true_branch.live_in and block.false_branch.live_in:
+                        block.live_out = block.true_branch.live_in.union(block.false_branch.live_in)
+                    elif block.true_branch.live_in:
+                        block.live_out = block.true_branch.live_in
+                    else:
+                        block.live_out = block.false_branch.live_in
+
+                if (block.live_out != old_out or block.live_in != old_in):
+                    done = False
 
     # Run Reaching Definitions and Liveness analysis
     def analyze(self):
