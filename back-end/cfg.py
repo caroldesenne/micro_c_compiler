@@ -311,12 +311,15 @@ class CFG():
         if op_without_type == 'param':
             return set([instruction[1]]), set()
         # Function call (if it has a target)
-        if op == 'call' and len(instruction) == 3:
-            return set(), set([instruction[2]])
+        if op == 'call':
+            if len(instruction) == 3:
+                return set(), set([instruction[2]])
+            # TODO: add all global variables in gen set
+            # called function might use all globals
         # Conditional Branch and Jump
         if op == 'cbranch':
             return set([instruction[1]]), set()
-        # t <- M[b[i]]
+        # t <- b[i]
         if op_without_type == 'elem':
             return set([instruction[1], instruction[2]]), set([instruction[3]])
         if op_without_type in ['load','get','store','fptosi','sitofp']:
