@@ -87,6 +87,11 @@ class CFG():
             if isinstance(v, BasicBlock) and v.next_block:
                 print("Next block {}".format(v.next_block.label))
 
+    def output_optimized_code(self):
+        for k, v in self.label_block_dict.items():
+            for line,code in enumerate(v.instructions):
+                print(code)
+
     def output_rd(self):
         '''
         outputs generated IR code to given file. If no file is given, output to stdout
@@ -500,6 +505,15 @@ class CFG_Program():
             print('\n\n\n')
         sys.stdout = aux
 
+    def output_optimized_code(self, ir_filename=None):
+        aux = sys.stdout
+        if ir_filename:
+            print("Outputting CFG to %s" % ir_filename)
+            sys.stdout = open(ir_filename, 'w')
+        for _, cfg in self.func_cfg_dict.items():
+            cfg.output_optimized_code()
+        sys.stdout = aux
+
     def optimize(self):
         for _, cfg in self.func_cfg_dict.items():
             # TODO analyse and optimize several times
@@ -528,5 +542,5 @@ if __name__ == "__main__":
     # output result of CFG to file
     cfg_filename = filename[:-3] + '.cfg'
     cfg.output(cfg_filename)
-
-    # TODO save optimized code to some file
+    opt_filename = filename[:-3] + '.opt'
+    cfg.output_optimized_code(opt_filename)
