@@ -319,10 +319,7 @@ class CFG():
         # t <- M[b[i]]
         if op_without_type == 'elem':
             return set([instruction[1], instruction[2]]), set([instruction[3]])
-        if op_without_type in ['load','get']:
-            return set([instruction[1]]), set([instruction[2]])
-        # M[a] <- b
-        if op_without_type == 'store':
+        if op_without_type in ['load','get','store']:
             return set([instruction[1]]), set([instruction[2]])
         # t <- C
         if op_without_type == 'literal':
