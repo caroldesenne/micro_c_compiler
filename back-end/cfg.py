@@ -348,7 +348,7 @@ class CFG():
         N and the partial result of P.
         We will merge the two blocks (N and P) using the following equations:
 
-        gen[PN] = (gen[N] U gen[P]) - kill[P]
+        gen[PN] = (gen[N] - kill[P]) U gen[P]
         kill[PN] = (kill[N] - gen[P]) U kill[P]
 
         Why does this work?
@@ -367,24 +367,16 @@ class CFG():
         P, shouldn't be in the new kill set anymore, unless it is
         killed in P as well.
 
-        This detail of having the operations with gen[P] before
-        those with kill[P] is especially important because of instructions like:
-
-        i: int x = x;
-
-        In this case, we always want to kill x, not generate it. So kill
-        is stronger than generate.
-
         '''
 
         # For our case, we have:
-        # block.live_gen  = (block.gen + gen) - kill
+        # block.live_gen  = (block.gen - kill) + gen
         # block.live_kill = (block.kill - gen) + kill
 
         # Compute Gen and Kill (backwards)
         for instr_pos, instruction in reversed(list(enumerate(block.instructions))):
             gen, kill       = self.instruction_live_gen_kill(instruction)
-            block.live_gen  = block.live_gen.union(gen) - kill
+            block.live_gen  = (block.live_gen - kill).union(gen)
             block.live_kill = (block.live_kill - gen).union(kill)
 
     def compute_live_in_out(self):
@@ -429,8 +421,39 @@ class CFG():
             self.compute_live_gen_kill(block)
         self.compute_live_in_out()
 
+    def dead_code_elimination(self):
+        for label, block in self.label_block_dict.items():
+            delete_indexes = set()
+            # inner_live contains the set of variables that are alive through the block 
+            # (initially contains only variables used after this block)
+            inner_live = block.live_out
+            for instr_pos, instruction in reversed(list(enumerate(block.instructions))):
+                uses, defs = self.instruction_live_gen_kill(instruction)
+                dead = False
+                # defs has always only one element so this is not a real loop
+                for d in defs:
+                    '''
+                    If we are defining something that is not used, then mark this code as dead and
+                    don't even save their uses, because we might find more dead code from this deletion.
+                    '''
+                    if not d in inner_live:
+                        dead = True
+                        delete_indexes.add(instr_pos)
+                # if the instruction is not dead, we kill the definitions and add uses to the inner_live set
+                if not dead:
+                    inner_live = inner_live - defs
+                    inner_live = inner_live.union(uses)
+
+            # remove dead code from delete_indexes list
+            updated_instructions = []
+            for i,inst in enumerate(block.instructions):
+                if not i in delete_indexes:
+                    updated_instructions.append(inst)
+            block.instructions = updated_instructions
+
     def optimize(self):
-        pass
+        # TODO common subexpression elimination
+        self.dead_code_elimination()
 
 class CFG_Program():
     def __init__(self, gen_code):
@@ -458,7 +481,7 @@ class CFG_Program():
     def output(self, ir_filename=None):
         aux = sys.stdout
         if ir_filename:
-            print("Outputting CFG to %s." % ir_filename)
+            print("Outputting CFG to %s" % ir_filename)
             sys.stdout = open(ir_filename, 'w')
 
         for function, cfg in self.func_cfg_dict.items():
@@ -478,6 +501,8 @@ class CFG_Program():
 
     def optimize(self):
         for _, cfg in self.func_cfg_dict.items():
+            # TODO analyse and optimize several times
+            # TODO do we need to analyse each time we optimize again? I think we do.
             cfg.analyze()
             cfg.optimize()
 
@@ -496,13 +521,11 @@ if __name__ == "__main__":
     gencode.visit_Program(ast)
 
     cfg = CFG_Program(gencode.code)
-    # remove this print in the future
-    #cfg.print()
+    # perform optimizations
     cfg.optimize()
     cfg.output()
     # output result of CFG to file
     cfg_filename = filename[:-3] + '.cfg'
     cfg.output(cfg_filename)
 
-    # perform optimizations
-    # cfg.optimize()
+    # TODO save optimized code to some file
