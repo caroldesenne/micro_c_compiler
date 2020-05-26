@@ -314,7 +314,7 @@ class CFG():
         if op == 'call' and len(instruction) == 3:
             return set(), set([instruction[2]])
         # Conditional Branch and Jump
-        if op == 'cbranch' or op == 'jump':
+        if op == 'cbranch':
             return set([instruction[1]]), set()
         # t <- M[b[i]]
         if op_without_type == 'elem':
