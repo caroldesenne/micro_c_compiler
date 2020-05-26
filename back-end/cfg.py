@@ -450,6 +450,7 @@ class CFG():
                 if not i in delete_indexes:
                     updated_instructions.append(inst)
             block.instructions = updated_instructions
+        # TODO dead code elimination for unused allocs
 
     def optimize(self):
         # TODO common subexpression elimination
