@@ -323,10 +323,15 @@ class CFG():
             return set([instruction[1]]), set([instruction[2]])
         # M[a] <- b
         if op_without_type == 'store':
-            return set([instruction[1], instruction[2]]), set()
+            return set([instruction[1]]), set([instruction[2]])
         # t <- C
         if op_without_type == 'literal':
             return set(), set([instruction[2]])
+        # return x
+        if op_without_type == 'return':
+            op_type = op.split('_')[1]
+            if op_type != 'void':
+                return set([instruction[1]]), set()
         # Everything else
         return set(), set()
 
