@@ -337,14 +337,50 @@ class CFG():
 
 
     def compute_live_gen_kill(self, block):
-        # gen[pn]  = gen[p]  U (gen[n] − kill[p])
-        # kill[pn] = kill[p] U kill[n]
+        '''
+        Let's say P is the upper block and N is the lower block.
+        Since the analysis is backwards, we have the previous result stored in
+        N and the partial result of P.
+        We will merge the two blocks (N and P) using the following equations:
+
+        gen[PN] = (gen[N] U gen[P]) - kill[P]
+        kill[PN] = (kill[N] - gen[P]) U kill[P]
+        
+        Why does this work?
+        Suppose we have sets gen[N], kill[N] with the original gen and kill sets for N.
+        Now suppose we have a new instruction, which corresponds to block P:
+
+        i: int a = x;
+
+        So we know that:
+        kill[P] = {a}
+        gen[P] = {x}
+
+        Whatever is generated on N and P should be united in PN,
+        except for everything that is killed in P.
+        In the same way, whatever is killed on N but generated on
+        P, shouldn't be in the new kill set anymore, unless it is
+        killed in P as well.
+
+        This detail of having the operations with gen[P] before
+        those with kill[P] is especially important because of instructions like:
+
+        i: int x = x;
+
+        In this case, we always want to kill x, not generate it. So kill
+        is stronger than generate.
+
+        '''
+
+        # For our case, we have:
+        # block.live_gen  = (block.gen + gen) - kill
+        # block.live_kill = (block.kill - gen) + kill
 
         # Compute Gen and Kill (backwards)
         for instr_pos, instruction in reversed(list(enumerate(block.instructions))):
             gen, kill       = self.instruction_live_gen_kill(instruction)
-            block.live_gen  = block.live_gen.union(gen - block.live_kill)
-            block.live_kill = block.live_kill.union(kill)
+            block.live_gen  = block.live_gen.union(gen) - kill
+            block.live_kill = (block.live_kill - gen).union(kill)
 
     def compute_live_in_out(self):
         # Initialize
