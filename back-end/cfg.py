@@ -224,8 +224,7 @@ class CFG():
     def instruction_has_rd_gen_kill(self, instruction):
         op = instruction[0]
         op_without_type = op.split('_')[0]
-        if op_without_type in ['load','store','literal','elem','get','add','sub','mul','div','mod'] or\
-           op_without_type in ['ne','eq','lt','le','gt','ge'] or\
+        if op_without_type in ['load','store','literal','elem','get','add','sub','mul','div','mod','and','or','not','ne','eq','lt','le','gt','ge'] or\
            (op == 'call' and len(instruction) == 3):
             return True
         else:
@@ -348,7 +347,7 @@ class CFG():
 
         gen[PN] = (gen[N] U gen[P]) - kill[P]
         kill[PN] = (kill[N] - gen[P]) U kill[P]
-        
+
         Why does this work?
         Suppose we have sets gen[N], kill[N] with the original gen and kill sets for N.
         Now suppose we have a new instruction, which corresponds to block P:
