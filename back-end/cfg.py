@@ -305,7 +305,7 @@ class CFG():
         op = instruction[0]
         op_without_type = op.split('_')[0]
         # binary op
-        if op_without_type in ['add','sub','mul','div','mod'] or op_without_type in ['ne','eq','lt','le','gt','ge']:
+        if op_without_type in ['add','sub','mul','div','mod'] or op_without_type in ['ne','eq','lt','le','gt','ge','and','or','not']:
             return set([instruction[1], instruction[2]]), set([instruction[3]])
         # Params
         if op_without_type == 'param':
@@ -319,11 +319,17 @@ class CFG():
         # t <- M[b[i]]
         if op_without_type == 'elem':
             return set([instruction[1], instruction[2]]), set([instruction[3]])
-        if op_without_type in ['load','get','store']:
+        if op_without_type in ['load','get','store','fptosi','sitofp']:
             return set([instruction[1]]), set([instruction[2]])
         # t <- C
         if op_without_type == 'literal':
             return set(), set([instruction[2]])
+        # read(variable)
+        if op_without_type == 'read':
+            return set(), set([instruction[1]])
+        # print(variable)
+        if op_without_type == 'print':
+            return set([instruction[1]]), set()
         # return x
         if op_without_type == 'return':
             op_type = op.split('_')[1]
