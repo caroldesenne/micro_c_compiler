@@ -11,3 +11,5 @@ test
 *.code
 *.cfg
 *.opt
+*.gv
+*.pdf
