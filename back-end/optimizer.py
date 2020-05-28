@@ -587,6 +587,7 @@ class CFG():
 class CFG_Program():
     def __init__(self, gen_code):
         self.gen_code      = gen_code
+        self.opt_code      = []
         self.func_cfg_dict = {}
 
         self.create_cfgs()
@@ -641,6 +642,13 @@ class CFG_Program():
         for _, cfg in self.func_cfg_dict.items():
             cfg.clean_analysis()
 
+    def get_optimized_code(self):
+        self.opt_code = []
+        for _, cfg in self.func_cfg_dict.items():
+            for k, v in cfg.label_block_dict.items():
+                for line, code in enumerate(v.instructions):
+                    self.opt_code.append(code)
+
     def optimize(self):
         self.clean_analysis()
         for _, cfg in self.func_cfg_dict.items():
@@ -650,6 +658,8 @@ class CFG_Program():
             # previous instruction, that index wont be valid anymore.
             cfg.analyze()
             cfg.optimize()
+
+            self.get_optimized_code()
 
     def get_instruction_count(self):
         count = 0
@@ -673,17 +683,18 @@ if __name__ == "__main__":
 
     cfg = CFG_Program(gencode.code)
     # perform optimizations
-    instructions_count_raw = cfg.get_instruction_count()
-    code_can_be_optimized = True
-    while (code_can_be_optimized):
-        instructions_count = cfg.get_instruction_count()
-        print(instructions_count)
-        cfg.optimize()
-        if cfg.get_instruction_count() < instructions_count:
-            instructions_count = cfg.get_instruction_count()
-        else:
-            code_can_be_optimized = False
-    print('speed up = ', instructions_count_raw/instructions_count)
+    cfg.optimize()
+    # instructions_count_raw = cfg.get_instruction_count()
+    # code_can_be_optimized = True
+    # while (code_can_be_optimized):
+    #     instructions_count = cfg.get_instruction_count()
+    #     print(instructions_count)
+    #     cfg.optimize()
+    #     if cfg.get_instruction_count() < instructions_count:
+    #         instructions_count = cfg.get_instruction_count()
+    #     else:
+    #         code_can_be_optimized = False
+    # print('speed up = ', instructions_count_raw/instructions_count)
     cfg.output()
     # output result of CFG to file
     cfg_filename = filename[:-3] + '.cfg'
@@ -692,4 +703,5 @@ if __name__ == "__main__":
     cfg.output_optimized_code(opt_filename)
 
     interpreter = Interpreter()
-    interpreter.run(gencode.code)
+    interpreter.run(cfg.opt_code)
+    # interpreter.run(gencode.code)
