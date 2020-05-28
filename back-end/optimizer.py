@@ -69,6 +69,12 @@ class CFG():
 
         self.create_blocks()
 
+    def get_instruction_count(self):
+        count = 0
+        for _, block in self.label_block_dict.items():
+            count += len(block.instructions)
+        return count
+
     '''
     Get type from instruction (basically if label or not) and return label converted to int.
     '''
@@ -553,7 +559,7 @@ class CFG():
                         left_op  = temp_constant_dict[instruction[1]]
                         right_op = temp_constant_dict[instruction[2]]
                         new_instruction = self.fold_instruction(instruction, left_op, right_op)
-                        print(instruction, '->', new_instruction)
+                        # print(instruction, '->', new_instruction)
                         block.instructions[instr_pos] = new_instruction
 
                         instruction = block.instructions[instr_pos]
@@ -642,6 +648,12 @@ class CFG_Program():
             cfg.analyze()
             cfg.optimize()
 
+    def get_instruction_count(self):
+        count = 0
+        for _, cfg in self.func_cfg_dict.items():
+            count += cfg.get_instruction_count()
+        return count
+
 if __name__ == "__main__":
     # open source code file and read contents
     filename = sys.argv[1]
@@ -658,7 +670,17 @@ if __name__ == "__main__":
 
     cfg = CFG_Program(gencode.code)
     # perform optimizations
-    cfg.optimize()
+    instructions_count_raw = cfg.get_instruction_count()
+    code_can_be_optimized = True
+    while (code_can_be_optimized):
+        instructions_count = cfg.get_instruction_count()
+        print(instructions_count)
+        cfg.optimize()
+        if cfg.get_instruction_count() < instructions_count:
+            instructions_count = cfg.get_instruction_count()
+        else:
+            code_can_be_optimized = False
+    print('speed up = ', instructions_count_raw/instructions_count)
     cfg.output()
     # output result of CFG to file
     cfg_filename = filename[:-3] + '.cfg'
