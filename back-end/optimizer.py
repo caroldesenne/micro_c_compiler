@@ -93,7 +93,6 @@ class CFG():
         else:
         # Get the label as node name
             _name = 'B{}'.format(block.label)
-        # if _name != 'B0':
         # get the formatted instructions as node label
         _label = "{" + _name + ":\l\t"
         for _inst in block.instructions[1:]:
@@ -102,11 +101,6 @@ class CFG():
         self.g.node(_name, label=_label)
         if block.next_block:
             self.g.edge(_name, 'B{}'.format(block.next_block.label))
-        # else:
-        #     # Function definition. An empty block that connect to the Entry Block
-        #     print(block.label, block.next_block, block.instructions)
-        #     # self.g.node(self.fname, label=None, _attributes={'shape': 'ellipse'})
-        #     # self.g.edge(self.fname, block.next_block.label)
 
     def visit_ConditionalBlock(self, block):
         # Get the label as node name
@@ -179,11 +173,6 @@ class CFG():
                 print("    "+str(line)+": "+str(code))
             if isinstance(v, BasicBlock) and v.next_block:
                 print("Next block {}".format(v.next_block.label))
-
-    def output_optimized_code(self):
-        for k, v in self.label_block_dict.items():
-            for line,code in enumerate(v.instructions):
-                print(code)
 
     def output_rd(self):
         '''
@@ -707,8 +696,8 @@ class CFG_Program():
         if ir_filename:
             print("Outputting CFG to %s" % ir_filename)
             sys.stdout = open(ir_filename, 'w')
-        for _, cfg in self.func_cfg_dict.items():
-            cfg.output_optimized_code()
+        for instruction in self.opt_code:
+            print(instruction)
         sys.stdout = aux
 
     def clean_analysis(self):
