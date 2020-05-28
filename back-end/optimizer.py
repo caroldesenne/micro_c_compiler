@@ -432,6 +432,20 @@ class CFG():
                 if (block.live_out != old_out or block.live_in != old_in):
                     done = False
 
+    def clean_analysis(self):
+        for label, block in self.label_block_dict.items():
+            # Clean Reaching definition (rd) stuff
+            block.rd_gen  = set()
+            block.rd_kill = set()
+            block.rd_in   = set()
+            block.rd_out  = set()
+
+            # Clean Liveness stuff
+            block.live_gen  = set()
+            block.live_kill = set()
+            block.live_in   = set()
+            block.live_out  = set()
+
     # Run Reaching Definitions and Liveness analysis
     def analyze(self):
         # Reaching Definitions
@@ -490,6 +504,7 @@ class CFG():
         instr_type = op.split('_')[1]
         target = instruction[3]
 
+        #TODO: char and pointers
         if instr_type == 'int':
             left_op, right_op = int(left_op), int(right_op)
         elif instr_type == 'float':
@@ -499,10 +514,20 @@ class CFG():
 
         return ('literal_{}'.format(instr_type), fold, target)
 
-    def constant_propagation(self):
-        temp_constant_dict = {}
-
+    def constant_propagation_and_folding(self):
         for label, block in self.label_block_dict.items():
+            temp_constant_dict = {}
+
+            for pred_block in block.parents:
+                for block_label, instr_index in pred_block.rd_out:
+                    instruction = self.label_block_dict[block_label].instructions[instr_index]
+                    op = instruction[0]
+                    target = self.get_target_instr(instruction)
+                    op_without_type = op.split('_')[0]
+                    if op_without_type == 'literal':
+                        literal = instruction[1]
+                        temp_constant_dict[target] = literal
+
             for instr_pos, instruction in enumerate(block.instructions):
                 op = instruction[0]
                 target = self.get_target_instr(instruction)
@@ -513,8 +538,9 @@ class CFG():
                     if source in temp_constant_dict:
                         instr_type = op.split('_')[1]
                         new_op = 'literal_{}'.format(instr_type)
-                        block.instructions[instr_pos] = (new_op, temp_constant_dict[source], instruction[2])
-
+                        new_instruction = (new_op, temp_constant_dict[source], instruction[2])
+                        block.instructions[instr_pos] = new_instruction
+                        # print(instruction, '->', new_instruction)
                         instruction = block.instructions[instr_pos]
                         op = instruction[0]
                         target = self.get_target_instr(instruction)
@@ -527,7 +553,7 @@ class CFG():
                         left_op  = temp_constant_dict[instruction[1]]
                         right_op = temp_constant_dict[instruction[2]]
                         new_instruction = self.fold_instruction(instruction, left_op, right_op)
-                        print(instruction, new_instruction)
+                        print(instruction, '->', new_instruction)
                         block.instructions[instr_pos] = new_instruction
 
                         instruction = block.instructions[instr_pos]
@@ -539,18 +565,15 @@ class CFG():
                     # save constant
                     literal = instruction[1]
                     temp_constant_dict[target] = literal
-                    print('insertion', instruction, target, literal)
                 elif self.instruction_has_rd_gen_kill(instruction):
                     if target in temp_constant_dict:
-                        print('removal', instruction, target)
                         temp_constant_dict.pop(target)
 
-        print(temp_constant_dict)
-
+            # TODO: Improve, only recompute analysis if necessary
+            self.compute_rd_in_out()
 
     def optimize(self):
-        # TODO common subexpression elimination
-        self.constant_propagation()
+        self.constant_propagation_and_folding()
         self.dead_code_elimination()
 
 
@@ -607,7 +630,12 @@ class CFG_Program():
             cfg.output_optimized_code()
         sys.stdout = aux
 
+    def clean_analysis(self):
+        for _, cfg in self.func_cfg_dict.items():
+            cfg.clean_analysis()
+
     def optimize(self):
+        self.clean_analysis()
         for _, cfg in self.func_cfg_dict.items():
             # TODO analyse and optimize several times
             # TODO do we need to analyse each time we optimize again? I think we do.
@@ -638,8 +666,5 @@ if __name__ == "__main__":
     opt_filename = filename[:-3] + '.opt'
     cfg.output_optimized_code(opt_filename)
 
-    # gencode.code[3] = ('literal_int', 14, '%2')
-    # del gencode.code[4]
-    # print(gencode.code[4:6])
-    # interpreter = Interpreter()
-    # interpreter.run(gencode.code)
+    interpreter = Interpreter()
+    interpreter.run(gencode.code)
