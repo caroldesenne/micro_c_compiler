@@ -331,7 +331,8 @@ class CFG():
     # return gen and kill from instruction (Liveness) -- return (gen_set, kill_set)
     def instruction_live_gen_kill(self, instruction):
         op = instruction[0]
-        op_without_type = op.split('_')[0]
+        fragments = op.split('_')
+        op_without_type = fragments[0]
         # binary op
         if op_without_type in ['add','sub','mul','div','mod'] or op_without_type in ['ne','eq','lt','le','gt','ge','and','or','not']:
             return set([instruction[1], instruction[2]]), set([instruction[3]])
@@ -350,6 +351,8 @@ class CFG():
         # t <- b[i]
         if op_without_type == 'elem':
             return set([instruction[1], instruction[2]]), set([instruction[3]])
+        if op_without_type == 'store' and len(fragments)==3 and fragments[2]=='*':
+            return set([instruction[1],instruction[2]]), set()
         if op_without_type in ['load','get','store','fptosi','sitofp']:
             return set([instruction[1]]), set([instruction[2]])
         # t <- C
