@@ -66,6 +66,7 @@ class CFG():
         self.label_block_dict     = {}
         self.label_blocktype_dict = {}
         self.first_block          = None
+        self.block_order          = []
 
         self.create_blocks()
 
@@ -203,6 +204,7 @@ class CFG():
         # Create first block
         self.first_block = self.new_block(self.label_blocktype_dict[0], 0)
         self.label_block_dict[0] = self.first_block
+        self.block_order.append(0)
 
         cur_block = self.first_block
         for index in range(len(self.gen_code)):
@@ -211,6 +213,7 @@ class CFG():
             if isinstance(op, int):
                 # creates next block
                 next_label = op
+                self.block_order.append(next_label)
                 self.create_block_if_inexistent(next_label)
 
                 # link current block (next/jump/branch)
@@ -548,7 +551,7 @@ class CFG():
                         new_op = 'literal_{}'.format(instr_type)
                         new_instruction = (new_op, temp_constant_dict[source], instruction[2])
                         block.instructions[instr_pos] = new_instruction
-                        # print(instruction, '->', new_instruction)
+                        print(instruction, '->', new_instruction)
                         instruction = block.instructions[instr_pos]
                         op = instruction[0]
                         target = self.get_target_instr(instruction)
@@ -561,7 +564,7 @@ class CFG():
                         left_op  = temp_constant_dict[instruction[1]]
                         right_op = temp_constant_dict[instruction[2]]
                         new_instruction = self.fold_instruction(instruction, left_op, right_op)
-                        # print(instruction, '->', new_instruction)
+                        print(instruction, '->', new_instruction)
                         block.instructions[instr_pos] = new_instruction
 
                         instruction = block.instructions[instr_pos]
@@ -647,8 +650,8 @@ class CFG_Program():
     def get_optimized_code(self):
         self.opt_code = []
         for _, cfg in self.func_cfg_dict.items():
-            for k, v in cfg.label_block_dict.items():
-                for line, code in enumerate(v.instructions):
+            for label in cfg.block_order:
+                for code in cfg.label_block_dict[label].instructions:
                     self.opt_code.append(code)
 
     def optimize(self):
@@ -685,18 +688,18 @@ if __name__ == "__main__":
 
     cfg = CFG_Program(gencode.code)
     # perform optimizations
-    cfg.optimize()
-    # instructions_count_raw = cfg.get_instruction_count()
-    # code_can_be_optimized = True
-    # while (code_can_be_optimized):
-    #     instructions_count = cfg.get_instruction_count()
-    #     print(instructions_count)
-    #     cfg.optimize()
-    #     if cfg.get_instruction_count() < instructions_count:
-    #         instructions_count = cfg.get_instruction_count()
-    #     else:
-    #         code_can_be_optimized = False
-    # print('speed up = ', instructions_count_raw/instructions_count)
+    # cfg.optimize()
+    instructions_count_raw = cfg.get_instruction_count()
+    code_can_be_optimized = True
+    while (code_can_be_optimized):
+        instructions_count = cfg.get_instruction_count()
+        print(instructions_count)
+        cfg.optimize()
+        if cfg.get_instruction_count() < instructions_count:
+            instructions_count = cfg.get_instruction_count()
+        else:
+            code_can_be_optimized = False
+    print('speed up = ', instructions_count_raw/instructions_count)
     cfg.output()
     # output result of CFG to file
     cfg_filename = filename[:-3] + '.cfg'
