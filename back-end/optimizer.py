@@ -4,6 +4,24 @@ from parser import Parser
 from ast import *
 from checker import CheckProgramVisitor
 from generator import GenerateCode
+from interpreter import Interpreter
+
+op_lambdas = {
+    'add': lambda l, r: l + r,
+    'sub': lambda l, r: l - r,
+    'mul': lambda l, r: l * r,
+    'div': lambda l, r: l // r,
+    'mod': lambda l, r: l % r,
+    'and': lambda l, r: l & r,
+    'or':  lambda l, r: l | r,
+    #'not': lambda l, r: l  r,
+    'ne':  lambda l, r: int(l != r),
+    'eq':  lambda l, r: int(l == r),
+    'lt':  lambda l, r: int(l < r),
+    'le':  lambda l, r: int(l <= r),
+    'gt':  lambda l, r: int(l > r),
+    'ge':  lambda l, r: int(l >= r),
+}
 
 class Block(object):
     def __init__(self, label):
@@ -18,7 +36,7 @@ class Block(object):
         self.rd_in   = set()
         self.rd_out  = set()
 
-        # Reaching definition (rd) stuff
+        # Liveness stuff
         self.live_gen  = set()
         self.live_kill = set()
         self.live_in   = set()
@@ -429,7 +447,7 @@ class CFG():
     def dead_code_elimination(self):
         for label, block in self.label_block_dict.items():
             delete_indexes = set()
-            # inner_live contains the set of variables that are alive through the block 
+            # inner_live contains the set of variables that are alive through the block
             # (initially contains only variables used after this block)
             inner_live = block.live_out
             for instr_pos, instruction in reversed(list(enumerate(block.instructions))):
@@ -457,9 +475,84 @@ class CFG():
             block.instructions = updated_instructions
         # TODO dead code elimination for unused allocs
 
+    def instruction_is_binary_op(self, instruction):
+        op = instruction[0]
+        op_without_type = op.split('_')[0]
+        #TODO: check if 'elem','get' should be included
+        if op_without_type in ['add','sub','mul','div','mod','and','or','not','ne','eq','lt','le','gt','ge']:
+            return True
+        else:
+            return False
+
+    def fold_instruction(self, instruction, left_op, right_op):
+        op = instruction[0]
+        op_without_type = op.split('_')[0]
+        instr_type = op.split('_')[1]
+        target = instruction[3]
+
+        if instr_type == 'int':
+            left_op, right_op = int(left_op), int(right_op)
+        elif instr_type == 'float':
+            left_op, right_op = float(left_op), float(right_op)
+
+        fold = op_lambdas[op_without_type](left_op, right_op)
+
+        return ('literal_{}'.format(instr_type), fold, target)
+
+    def constant_propagation(self):
+        temp_constant_dict = {}
+
+        for label, block in self.label_block_dict.items():
+            for instr_pos, instruction in enumerate(block.instructions):
+                op = instruction[0]
+                target = self.get_target_instr(instruction)
+                op_without_type = op.split('_')[0]
+
+                if op_without_type in ['store','load']:
+                    source = instruction[1]
+                    if source in temp_constant_dict:
+                        instr_type = op.split('_')[1]
+                        new_op = 'literal_{}'.format(instr_type)
+                        block.instructions[instr_pos] = (new_op, temp_constant_dict[source], instruction[2])
+
+                        instruction = block.instructions[instr_pos]
+                        op = instruction[0]
+                        target = self.get_target_instr(instruction)
+                        op_without_type = op.split('_')[0]
+
+                if self.instruction_is_binary_op(instruction):
+                    left_op  = instruction[1]
+                    right_op = instruction[2]
+                    if left_op in temp_constant_dict.keys() and right_op in temp_constant_dict.keys():
+                        left_op  = temp_constant_dict[instruction[1]]
+                        right_op = temp_constant_dict[instruction[2]]
+                        new_instruction = self.fold_instruction(instruction, left_op, right_op)
+                        print(instruction, new_instruction)
+                        block.instructions[instr_pos] = new_instruction
+
+                        instruction = block.instructions[instr_pos]
+                        op = instruction[0]
+                        target = self.get_target_instr(instruction)
+                        op_without_type = op.split('_')[0]
+
+                if op_without_type == 'literal':
+                    # save constant
+                    literal = instruction[1]
+                    temp_constant_dict[target] = literal
+                    print('insertion', instruction, target, literal)
+                elif self.instruction_has_rd_gen_kill(instruction):
+                    if target in temp_constant_dict:
+                        print('removal', instruction, target)
+                        temp_constant_dict.pop(target)
+
+        print(temp_constant_dict)
+
+
     def optimize(self):
         # TODO common subexpression elimination
+        self.constant_propagation()
         self.dead_code_elimination()
+
 
 class CFG_Program():
     def __init__(self, gen_code):
@@ -544,3 +637,9 @@ if __name__ == "__main__":
     cfg.output(cfg_filename)
     opt_filename = filename[:-3] + '.opt'
     cfg.output_optimized_code(opt_filename)
+
+    # gencode.code[3] = ('literal_int', 14, '%2')
+    # del gencode.code[4]
+    # print(gencode.code[4:6])
+    # interpreter = Interpreter()
+    # interpreter.run(gencode.code)
