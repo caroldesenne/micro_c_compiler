@@ -309,7 +309,7 @@ class CFG():
             # calculate IN[b] from predecessors' OUT[p]
             # for all blocks p in predecessors(b)
             for pred_block in block.parents:
-                block.rd_in = block.rd_in.union(pred_block.rd_out)
+                block.rd_in = block.rd_in.intersection(pred_block.rd_out)
 
             # save old OUT[b]
             old_out = block.rd_out
@@ -527,15 +527,14 @@ class CFG():
         for label, block in self.label_block_dict.items():
             temp_constant_dict = {}
 
-            for pred_block in block.parents:
-                for block_label, instr_index in pred_block.rd_out:
-                    instruction = self.label_block_dict[block_label].instructions[instr_index]
-                    op = instruction[0]
-                    target = self.get_target_instr(instruction)
-                    op_without_type = op.split('_')[0]
-                    if op_without_type == 'literal':
-                        literal = instruction[1]
-                        temp_constant_dict[target] = literal
+            for block_label, instr_index in block.rd_in:
+                instruction = self.label_block_dict[block_label].instructions[instr_index]
+                op = instruction[0]
+                target = self.get_target_instr(instruction)
+                op_without_type = op.split('_')[0]
+                if op_without_type == 'literal':
+                    literal = instruction[1]
+                    temp_constant_dict[target] = literal
 
             for instr_pos, instruction in enumerate(block.instructions):
                 op = instruction[0]
