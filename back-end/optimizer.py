@@ -14,7 +14,7 @@ op_lambdas = {
     'mod': lambda l, r: l % r,
     'and': lambda l, r: l & r,
     'or':  lambda l, r: l | r,
-    #'not': lambda l, r: l  r,
+    #TODO: 'not': lambda l, r: l  r,
     'ne':  lambda l, r: int(l != r),
     'eq':  lambda l, r: int(l == r),
     'lt':  lambda l, r: int(l < r),
@@ -574,6 +574,7 @@ class CFG():
                 elif self.instruction_has_rd_gen_kill(instruction):
                     if target in temp_constant_dict:
                         temp_constant_dict.pop(target)
+                #TODO: optimize branchs (not straightforward, at all)
 
             # TODO: Improve, only recompute analysis if necessary
             self.compute_rd_in_out()
@@ -644,7 +645,9 @@ class CFG_Program():
         self.clean_analysis()
         for _, cfg in self.func_cfg_dict.items():
             # TODO analyse and optimize several times
-            # TODO do we need to analyse each time we optimize again? I think we do.
+            # TODO do we need to analyse each time we optimize again? I think we do. We do, since in
+            # the analysis the instruction is identified by index inside the block, if we delete a
+            # previous instruction, that index wont be valid anymore.
             cfg.analyze()
             cfg.optimize()
 
