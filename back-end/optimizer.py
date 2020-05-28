@@ -5,6 +5,7 @@ from ast import *
 from checker import CheckProgramVisitor
 from generator import GenerateCode
 from interpreter import Interpreter
+from graphviz import Digraph
 
 op_lambdas = {
     'add': lambda l, r: l + r,
@@ -22,6 +23,31 @@ op_lambdas = {
     'gt':  lambda l, r: int(l > r),
     'ge':  lambda l, r: int(l >= r),
 }
+
+def format_instruction(t):
+    # Auxiliary method to pretty print the instructions
+    op = t[0]
+    if len(t) > 1:
+        if op == "define":
+            return f"\n{op} {t[1]}"
+        else:
+            _str = "" if op.startswith('global') else "  "
+            if op == 'jump':
+                _str += f"{op} label {t[1]}"
+            elif op == 'cbranch':
+                _str += f"{op} {t[1]} label {t[2]} label {t[3]}"
+            elif op == 'global_string':
+                _str += f"{op} {t[1]} \'{t[2]}\'"
+            elif op.startswith('return'):
+                _str += f"{op} {t[1]}"
+            else:
+                for _el in t:
+                    _str += f"{_el} "
+            return _str
+    elif op == 'print_void' or op == 'return_void':
+        return f"  {op}"
+    else:
+        return f"{op}"
 
 class Block(object):
     def __init__(self, label):
@@ -61,7 +87,49 @@ class ConditionalBlock(Block):
         self.false_branch = None
 
 class CFG():
-    def __init__(self, gen_code):
+    def visit_BasicBlock(self, block):
+        if self.fname == '__global':
+            _name = self.fname
+        else:
+        # Get the label as node name
+            _name = 'B{}'.format(block.label)
+        # if _name != 'B0':
+        # get the formatted instructions as node label
+        _label = "{" + _name + ":\l\t"
+        for _inst in block.instructions[1:]:
+            _label += format_instruction(_inst) + "\l\t"
+        _label += "}"
+        self.g.node(_name, label=_label)
+        if block.next_block:
+            self.g.edge(_name, 'B{}'.format(block.next_block.label))
+        # else:
+        #     # Function definition. An empty block that connect to the Entry Block
+        #     print(block.label, block.next_block, block.instructions)
+        #     # self.g.node(self.fname, label=None, _attributes={'shape': 'ellipse'})
+        #     # self.g.edge(self.fname, block.next_block.label)
+
+    def visit_ConditionalBlock(self, block):
+        # Get the label as node name
+        _name = 'B{}'.format(block.label)
+        # get the formatted instructions as node label
+        _label = "{" + _name + ":\l\t"
+        for _inst in block.instructions[1:]:
+            _label += format_instruction(_inst) + "\l\t"
+        _label +="|{<f0>T|<f1>F}}"
+        self.g.node(_name, label=_label)
+        self.g.edge(_name + ":f0", 'B{}'.format(block.true_branch.label))
+        self.g.edge(_name + ":f1", 'B{}'.format(block.false_branch.label))
+
+    def view(self, block):
+        for label, block in self.label_block_dict.items():
+            name = "visit_%s" % type(block).__name__
+            if hasattr(self, name):
+                getattr(self, name)(block)
+        self.g.view()
+
+    def __init__(self, gen_code, fname):
+        self.fname                = fname
+        self.g                    = Digraph('g', filename=fname + '.gv', node_attr={'shape': 'record'})
         self.gen_code             = gen_code
         self.label_block_dict     = {}
         self.label_blocktype_dict = {}
@@ -551,7 +619,7 @@ class CFG():
                         new_op = 'literal_{}'.format(instr_type)
                         new_instruction = (new_op, temp_constant_dict[source], instruction[2])
                         block.instructions[instr_pos] = new_instruction
-                        print(instruction, '->', new_instruction)
+                        # print(instruction, '->', new_instruction)
                         instruction = block.instructions[instr_pos]
                         op = instruction[0]
                         target = self.get_target_instr(instruction)
@@ -564,7 +632,7 @@ class CFG():
                         left_op  = temp_constant_dict[instruction[1]]
                         right_op = temp_constant_dict[instruction[2]]
                         new_instruction = self.fold_instruction(instruction, left_op, right_op)
-                        print(instruction, '->', new_instruction)
+                        # print(instruction, '->', new_instruction)
                         block.instructions[instr_pos] = new_instruction
 
                         instruction = block.instructions[instr_pos]
@@ -607,7 +675,7 @@ class CFG_Program():
         for instr_pos, instruction in enumerate(self.gen_code):
             if instruction[0] == 'define':
                 function_code = self.gen_code[start_function:instr_pos]
-                self.func_cfg_dict[cur_function] = CFG(function_code)
+                self.func_cfg_dict[cur_function] = CFG(function_code, cur_function)
                 cur_function   = instruction[1]
                 start_function = instr_pos
 
@@ -666,6 +734,10 @@ class CFG_Program():
 
             self.get_optimized_code()
 
+    def view(self):
+        for _, cfg in self.func_cfg_dict.items():
+            cfg.view(cfg.first_block)
+
     def get_instruction_count(self):
         count = 0
         for _, cfg in self.func_cfg_dict.items():
@@ -688,7 +760,6 @@ if __name__ == "__main__":
 
     cfg = CFG_Program(gencode.code)
     # perform optimizations
-    # cfg.optimize()
     instructions_count_raw = cfg.get_instruction_count()
     code_can_be_optimized = True
     while (code_can_be_optimized):
@@ -707,6 +778,7 @@ if __name__ == "__main__":
     opt_filename = filename[:-3] + '.opt'
     cfg.output_optimized_code(opt_filename)
 
+    cfg.view()
+
     interpreter = Interpreter()
     interpreter.run(cfg.opt_code)
-    # interpreter.run(gencode.code)
