@@ -583,9 +583,10 @@ class CFG():
 
         return ('literal_{}'.format(instr_type), fold, target)
 
-    def constant_propagation_and_folding(self):
+    def copy_propagation_and_constant_folding(self):
         for label, block in self.label_block_dict.items():
             temp_constant_dict = {}
+            temp_temp_dict     = {}
 
             for block_label, instr_index in block.rd_in:
                 instruction = self.label_block_dict[block_label].instructions[instr_index]
@@ -595,20 +596,22 @@ class CFG():
                 if op_without_type == 'literal':
                     literal = instruction[1]
                     temp_constant_dict[target] = literal
+                elif op_without_type in ['load'] and '*' not in op:
+                    source = instruction[1]
+                    temp_temp_dict[target] = source
 
             for instr_pos, instruction in enumerate(block.instructions):
                 op = instruction[0]
                 target = self.get_target_instr(instruction)
                 op_without_type = op.split('_')[0]
 
-                if op_without_type in ['store','load']:
+                if op_without_type in ['store','load'] and '*' not in op:
                     source = instruction[1]
-                    if source in temp_constant_dict:
+                    if source in temp_constant_dict.keys():
                         instr_type = op.split('_')[1]
                         new_op = 'literal_{}'.format(instr_type)
-                        new_instruction = (new_op, temp_constant_dict[source], instruction[2])
+                        new_instruction = (new_op, temp_constant_dict[source], target)
                         block.instructions[instr_pos] = new_instruction
-                        # print(instruction, '->', new_instruction)
                         instruction = block.instructions[instr_pos]
                         op = instruction[0]
                         target = self.get_target_instr(instruction)
@@ -618,31 +621,41 @@ class CFG():
                     left_op  = instruction[1]
                     right_op = instruction[2]
                     if left_op in temp_constant_dict.keys() and right_op in temp_constant_dict.keys():
-                        left_op  = temp_constant_dict[instruction[1]]
-                        right_op = temp_constant_dict[instruction[2]]
+                        left_op  = temp_constant_dict[left_op]
+                        right_op = temp_constant_dict[right_op]
                         new_instruction = self.fold_instruction(instruction, left_op, right_op)
-                        # print(instruction, '->', new_instruction)
                         block.instructions[instr_pos] = new_instruction
 
                         instruction = block.instructions[instr_pos]
                         op = instruction[0]
                         target = self.get_target_instr(instruction)
                         op_without_type = op.split('_')[0]
+                    else:
+                        if left_op in temp_temp_dict.keys():
+                            left_op = temp_temp_dict[left_op]
+                        if right_op in temp_temp_dict.keys():
+                            right_op = temp_temp_dict[right_op]
+                        new_instruction = (op, left_op, right_op, target)
+                        block.instructions[instr_pos] = new_instruction
+                        instruction = block.instructions[instr_pos]
 
                 if op_without_type == 'literal':
-                    # save constant
                     literal = instruction[1]
                     temp_constant_dict[target] = literal
+                elif op_without_type in ['load'] and '*' not in op:
+                    source = instruction[1]
+                    temp_temp_dict[target] = source
+                    temp_constant_dict.pop(target, None)
                 elif self.instruction_has_rd_gen_kill(instruction):
-                    if target in temp_constant_dict:
-                        temp_constant_dict.pop(target)
+                    temp_constant_dict.pop(target, None)
+                    temp_temp_dict.pop(target, None)
                 #TODO: optimize branchs (not straightforward, at all)
 
             # TODO: Improve, only recompute analysis if necessary
             self.compute_rd_in_out()
 
     def optimize(self):
-        self.constant_propagation_and_folding()
+        self.copy_propagation_and_constant_folding()
         self.dead_code_elimination()
 
 
