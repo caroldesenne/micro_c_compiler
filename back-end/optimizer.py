@@ -645,7 +645,7 @@ class CFG():
                         new_instruction = (op, left_op, right_op, target)
                         block.instructions[instr_pos] = new_instruction
                         instruction = block.instructions[instr_pos]
-                elif op_without_type == 'return':
+                elif op_without_type == 'return' and 'void' not in op:
                     if instruction[1] in temp_temp_dict.keys():
                         new_instruction = (op, temp_temp_dict[instruction[1]])
                         block.instructions[instr_pos] = new_instruction
