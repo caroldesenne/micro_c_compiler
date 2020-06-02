@@ -144,7 +144,7 @@ class CFG():
     def get_instruction_type(self, instruction):
         op = instruction[0]
         # Not all instructions that have length 1 are labels. Other option is: ('return_void',)
-        if (len(instruction) == 1) and (op != 'return_void'):
+        if (len(instruction) == 1) and (op != 'return_void') and (op != 'print_void'):
             return int(op)
         else:
             return op
@@ -423,7 +423,9 @@ class CFG():
             return set(), set([instruction[1]])
         # print(variable)
         if op_without_type == 'print':
-            return set([instruction[1]]), set()
+            op_type = op.split('_')[1]
+            if op_type != 'void':
+                return set([instruction[1]]), set()
         # return x
         if op_without_type == 'return':
             op_type = op.split('_')[1]
