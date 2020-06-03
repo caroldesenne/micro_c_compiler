@@ -605,7 +605,9 @@ class CFG():
                 # If a reaching definition is a load (but not of type pointer), save the temp->temp (copy prop)
                 elif op_without_type in ['load'] and '*' not in op:
                     source = instruction[1]
-                    temp_temp_dict[target] = source
+                    # Global cant be propagated
+                    if '@' not in source:
+                        temp_temp_dict[target] = source
 
             # Iterate over isntructions from current block
             for instr_pos, instruction in enumerate(block.instructions):
@@ -674,9 +676,11 @@ class CFG():
                     literal                    = instruction[1]
                     temp_constant_dict[target] = literal
                 elif op_without_type in ['load'] and '*' not in op:
-                    source                 = instruction[1]
-                    temp_temp_dict[target] = source
-                    temp_constant_dict.pop(target, None)
+                    # Global cant be propagated
+                    if '@' not in source:
+                        source                 = instruction[1]
+                        temp_temp_dict[target] = source
+                        temp_constant_dict.pop(target, None)
                 elif self.instruction_has_rd_gen_kill(instruction):
                     temp_constant_dict.pop(target, None)
                     temp_temp_dict.pop(target, None)
