@@ -573,11 +573,13 @@ class CFG():
         instr_type = op.split('_')[1]
         target = instruction[3]
 
-        #TODO: char and pointers
+        #TODO: bool, char and pointers
         if instr_type == 'int':
             left_op, right_op = int(left_op), int(right_op)
         elif instr_type == 'float':
             left_op, right_op = float(left_op), float(right_op)
+        else:
+            return instruction
 
         fold = op_lambdas[op_without_type](left_op, right_op)
 
@@ -585,84 +587,100 @@ class CFG():
 
     def copy_propagation_and_constant_folding(self):
         for label, block in self.label_block_dict.items():
+            # maps to replace temps by constant (constant propagation) or by another temp (copy propagation)
             temp_constant_dict = {}
             temp_temp_dict     = {}
 
+            # Populate the maps with data coming from another block (IN from RD analysis)
             for block_label, instr_index in block.rd_in:
-                instruction = self.label_block_dict[block_label].instructions[instr_index]
-                op = instruction[0]
-                target = self.get_target_instr(instruction)
+                instruction     = self.label_block_dict[block_label].instructions[instr_index]
+                op              = instruction[0]
                 op_without_type = op.split('_')[0]
+                target          = self.get_target_instr(instruction)
+
+                # If a reaching definition is a literal, save the temp->constant (constant prop)
                 if op_without_type == 'literal':
                     literal = instruction[1]
                     temp_constant_dict[target] = literal
+                # If a reaching definition is a load (but not of type pointer), save the temp->temp (copy prop)
                 elif op_without_type in ['load'] and '*' not in op:
                     source = instruction[1]
                     temp_temp_dict[target] = source
 
+            # Iterate over isntructions from current block
             for instr_pos, instruction in enumerate(block.instructions):
-                op = instruction[0]
-                target = self.get_target_instr(instruction)
+                op              = instruction[0]
                 op_without_type = op.split('_')[0]
+                try:
+                    instr_type = op.split('_')[1]
+                except:
+                    instr_type = 'void'
+                target          = self.get_target_instr(instruction)
 
-                if op_without_type in ['store','load'] and '*' not in op:
+                # If we find a store or load instruction for which the source is on the constant map, we replace it for a literal instruction of the same type
+                if op_without_type in ['store','load'] and '*' not in op and instr_type in ['int','float']:
                     source = instruction[1]
                     if source in temp_constant_dict.keys():
-                        instr_type = op.split('_')[1]
-                        new_op = 'literal_{}'.format(instr_type)
+                        new_op          = 'literal_{}'.format(instr_type)
                         new_instruction = (new_op, temp_constant_dict[source], target)
                         block.instructions[instr_pos] = new_instruction
-                        instruction = block.instructions[instr_pos]
-                        op = instruction[0]
-                        target = self.get_target_instr(instruction)
-                        op_without_type = op.split('_')[0]
+                        # Update current instruction info
+                        instruction     = block.instructions[instr_pos]
+                        op              = new_op
+                        op_without_type = 'literal'
 
+                # Binary op -> possible folding or copy prop
                 if self.instruction_is_binary_op(instruction):
                     left_op  = instruction[1]
                     right_op = instruction[2]
+                    # If both operators are in the mapping -> apply folding and replace instruction with literal
                     if left_op in temp_constant_dict.keys() and right_op in temp_constant_dict.keys():
                         left_op  = temp_constant_dict[left_op]
                         right_op = temp_constant_dict[right_op]
                         new_instruction = self.fold_instruction(instruction, left_op, right_op)
                         block.instructions[instr_pos] = new_instruction
 
-                        instruction = block.instructions[instr_pos]
-                        op = instruction[0]
-                        target = self.get_target_instr(instruction)
+                        # Update current instruction info
+                        instruction     = new_instruction
+                        op              = instruction[0]
                         op_without_type = op.split('_')[0]
+                    # If folding is not possible, check if we can propagate a copy at least
                     else:
                         if left_op in temp_temp_dict.keys():
                             left_op = temp_temp_dict[left_op]
                         if right_op in temp_temp_dict.keys():
                             right_op = temp_temp_dict[right_op]
-                        next_instruction = block.instructions[instr_pos+1]
-                        next_op = next_instruction[0]
+                        # Check for next instruction, ad-hoc optimization (store after binary_op)
+                        next_instruction     = block.instructions[instr_pos+1]
+                        next_op              = next_instruction[0]
                         next_op_without_type = next_op.split('_')[0]
-                        next_target = self.get_target_instr(next_instruction)
+                        next_target          = self.get_target_instr(next_instruction)
                         if next_op_without_type == 'store' and '*' not in op and next_instruction[1] == target:
                             target = next_target
                             block.instructions[instr_pos+1] = ('literal_int', 0, '')
                         new_instruction = (op, left_op, right_op, target)
+
+                        # Update current instruction info
                         block.instructions[instr_pos] = new_instruction
-                        instruction = block.instructions[instr_pos]
+                        instruction                   = new_instruction
+                # Copy propagation on a non-void return
                 elif op_without_type == 'return' and 'void' not in op:
                     if instruction[1] in temp_temp_dict.keys():
                         new_instruction = (op, temp_temp_dict[instruction[1]])
                         block.instructions[instr_pos] = new_instruction
 
+                # Update maps
                 if op_without_type == 'literal':
-                    literal = instruction[1]
+                    literal                    = instruction[1]
                     temp_constant_dict[target] = literal
                 elif op_without_type in ['load'] and '*' not in op:
-                    source = instruction[1]
+                    source                 = instruction[1]
                     temp_temp_dict[target] = source
                     temp_constant_dict.pop(target, None)
                 elif self.instruction_has_rd_gen_kill(instruction):
                     temp_constant_dict.pop(target, None)
                     temp_temp_dict.pop(target, None)
-                #TODO: optimize branchs (not straightforward, at all)
 
-            # TODO: Improve, only recompute analysis if necessary
             self.compute_rd_in_out()
 
     def optimize(self):
@@ -772,6 +790,10 @@ if __name__ == "__main__":
     gencode.visit_Program(ast)
 
     cfg = CFG_Program(gencode.code)
+
+    cfg.get_optimized_code()
+    opt_filename = filename[:-3] + '.raw'
+    cfg.output_optimized_code(opt_filename)
     # perform optimizations
     instructions_count_raw = cfg.get_instruction_count()
     code_can_be_optimized = True
