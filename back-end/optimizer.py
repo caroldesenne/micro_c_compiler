@@ -143,8 +143,8 @@ class CFG():
     '''
     def get_instruction_type(self, instruction):
         op = instruction[0]
-        # Not all instructions that have length 1 are labels. Other option is: ('return_void',)
-        if (len(instruction) == 1) and (op != 'return_void'):
+        # Not all instructions that have length 1 are labels. Other option is: ('return_void',), also ('print_void',)
+        if (len(instruction) == 1) and (op not in ['return_void','print_void']):
             return int(op)
         else:
             return op
@@ -422,7 +422,7 @@ class CFG():
         if op_without_type == 'read':
             return set(), set([instruction[1]])
         # print(variable)
-        if op_without_type == 'print':
+        if op_without_type == 'print' and 'void' not in op:
             return set([instruction[1]]), set()
         # return x
         if op_without_type == 'return':
@@ -690,7 +690,6 @@ class CFG():
     def optimize(self):
         self.copy_propagation_and_constant_folding()
         self.dead_code_elimination()
-
 
 class CFG_Program():
     def __init__(self, gen_code):
