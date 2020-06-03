@@ -611,7 +611,6 @@ class CFG():
 
             # Iterate over isntructions from current block
             for instr_pos, instruction in enumerate(block.instructions):
-                print(temp_constant_dict)
                 op              = instruction[0]
                 op_without_type = op.split('_')[0]
                 try:
