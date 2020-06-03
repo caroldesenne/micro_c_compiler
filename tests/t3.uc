@@ -5,7 +5,7 @@ int f(int n, int k) {
         return n;
     }
     else {
-        t = f(n-1, p) + f(n-2);
+        t = f(n-1, p) + f(n-2, p);
         k = p + q + 1;
         return t;
     }

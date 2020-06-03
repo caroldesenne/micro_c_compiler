@@ -24,7 +24,7 @@ int main() {
     // Finding the transpose of matrix a
     for (i = 0; i < r; ++i)
         for (j = 0; j < c; ++j) {
-            transpose[j][i] = a[j];
+            transpose[j][i] = a[i][j];
         }
 
     // Displaying the transpose of matrix a

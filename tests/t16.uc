@@ -2,6 +2,6 @@ int main() {
     int x =2, y, z;
     y = ++x;
     z = x++;
-    assert y;
+    assert y == 3;
     return x;
 }

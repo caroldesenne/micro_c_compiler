@@ -18,7 +18,7 @@ int main() {
         sum = sum + num[i];
     }
 
-    avg = sum / n;
+    avg = sum / (float)n;
     print("Average = ", avg);
     return 0;
 }

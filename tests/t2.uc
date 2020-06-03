@@ -4,7 +4,7 @@ int doubleMe (int x) {
     return x * x;
 }
 
-void main () {
+int main () {
     int v = n;
     v = doubleMe (v);
     assert v == n * n;

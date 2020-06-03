@@ -1,5 +1,5 @@
 int main() {
-    int n, t1 = 0, t2 = 1, nextTerm;
+    int n, t1 = 0, t2 = 1, nextTerm, i;
     print("Enter the number of terms: ");
     read(n);
     print("Fibonacci Series: ");
