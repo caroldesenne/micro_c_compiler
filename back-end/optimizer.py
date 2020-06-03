@@ -611,6 +611,7 @@ class CFG():
 
             # Iterate over isntructions from current block
             for instr_pos, instruction in enumerate(block.instructions):
+                print(temp_constant_dict)
                 op              = instruction[0]
                 op_without_type = op.split('_')[0]
                 try:
@@ -657,7 +658,7 @@ class CFG():
                         next_op              = next_instruction[0]
                         next_op_without_type = next_op.split('_')[0]
                         next_target          = self.get_target_instr(next_instruction)
-                        if next_op_without_type == 'store' and '*' not in op and next_instruction[1] == target:
+                        if next_op_without_type == 'store' and '*' not in next_op and next_instruction[1] == target:
                             target = next_target
                             block.instructions[instr_pos+1] = ('literal_int', 0, '')
                         new_instruction = (op, left_op, right_op, target)
