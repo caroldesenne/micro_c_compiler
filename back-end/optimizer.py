@@ -404,8 +404,6 @@ class CFG():
         if op == 'call':
             if len(instruction) == 3:
                 return set(), set([instruction[2]])
-            # TODO: add all global variables in gen set
-            # called function might use all globals
         # Conditional Branch and Jump
         if op == 'cbranch':
             return set([instruction[1]]), set()
