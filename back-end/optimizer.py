@@ -397,6 +397,9 @@ class CFG():
         # binary op
         if op_without_type in ['add','sub','mul','div','mod'] or op_without_type in ['ne','eq','lt','le','gt','ge','and','or','not']:
             return set([instruction[1], instruction[2]]), set([instruction[3]])
+        # Alloc
+        if op_without_type == 'alloc':
+            return set(), set([instruction[1]])
         # Params
         if op_without_type == 'param':
             return set([instruction[1]]), set()
@@ -410,9 +413,9 @@ class CFG():
         # t <- b[i]
         if op_without_type == 'elem':
             return set([instruction[1], instruction[2]]), set([instruction[3]])
-        if op_without_type == 'store' and len(fragments)==3 and fragments[2]=='*':
+        if op_without_type == 'store':
             return set([instruction[1],instruction[2]]), set()
-        if op_without_type in ['load','get','store','fptosi','sitofp']:
+        if op_without_type in ['load','get','fptosi','sitofp']:
             return set([instruction[1]]), set([instruction[2]])
         # t <- C
         if op_without_type == 'literal':
@@ -818,14 +821,14 @@ if __name__ == "__main__":
         else:
             code_can_be_optimized = False
     print('speed up = ', instructions_count_raw/instructions_count)
-    cfg.output()
+    #cfg.output()
     # output result of CFG to file
     cfg_filename = filename[:-3] + '.cfg'
     cfg.output(cfg_filename)
     opt_filename = filename[:-3] + '.opt'
     cfg.output_optimized_code(opt_filename)
 
-    cfg.view()
+    #cfg.view()
 
     interpreter = Interpreter()
     interpreter.run(cfg.opt_code)
