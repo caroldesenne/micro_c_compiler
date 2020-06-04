@@ -7,5 +7,5 @@ int main() {
     a = t;
   }
 
-  return 17;
+  return 0;
 }

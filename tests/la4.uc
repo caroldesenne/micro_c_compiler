@@ -8,4 +8,5 @@ int main() {
   d = 2;
   int e = foo(c,d);
   print(e);
+  return 0;
 }

@@ -3,5 +3,5 @@ int main() {
     y = ++x;
     z = x++;
     assert y == 3;
-    return x;
+    return 0;
 }

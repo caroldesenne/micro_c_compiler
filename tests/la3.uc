@@ -9,5 +9,6 @@ int main() {
     y++;
   }
 
-  return y;
+  print(y);
+  return 0;
 }
