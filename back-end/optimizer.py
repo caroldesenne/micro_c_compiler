@@ -121,7 +121,7 @@ class CFG():
                 getattr(self, name)(block)
         self.g.view()
 
-    def __init__(self, gen_code, fname):
+    def __init__(self, gen_code, fname, global_vars=set()):
         self.fname                = fname
         self.g                    = Digraph('g', filename=fname + '.gv', node_attr={'shape': 'record'})
         self.gen_code             = gen_code
@@ -129,6 +129,7 @@ class CFG():
         self.label_blocktype_dict = {}
         self.first_block          = None
         self.block_order          = []
+        self.global_vars          = global_vars
 
         self.create_blocks()
 
@@ -432,6 +433,12 @@ class CFG():
         # Everything else
         return set(), set()
 
+    # returns gen and kill for the given instruction, with global variables appended to gen
+    # (global variables should be alive during the whole program)
+    def live_gen_kill(self,instruction):
+        gen,kill = self.instruction_live_gen_kill(instruction)
+        gen = gen.union(self.global_vars)
+        return gen,kill
 
     def compute_live_gen_kill(self, block):
         '''
@@ -467,7 +474,7 @@ class CFG():
 
         # Compute Gen and Kill (backwards)
         for instr_pos, instruction in reversed(list(enumerate(block.instructions))):
-            gen, kill       = self.instruction_live_gen_kill(instruction)
+            gen, kill       = self.live_gen_kill(instruction)
             block.live_gen  = (block.live_gen - kill).union(gen)
             block.live_kill = (block.live_kill - gen).union(kill)
 
@@ -485,6 +492,7 @@ class CFG():
                 old_in  = block.live_in
                 old_out = block.live_out
 
+                # TODO CALCULAR O IN DEPOIS DE CALCULAR O OUT (EH MAIS RAPIDO)
                 block.live_in = block.live_gen.union(block.live_out - block.live_kill)
 
                 if isinstance(block, BasicBlock):
@@ -534,7 +542,7 @@ class CFG():
             # (initially contains only variables used after this block)
             inner_live = block.live_out
             for instr_pos, instruction in reversed(list(enumerate(block.instructions))):
-                uses, defs = self.instruction_live_gen_kill(instruction)
+                uses, defs = self.live_gen_kill(instruction)
                 dead = False
                 # defs has always only one element so this is not a real loop
                 for d in defs:
@@ -696,6 +704,7 @@ class CFG_Program():
         self.gen_code      = gen_code
         self.opt_code      = []
         self.func_cfg_dict = {}
+        self.global_vars   = set()
 
         self.create_cfgs()
 
@@ -707,9 +716,11 @@ class CFG_Program():
         cur_function   = '__global'
         start_function = 0
         for instr_pos, instruction in enumerate(self.gen_code):
+            if instruction[0].split('_')[0] == 'global':
+                self.global_vars.add(instruction[1])
             if instruction[0] == 'define':
                 function_code = self.gen_code[start_function:instr_pos]
-                self.func_cfg_dict[cur_function] = CFG(function_code, cur_function)
+                self.func_cfg_dict[cur_function] = CFG(function_code, cur_function, self.global_vars)
                 cur_function   = instruction[1]
                 start_function = instr_pos
 
