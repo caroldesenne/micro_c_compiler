@@ -665,7 +665,7 @@ class CFG():
                         next_op              = next_instruction[0]
                         next_op_without_type = next_op.split('_')[0]
                         next_target          = self.get_target_instr(next_instruction)
-                        if next_op_without_type == 'store' and '*' not in next_op and next_instruction[1] == target:
+                        if next_op_without_type == 'store' and '*' not in next_op and next_instruction[1] == target and '@' not in next_target:
                             target = next_target
                             block.instructions[instr_pos+1] = ('literal_int', 0, '')
                         new_instruction = (op, left_op, right_op, target)
