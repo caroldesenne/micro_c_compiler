@@ -769,6 +769,19 @@ class CFG_Program():
                     self.opt_code.append(code)
 
     def optimize(self):
+        instructions_count_raw = self.get_instruction_count()
+        code_can_be_optimized = True
+        while (code_can_be_optimized):
+            instructions_count = self.get_instruction_count()
+            self.optimize_once()
+            if self.get_instruction_count() < instructions_count:
+                instructions_count = cfg.get_instruction_count()
+            else:
+                code_can_be_optimized = False
+        speed_up = instructions_count_raw/instructions_count
+        return speed_up
+
+    def optimize_once(self):
         self.clean_analysis()
         for _, cfg in self.func_cfg_dict.items():
             # TODO analyse and optimize several times
@@ -810,17 +823,8 @@ if __name__ == "__main__":
     opt_filename = filename[:-3] + '.raw'
     cfg.output_optimized_code(opt_filename)
     # perform optimizations
-    instructions_count_raw = cfg.get_instruction_count()
-    code_can_be_optimized = True
-    while (code_can_be_optimized):
-        instructions_count = cfg.get_instruction_count()
-        print(instructions_count)
-        cfg.optimize()
-        if cfg.get_instruction_count() < instructions_count:
-            instructions_count = cfg.get_instruction_count()
-        else:
-            code_can_be_optimized = False
-    print('speed up = ', instructions_count_raw/instructions_count)
+    speed_up = cfg.optimize()
+    print('speed up = ', speed_up)
     #cfg.output()
     # output result of CFG to file
     cfg_filename = filename[:-3] + '.cfg'
