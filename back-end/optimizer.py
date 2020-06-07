@@ -600,6 +600,40 @@ class CFG():
 
         return ('literal_{}'.format(instr_type), fold, target)
 
+    def optimize_cbranch(self, block, cond):
+        keep_branch_blocks = set()
+
+        queue = []
+        if cond:
+            queue.append(block.true_branch)
+        else:
+            queue.append(block.false_branch)
+        while (queue):
+            cur_block = queue.pop(0)
+            keep_branch_blocks.add(cur_block)
+            if isinstance(cur_block, BasicBlock):
+                if cur_block.next_block and cur_block.next_block not in keep_branch_blocks:
+                    queue.append(cur_block.next_block)
+            elif isinstance(cur_block, ConditionalBlock):
+                if cur_block.true_branch and cur_block.true_branch not in keep_branch_blocks:
+                    queue.append(cur_block.true_branch)
+                if cur_block.false_branch and cur_block.false_branch not in keep_branch_blocks:
+                    queue.append(cur_block.false_branch)
+
+        queue = []
+        if cond:
+            queue.append(block.false_branch)
+        else:
+            queue.append(block.true_branch)
+        while (queue):
+            cur_block = queue.pop(0)
+            if cur_block not in keep_branch_blocks:
+                cur_block.instructions = []
+                self.clean_analysis()
+                self.analyze()
+            else:
+                break
+
     def copy_propagation_and_constant_folding(self):
         for label, block in self.label_block_dict.items():
             # maps to replace temps by constant (constant propagation) or by another temp (copy propagation)
@@ -669,18 +703,21 @@ class CFG():
                         if right_op in temp_temp_dict.keys():
                             right_op = temp_temp_dict[right_op]
                         # Check for next instruction, ad-hoc optimization (store after binary_op)
-                        next_instruction     = block.instructions[instr_pos+1]
-                        next_op              = next_instruction[0]
-                        next_op_without_type = next_op.split('_')[0]
-                        next_target          = self.get_target_instr(next_instruction)
-                        if next_op_without_type == 'store' and '*' not in next_op and next_instruction[1] == target and '@' not in next_target:
-                            target = next_target
-                            block.instructions[instr_pos+1] = ('literal_int', 0, '')
-                        new_instruction = (op, left_op, right_op, target)
+                        if instr_pos+1 < len(block.instructions):
+                            next_instruction     = block.instructions[instr_pos+1]
+                            next_op              = next_instruction[0]
+                            next_op_without_type = next_op.split('_')[0]
+                            next_target          = self.get_target_instr(next_instruction)
+                            if next_op_without_type == 'store' and '*' not in next_op and next_instruction[1] == target and '@' not in next_target:
+                                target = next_target
+                                block.instructions[instr_pos+1] = ('literal_int', 0, '')
+                            new_instruction = (op, left_op, right_op, target)
 
-                        # Update current instruction info
-                        block.instructions[instr_pos] = new_instruction
-                        instruction                   = new_instruction
+                            if op_without_type != 'not':
+                                # Update current instruction info
+                                block.instructions[instr_pos] = new_instruction
+                                instruction                   = new_instruction
+
                 # Copy propagation on a non-void return
                 elif op_without_type == 'return' and 'void' not in op:
                     if instruction[1] in temp_temp_dict.keys():
@@ -690,30 +727,7 @@ class CFG():
                 if op == 'cbranch':
                     cond = instruction[1]
                     if cond in temp_constant_dict:
-                        if temp_constant_dict[cond]:
-                            # Delete False Branch
-                            if len(block.false_branch.parents) == 1:
-                                block.false_branch.instructions = []
-                                try:
-                                    block.false_branch.next_block.parents.remove(block.false_branch)
-                                    block.false_branch.parents.remove(block)
-                                    block.false_branch.next_block = None
-                                    self.clean_analysis()
-                                    self.analyze()
-                                except:
-                                    pass
-                        else:
-                            # Delete True Branch
-                            if len(block.true_branch.parents) == 1:
-                                block.true_branch.instructions = []
-                                try:
-                                    block.true_branch.next_block.parents.remove(block.true_branch)
-                                    block.true_branch.parents.remove(block)
-                                    block.true_branch.next_block = None
-                                    self.clean_analysis()
-                                    self.analyze()
-                                except:
-                                    pass
+                        self.optimize_cbranch(block, temp_constant_dict[cond])
 
                 # Update maps
                 if op_without_type == 'literal':
