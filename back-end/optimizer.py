@@ -15,7 +15,7 @@ op_lambdas = {
     'mod': lambda l, r: l % r,
     'and': lambda l, r: l & r,
     'or':  lambda l, r: l | r,
-    'not': lambda l: not l,
+    'not': lambda l, r : not l,
     'ne':  lambda l, r: int(l != r),
     'eq':  lambda l, r: int(l == r),
     'lt':  lambda l, r: int(l < r),
@@ -369,7 +369,9 @@ class CFG():
 
             # calculate IN[b] from predecessors' OUT[p]
             # for all blocks p in predecessors(b)
-            for pred_block in block.parents:
+            if len(block.parents) > 0:
+                block.rd_in = block.parents[0].rd_out
+            for pred_block in block.parents[1:]:
                 block.rd_in = block.rd_in.intersection(pred_block.rd_out)
 
             # save old OUT[b]
@@ -572,26 +574,29 @@ class CFG():
     def instruction_is_binary_op(self, instruction):
         op = instruction[0]
         op_without_type = op.split('_')[0]
-        if op_without_type in ['add','sub','mul','div','mod','and','or','ne','eq','lt','le','gt','ge']:
+        if op_without_type in ['add','sub','mul','div','mod','and','or','ne','eq','lt','le','gt','ge','not']:
             return True
         else:
             return False
 
-    def fold_instruction(self, instruction, left_op, right_op):
-        op = instruction[0]
+    def fold_instruction(self, instruction, left_op, right_op, temp_constant_dict):
+        op              = instruction[0]
         op_without_type = op.split('_')[0]
-        instr_type = op.split('_')[1]
-        target = instruction[3]
+        instr_type      = op.split('_')[1]
+        target          = self.get_target_instr(instruction)
 
-        #TODO: bool, char and pointers
         if instr_type == 'int':
             left_op, right_op = int(left_op), int(right_op)
         elif instr_type == 'float':
             left_op, right_op = float(left_op), float(right_op)
-        else:
+        elif instr_type != 'bool':
             return instruction
 
         fold = op_lambdas[op_without_type](left_op, right_op)
+
+        if instr_type == 'bool':
+            temp_constant_dict[target] = fold
+            return instruction
 
         return ('literal_{}'.format(instr_type), fold, target)
 
@@ -646,10 +651,11 @@ class CFG():
                     left_op  = instruction[1]
                     right_op = instruction[2]
                     # If both operators are in the mapping -> apply folding and replace instruction with literal
-                    if left_op in temp_constant_dict.keys() and right_op in temp_constant_dict.keys():
+                    if (left_op in temp_constant_dict.keys() and right_op in temp_constant_dict.keys()) or (op_without_type == 'not' and left_op in temp_constant_dict.keys()):
                         left_op  = temp_constant_dict[left_op]
-                        right_op = temp_constant_dict[right_op]
-                        new_instruction = self.fold_instruction(instruction, left_op, right_op)
+                        if op_without_type != 'not':
+                            right_op = temp_constant_dict[right_op]
+                        new_instruction = self.fold_instruction(instruction, left_op, right_op, temp_constant_dict)
                         block.instructions[instr_pos] = new_instruction
 
                         # Update current instruction info
@@ -681,6 +687,34 @@ class CFG():
                         new_instruction = (op, temp_temp_dict[instruction[1]])
                         block.instructions[instr_pos] = new_instruction
 
+                if op == 'cbranch':
+                    cond = instruction[1]
+                    if cond in temp_constant_dict:
+                        if temp_constant_dict[cond]:
+                            # Delete False Branch
+                            if len(block.false_branch.parents) == 1:
+                                block.false_branch.instructions = []
+                                try:
+                                    block.false_branch.next_block.parents.remove(block.false_branch)
+                                    block.false_branch.parents.remove(block)
+                                    block.false_branch.next_block = None
+                                    self.clean_analysis()
+                                    self.analyze()
+                                except:
+                                    pass
+                        else:
+                            # Delete True Branch
+                            if len(block.true_branch.parents) == 1:
+                                block.true_branch.instructions = []
+                                try:
+                                    block.true_branch.next_block.parents.remove(block.true_branch)
+                                    block.true_branch.parents.remove(block)
+                                    block.true_branch.next_block = None
+                                    self.clean_analysis()
+                                    self.analyze()
+                                except:
+                                    pass
+
                 # Update maps
                 if op_without_type == 'literal':
                     literal                    = instruction[1]
@@ -692,7 +726,8 @@ class CFG():
                         temp_temp_dict[target] = source
                         temp_constant_dict.pop(target, None)
                 elif self.instruction_has_rd_gen_kill(instruction):
-                    temp_constant_dict.pop(target, None)
+                    if 'bool' not in op:
+                        temp_constant_dict.pop(target, None)
                     temp_temp_dict.pop(target, None)
 
             self.compute_rd_in_out()
