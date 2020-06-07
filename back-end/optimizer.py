@@ -15,7 +15,7 @@ op_lambdas = {
     'mod': lambda l, r: l % r,
     'and': lambda l, r: l & r,
     'or':  lambda l, r: l | r,
-    #TODO: 'not': lambda l, r: l  r,
+    'not': lambda l: not l,
     'ne':  lambda l, r: int(l != r),
     'eq':  lambda l, r: int(l == r),
     'lt':  lambda l, r: int(l < r),
@@ -395,8 +395,10 @@ class CFG():
         fragments = op.split('_')
         op_without_type = fragments[0]
         # binary op
-        if op_without_type in ['add','sub','mul','div','mod'] or op_without_type in ['ne','eq','lt','le','gt','ge','and','or','not']:
+        if op_without_type in ['add','sub','mul','div','mod'] or op_without_type in ['ne','eq','lt','le','gt','ge','and','or']:
             return set([instruction[1], instruction[2]]), set([instruction[3]])
+        if op_without_type == 'not':
+            return set([instruction[1]]), set([instruction[2]])
         # Alloc
         if op_without_type == 'alloc':
             return set(), set([instruction[1]])
@@ -570,8 +572,7 @@ class CFG():
     def instruction_is_binary_op(self, instruction):
         op = instruction[0]
         op_without_type = op.split('_')[0]
-        #TODO: check if 'elem','get' should be included
-        if op_without_type in ['add','sub','mul','div','mod','and','or','not','ne','eq','lt','le','gt','ge']:
+        if op_without_type in ['add','sub','mul','div','mod','and','or','ne','eq','lt','le','gt','ge']:
             return True
         else:
             return False
@@ -832,7 +833,7 @@ if __name__ == "__main__":
     opt_filename = filename[:-3] + '.opt'
     cfg.output_optimized_code(opt_filename)
 
-    #cfg.view()
+    cfg.view()
 
     interpreter = Interpreter()
     interpreter.run(cfg.opt_code)
