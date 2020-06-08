@@ -161,7 +161,7 @@ class Compiler:
         self.cfg.optimize()
         self.optcode = self.cfg.get_optimized_code()
         if not susy and opt_file is not None:
-            self.cfg.output(buf=opt_file)
+            self.cfg.output_optimized_code(opt_file)
 
     def _do_compile(self, susy, ast_file, ir_file, opt_file, opt, debug):
         """ Compiles the code to the given file object. """
@@ -191,9 +191,6 @@ class Compiler:
                         self.vm.run(self.optcode)
                     else:
                         self.vm.run(self.gencode)
-            # elif run_ir:
-            #     self.vm = Interpreter()
-            #     self.vm.run(self.gencode)
         return 0
 
 

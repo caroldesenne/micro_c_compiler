@@ -5,7 +5,7 @@ from ast import *
 from checker import CheckProgramVisitor
 from generator import GenerateCode
 from interpreter import Interpreter
-from graphviz import Digraph
+# from graphviz import Digraph
 
 op_lambdas = {
     'add': lambda l, r: l + r,
@@ -123,7 +123,7 @@ class CFG():
 
     def __init__(self, gen_code, fname, global_vars=set()):
         self.fname                = fname
-        self.g                    = Digraph('g', filename=fname + '.gv', node_attr={'shape': 'record'})
+        self.g                    = None #Digraph('g', filename=fname + '.gv', node_attr={'shape': 'record'})
         self.gen_code             = gen_code
         self.label_block_dict     = {}
         self.label_blocktype_dict = {}
@@ -798,11 +798,10 @@ class CFG_Program():
             print('\n\n\n')
         sys.stdout = aux
 
-    def output_optimized_code(self, ir_filename=None):
+    def output_optimized_code(self, ir_file=None):
         aux = sys.stdout
         if ir_filename:
-            print("Outputting CFG to %s" % ir_filename)
-            sys.stdout = open(ir_filename, 'w')
+            sys.stdout = ir_file
         for instruction in self.opt_code:
             print(instruction)
         sys.stdout = aux
