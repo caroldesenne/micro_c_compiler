@@ -569,7 +569,6 @@ class CFG():
                 if not i in delete_indexes:
                     updated_instructions.append(inst)
             block.instructions = updated_instructions
-        # TODO dead code elimination for unused allocs
 
     def instruction_is_binary_op(self, instruction):
         op = instruction[0]
@@ -858,6 +857,23 @@ class CFG_Program():
         for index in sorted(dead_jumps, reverse=True):
             del self.opt_code[index]
 
+    def optimize_globals(self):
+        used_global_vars = set()
+        for _, cfg in self.func_cfg_dict.items():
+            for _, block in cfg.label_block_dict.items():
+                for inst in block.instructions:
+                    gen,kill = cfg.instruction_live_gen_kill(inst)
+                    for var in gen:
+                        if var in self.global_vars:
+                            used_global_vars.add(var)
+
+        global_cfg = self.func_cfg_dict['__global']
+        for index,inst in enumerate(self.opt_code):
+            if inst[0].split('_')[0] != 'global':
+                break
+            if inst[1] not in used_global_vars:
+                del self.opt_code[index]
+
     def optimize(self):
         instructions_count_raw = self.get_instruction_count()
         code_can_be_optimized = True
@@ -872,14 +888,11 @@ class CFG_Program():
         # speed_up = instructions_count_raw/instructions_count
         # return speed_up
         self.optimize_jumps()
+        self.optimize_globals()
 
     def optimize_once(self):
         self.clean_analysis()
         for _, cfg in self.func_cfg_dict.items():
-            # TODO analyse and optimize several times
-            # TODO do we need to analyse each time we optimize again? I think we do. We do, since in
-            # the analysis the instruction is identified by index inside the block, if we delete a
-            # previous instruction, that index wont be valid anymore.
             cfg.analyze()
             cfg.optimize()
 
@@ -916,7 +929,7 @@ if __name__ == "__main__":
     cfg.output_optimized_code(open(opt_filename, 'w'))
     # perform optimizations
     speed_up = cfg.optimize()
-    print(speed_up, file=sys.stderr)
+    #print(speed_up, file=sys.stderr)
     #cfg.output()
     # output result of CFG to file
     cfg_filename = filename[:-3] + '.cfg'
@@ -924,7 +937,7 @@ if __name__ == "__main__":
     opt_filename = filename[:-3] + '.opt'
     cfg.output_optimized_code(open(opt_filename, 'w'))
 
-    cfg.view()
+    #cfg.view()
 
     interpreter = Interpreter()
     interpreter.run(cfg.opt_code)
