@@ -817,6 +817,7 @@ class CFG_Program():
             for label in cfg.block_order:
                 for code in cfg.label_block_dict[label].instructions:
                     self.opt_code.append(code)
+        return self.opt_code
 
     def optimize(self):
         instructions_count_raw = self.get_instruction_count()
@@ -825,11 +826,12 @@ class CFG_Program():
             instructions_count = self.get_instruction_count()
             self.optimize_once()
             if self.get_instruction_count() < instructions_count:
-                instructions_count = cfg.get_instruction_count()
+                # instructions_count = cfg.get_instruction_count()
+                pass
             else:
                 code_can_be_optimized = False
-        speed_up = instructions_count_raw/instructions_count
-        return speed_up
+        # speed_up = instructions_count_raw/instructions_count
+        # return speed_up
 
     def optimize_once(self):
         self.clean_analysis()
@@ -874,7 +876,7 @@ if __name__ == "__main__":
     cfg.output_optimized_code(opt_filename)
     # perform optimizations
     speed_up = cfg.optimize()
-    print('speed up = ', speed_up)
+    print(speed_up, file=sys.stderr)
     #cfg.output()
     # output result of CFG to file
     cfg_filename = filename[:-3] + '.cfg'

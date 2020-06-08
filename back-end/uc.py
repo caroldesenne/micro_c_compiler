@@ -14,6 +14,7 @@ from parser import Parser
 from checker import CheckProgramVisitor
 from generator import GenerateCode
 from interpreter import Interpreter
+from optimizer import CFG_Program
 
 from pprint import pprint
 
@@ -130,7 +131,7 @@ class Compiler:
         """
         self.parser = Parser()
         self.ast = self.parser.parse(self.code, '', debug)
-        
+
     def _sema(self, susy, ast_file):
         """ Decorate AST with semantic actions. If ast_file != None,
             or running at susy machine,
@@ -153,25 +154,46 @@ class Compiler:
             for _code in self.gencode:
                 _str += f"{_code}\n"
             ir_file.write(_str)
-            
-    def _do_compile(self, susy, ast_file, ir_file, debug):
+
+    def _opt(self, susy, opt_file, gen_code, debug):
+
+        self.cfg = CFG_Program(gen_code)
+        self.cfg.optimize()
+        self.optcode = self.cfg.get_optimized_code()
+        if not susy and opt_file is not None:
+            self.cfg.output(buf=opt_file)
+
+    def _do_compile(self, susy, ast_file, ir_file, opt_file, opt, debug):
         """ Compiles the code to the given file object. """
         self._parse(susy, ast_file, debug)
         if not errors_reported():
             self._sema(susy, ast_file)
         if not errors_reported():
             self._gencode(susy, ir_file)
+            if opt:
+                self._opt(susy, opt_file, self.gencode, debug)
 
-    def compile(self, code, susy, ast_file, ir_file, run_ir, debug):
+    def compile(self, code, susy, ast_file, ir_file, opt_file, opt, run_ir, debug):
         """ Compiles the given code string """
         self.code = code
         with subscribe_errors(lambda msg: sys.stderr.write(msg+"\n")):
-            self._do_compile(susy, ast_file, ir_file, debug)
+            self._do_compile(susy, ast_file, ir_file, opt_file, opt, debug)
             if errors_reported():
                 sys.stderr.write("{} error(s) encountered.".format(errors_reported()))
-            elif run_ir:
-                self.vm = Interpreter()
-                self.vm.run(self.gencode)
+            else:
+                if opt:
+                    self.speedup = len(self.gencode) / len(self.optcode)
+                    sys.stderr.write("speedup = %.2f\n" % self.speedup)
+                # if run_ir and not cfg:
+                if run_ir:
+                    self.vm = Interpreter()
+                    if opt:
+                        self.vm.run(self.optcode)
+                    else:
+                        self.vm.run(self.gencode)
+            # elif run_ir:
+            #     self.vm = Interpreter()
+            #     self.vm.run(self.gencode)
         return 0
 
 
@@ -179,17 +201,18 @@ def run_compiler():
     """ Runs the command-line compiler. """
 
     if len(sys.argv) < 2:
-        print("Usage: ./uc <source-file> [-at-susy] [-no-ast] [-no-ir] [-no-run] [-debug]")
+        print("Usage: ./uc <source-file> [-at-susy] [-no-ast] [-no-ir] [-no-run] [-debug] [-opt]")
         sys.exit(1)
 
     emit_ast = True
-    emit_ir = True
-    run_ir = True
-    susy = False
-    debug = False
+    emit_ir  = True
+    run_ir   = True
+    susy     = False
+    debug    = False
+    opt      = False
 
     params = sys.argv[1:]
-    files = sys.argv[1:]
+    files  = sys.argv[1:]
 
     for param in params:
         if param[0] == '-':
@@ -203,6 +226,8 @@ def run_compiler():
                 run_ir = False
             elif param == '-debug':
                 debug = True
+            elif param == '-opt':
+                opt = True
             else:
                 print("Unknown option: %s" % param)
                 sys.exit(1)
@@ -230,11 +255,18 @@ def run_compiler():
             ir_file = open(ir_filename, 'w')
             open_files.append(ir_file)
 
+        opt_file = None
+        if opt and not susy:
+            opt_filename = source_filename[:-3] + '.opt'
+            print("Outputting the optimized uCIR to %s." % opt_filename)
+            opt_file = open(opt_filename, 'w')
+            open_files.append(opt_file)
+
         source = open(source_filename, 'r')
         code = source.read()
         source.close()
 
-        retval = Compiler().compile(code, susy, ast_file, ir_file, run_ir, debug)
+        retval = Compiler().compile(code, susy, ast_file, ir_file, opt_file, opt, run_ir, debug)
         for f in open_files:
             f.close()
         if retval != 0:
@@ -242,6 +274,5 @@ def run_compiler():
 
     sys.exit(retval)
 
-    
 if __name__ == '__main__':
     run_compiler()
