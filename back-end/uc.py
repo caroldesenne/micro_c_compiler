@@ -159,7 +159,7 @@ class Compiler:
 
         self.cfg = CFG_Program(gen_code)
         self.cfg.optimize()
-        self.optcode = self.cfg.get_optimized_code()
+        self.optcode = self.cfg.opt_code
         if not susy and opt_file is not None:
             self.cfg.output_optimized_code(opt_file)
 

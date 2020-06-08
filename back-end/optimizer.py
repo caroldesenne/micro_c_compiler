@@ -5,7 +5,7 @@ from ast import *
 from checker import CheckProgramVisitor
 from generator import GenerateCode
 from interpreter import Interpreter
-# from graphviz import Digraph
+from graphviz import Digraph
 
 op_lambdas = {
     'add': lambda l, r: l + r,
@@ -123,7 +123,7 @@ class CFG():
 
     def __init__(self, gen_code, fname, global_vars=set()):
         self.fname                = fname
-        self.g                    = None #Digraph('g', filename=fname + '.gv', node_attr={'shape': 'record'})
+        self.g                    = Digraph('g', filename=fname + '.gv', node_attr={'shape': 'record'})
         self.gen_code             = gen_code
         self.label_block_dict     = {}
         self.label_blocktype_dict = {}
@@ -728,6 +728,12 @@ class CFG():
                     cond = instruction[1]
                     if cond in temp_constant_dict:
                         self.optimize_cbranch(block, temp_constant_dict[cond])
+                        # print(cond, temp_constant_dict[cond], type(temp_constant_dict[cond]), block.true_branch.label, block.false_branch.label)
+                        if temp_constant_dict[cond] == True:
+                            new_instruction = ('jump', '%{}'.format(block.true_branch.label))
+                        else:
+                            new_instruction = ('jump', '%{}'.format(block.false_branch.label))
+                        block.instructions[instr_pos] = new_instruction
 
                 # Update maps
                 if op_without_type == 'literal':
@@ -800,7 +806,7 @@ class CFG_Program():
 
     def output_optimized_code(self, ir_file=None):
         aux = sys.stdout
-        if ir_filename:
+        if ir_file:
             sys.stdout = ir_file
         for instruction in self.opt_code:
             print(instruction)
@@ -818,6 +824,40 @@ class CFG_Program():
                     self.opt_code.append(code)
         return self.opt_code
 
+    def optimize_jumps(self):
+        jump_target_count_dict = {}
+        label_index_dict = {}
+        for index, instruction in enumerate(self.opt_code):
+            op = instruction[0]
+            if (len(instruction) == 1) and (op not in ['return_void','print_void']):
+                label_index_dict[op] = index
+            elif op == 'jump':
+                target = instruction[1][1:]
+                if target in jump_target_count_dict:
+                    jump_target_count_dict[target] += 1
+                else:
+                    jump_target_count_dict[target] = 1
+
+        dead_jumps = []
+        for index, instruction in enumerate(self.opt_code):
+            op = instruction[0]
+            if op == 'jump':
+                target = instruction[1][1:]
+                if index + 1 <  len(self.opt_code):
+                    next_instruction = self.opt_code[index+1]
+                    next_op = next_instruction[0]
+                    if next_op == target and jump_target_count_dict[target] == 1:
+                        dead_jumps.append(index)
+                        dead_jumps.append(index+1)
+                    elif next_op == 'jump':
+                        dead_jumps.append(index+1)
+                        next_target = next_instruction[1][1:]
+                        if next_target in label_index_dict:
+                            dead_jumps.append(label_index_dict[next_target])
+
+        for index in sorted(dead_jumps, reverse=True):
+            del self.opt_code[index]
+
     def optimize(self):
         instructions_count_raw = self.get_instruction_count()
         code_can_be_optimized = True
@@ -831,6 +871,7 @@ class CFG_Program():
                 code_can_be_optimized = False
         # speed_up = instructions_count_raw/instructions_count
         # return speed_up
+        self.optimize_jumps()
 
     def optimize_once(self):
         self.clean_analysis()
@@ -872,7 +913,7 @@ if __name__ == "__main__":
 
     cfg.get_optimized_code()
     opt_filename = filename[:-3] + '.raw'
-    cfg.output_optimized_code(opt_filename)
+    cfg.output_optimized_code(open(opt_filename, 'w'))
     # perform optimizations
     speed_up = cfg.optimize()
     print(speed_up, file=sys.stderr)
@@ -881,7 +922,7 @@ if __name__ == "__main__":
     cfg_filename = filename[:-3] + '.cfg'
     cfg.output(cfg_filename)
     opt_filename = filename[:-3] + '.opt'
-    cfg.output_optimized_code(opt_filename)
+    cfg.output_optimized_code(open(opt_filename, 'w'))
 
     cfg.view()
 
