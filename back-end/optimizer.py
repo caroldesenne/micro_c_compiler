@@ -836,6 +836,17 @@ class CFG_Program():
                     jump_target_count_dict[target] += 1
                 else:
                     jump_target_count_dict[target] = 1
+            elif op == 'cbranch':
+                true_branch  = instruction[2][1:]
+                if true_branch in jump_target_count_dict:
+                    jump_target_count_dict[true_branch] += 1
+                else:
+                    jump_target_count_dict[true_branch] = 1
+                false_branch = instruction[3][1:]
+                if false_branch in jump_target_count_dict:
+                    jump_target_count_dict[false_branch] += 1
+                else:
+                    jump_target_count_dict[false_branch] = 1
 
         dead_jumps = []
         for index, instruction in enumerate(self.opt_code):
@@ -851,7 +862,7 @@ class CFG_Program():
                     elif next_op == 'jump':
                         dead_jumps.append(index+1)
                         next_target = next_instruction[1][1:]
-                        if next_target in label_index_dict:
+                        if next_target in label_index_dict  and jump_target_count_dict[target] == 1:
                             dead_jumps.append(label_index_dict[next_target])
 
         for index in sorted(dead_jumps, reverse=True):
@@ -937,7 +948,7 @@ if __name__ == "__main__":
     opt_filename = filename[:-3] + '.opt'
     cfg.output_optimized_code(open(opt_filename, 'w'))
 
-    #cfg.view()
+    # cfg.view()
 
     interpreter = Interpreter()
     interpreter.run(cfg.opt_code)
