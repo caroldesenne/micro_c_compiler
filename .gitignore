@@ -6,3 +6,11 @@ parsetab.py
 __pycache__*
 *.ipynb
 test
+*.ast
+*.ir
+*.code
+*.cfg
+*.opt
+*.gv
+*.pdf
+*.raw
