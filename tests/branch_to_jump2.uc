@@ -13,15 +13,17 @@ int main() {
     a = 2*a;
     a = a + b;
 
-    while (!(a != 25) && (b == 5)) {
-    //while (1 == 2) {
-        i = g(10);
-        k = g(2*1);
+    //while (!(a != 25) && (b == 5)) {
+    while (g(a) == 0) {
         if (j == 100) {
-            i = 100;
-            //return 0;
+            i = a;
+            g(i);
         }
     }
 
-    return 2*a;
+    i = a;
+
+    g(i);
+
+    return i;
 }

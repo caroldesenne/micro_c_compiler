@@ -351,8 +351,13 @@ class CFG():
 
     def compute_rd_in_out(self):
         # Initialize
+        full_set = set()
         for label, block in self.label_block_dict.items():
-            block.rd_out = set()
+            for i in range(len(block.instructions)):
+                full_set.add((label, i))
+
+        for label, block in self.label_block_dict.items():
+            block.rd_out = full_set
 
         # put all blocks into the changed set
         # B is all blocks in graph,
@@ -365,13 +370,14 @@ class CFG():
             block = changed_set.pop()
 
             # init IN[b] to be empty
-            block.rd_in = set()
+            if block.label == 0:
+                block.rd_in = set()
+            else:
+                block.rd_in = full_set
 
             # calculate IN[b] from predecessors' OUT[p]
             # for all blocks p in predecessors(b)
-            if len(block.parents) > 0:
-                block.rd_in = block.parents[0].rd_out
-            for pred_block in block.parents[1:]:
+            for pred_block in block.parents:
                 block.rd_in = block.rd_in.intersection(pred_block.rd_out)
 
             # save old OUT[b]
@@ -948,7 +954,7 @@ if __name__ == "__main__":
     opt_filename = filename[:-3] + '.opt'
     cfg.output_optimized_code(open(opt_filename, 'w'))
 
-    # cfg.view()
+    cfg.view()
 
     interpreter = Interpreter()
     interpreter.run(cfg.opt_code)
