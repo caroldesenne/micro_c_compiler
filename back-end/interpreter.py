@@ -11,11 +11,6 @@
 # permitted but the source code must retain the above copyright notice.
 # ---------------------------------------------------------------------------------
 import sys
-import ply.yacc as yacc
-from parser import Parser
-from ast import *
-from checker import *
-from generator import *
 
 
 class Interpreter(object):
@@ -105,7 +100,7 @@ class Interpreter(object):
                 op = ircode[self.pc]
             except IndexError:
                 break
-            if not op[0].isdigit():
+            if len(op) > 1:  # that is, not label
                 opcode, modifier = self._extract_operation(op[0])
                 if opcode.startswith('global'):
                     self.globals[op[1]] = self.offset
@@ -124,7 +119,7 @@ class Interpreter(object):
                         if len(op) == 3:
                             self._copy_data(self.offset, _len, op[2])
                         self.offset += _len
-                elif opcode == 'define':
+                elif opcode.startswith('define'):
                         self.globals[op[1]] = self.offset
                         M[self.offset] = self.pc
                         self.offset += 1
@@ -140,7 +135,7 @@ class Interpreter(object):
             except IndexError:
                 break
             self.pc += 1
-            if not op[0].isdigit():
+            if len(op) > 1 or op[0] == 'return_void':
                 opcode, modifier = self._extract_operation(op[0])
                 if hasattr(self, "run_" + opcode):
                     if not modifier:
@@ -148,7 +143,7 @@ class Interpreter(object):
                     else:
                         getattr(self, "run_" + opcode + '_')(*op[1:], **modifier)
                 else:
-                    print("Warning: No run_" + opcode + "() method",flush=True)
+                    print("Warning: No run_" + opcode + "() method", flush=True)
 
     #
     # Auxiliary methods
@@ -159,19 +154,21 @@ class Interpreter(object):
         _lpc = self.pc
         while True:
             try:
-                _opcode = self.code[_lpc][0]
+                _op = self.code[_lpc]
+                _opcode = _op[0]
                 _lpc += 1
-                if _opcode == 'define':
+                if _opcode.startswith('define'):
                     break
-                elif _opcode.isdigit():
-                    # labels don't go to memory, just in the dictionary
-                    self.vars['%' + _opcode] = _lpc
+                elif len(_op) == 1 and _opcode != 'return_void':
+                    # labels don't go to memory, just store the pc on dictionary
+                    # labels appears as name:, so we need to extract just the name
+                    self.vars['%' + _opcode[:-1]] = _lpc
             except IndexError:
                 break
 
     def _alloc_reg(self, target):
         # Alloc space in memory and save the offset in the dictionary
-        # for new vars or tempraries, only.
+        # for new vars or temporaries, only.
         if target not in self.vars:
             self.vars[target] = self.offset
             self.offset += 1
@@ -189,7 +186,7 @@ class Interpreter(object):
                 break
             inputline = sys.stdin.readline()
             if not inputline:
-                print("Unexpected end of input file.",flush=True)
+                print("Unexpected end of input file.", flush=True)
             inputline = inputline[:-1].strip().split()
 
     def _get_value(self, source):
@@ -199,7 +196,9 @@ class Interpreter(object):
             return M[self.vars[source]]
 
     def _load_multiple_values(self, size, varname, target):
-        pass
+        self.vars[target] = self.offset
+        self.offset += size
+        self._store_multiple_values(size, target, varname)
 
     def _push(self):
         # save the addresses of the vars from caller & their last offset
@@ -210,19 +209,13 @@ class Interpreter(object):
         # and copy the parameters passed to the callee in their local vars.
         # Finally, cleanup the parameters list used to transfer these vars
         self.vars = {}
-        idx = -1
+        # idx = 0
         for idx, val in enumerate(self.params):
             # Note that arrays (size >=1) are passed by reference only.
-            self.vars['%' + str(idx)] = self.offset
+            self.vars['%' + str(idx+1)] = self.offset
             M[self.offset] = M[val]
             self.offset += 1
         self.params = []
-
-        # alloc register to the return value & initialize it with 0.
-        self.vars['%' + str(idx+1)] = self.offset
-        M[self.offset] = 0
-        self.offset += 1
-
         self._alloc_labels()
 
     def _pop(self, target):
@@ -240,6 +233,7 @@ class Interpreter(object):
         else:
             # We reach the end of main function, so return to system
             # with the code returned by main in the return register.
+            print(flush=True)
             if target is None:
                 # void main () was defined, so exit with value 0
                 sys.exit(0)
@@ -309,7 +303,7 @@ class Interpreter(object):
             self.pc = self.vars[false_target]
 
     # Enter the function
-    def run_define(self, source):
+    def run_define(self, source, args):
         if source == '@main':
             # alloc register to the return value but not initialize it.
             # We use the "None" value to check if main function returns void.
@@ -330,8 +324,7 @@ class Interpreter(object):
     run_elem_char = run_elem_int
 
     def run_get_int(self, source, target):
-        # We never generate this code without * (ref)
-        # but we need to define it
+        # We never generate this code without * (ref) but we need to define it
         pass
 
     def run_get_int_(self, source, target, **kwargs):
@@ -370,7 +363,7 @@ class Interpreter(object):
             elif arg == '*':
                 _ref += 1
         if _ref == 0:
-            self._load_mult_values(_dim, varname, target)
+            self._load_multiple_values(_dim, varname, target)
         elif _dim == 1 and _ref == 1:
             self._alloc_reg(target)
             M[self.vars[target]] = M[self._get_value(varname)]
@@ -387,19 +380,19 @@ class Interpreter(object):
     def run_print_string(self, source):
         _res = list(self._get_value((source)))
         for c in _res:
-            print(c, end="",flush=True)
+            print(c, end="", flush=True)
 
     def run_print_int(self, source):
-        print(self._get_value(source), end="",flush=True)
+        print(self._get_value(source), end="", flush=True)
 
     run_print_float = run_print_int
     run_print_char = run_print_int
     run_print_bool = run_print_int
 
     def run_print_void(self):
-        pass
+        print(end="\n", flush=True)
 
-    def run_read_int(self, source):
+    def _read_int(self):
         global inputline
         self._get_input()
         try:
@@ -410,11 +403,18 @@ class Interpreter(object):
             except:
                 v2 = v1
         except:
-            print("Illegal input value.",flush=True)
-        self._alloc_reg(source)
-        self._store_value(source, v2)
+            print("Illegal input value.", flush=True)
+        return v2
 
-    def run_read_float(self, source):
+    def run_read_int(self, source):
+        _value = self._read_int()
+        self._store_value(source, _value)
+
+    def run_read_int_(self, source, **kwargs):
+        _value = self._read_int()
+        self._store_deref(source, _value)
+
+    def _read_float(self):
         global inputline
         self._get_input()
         try:
@@ -425,17 +425,30 @@ class Interpreter(object):
             except:
                 v2 = v1
         except:
-            print("Illegal input value.",flush=True)
-        self._alloc_reg(source)
-        self._store_value(source, v2)
+            print("Illegal input value.", flush=True)
+        return v2
+
+    def run_read_float(self, source):
+        _value = self._read_float()
+        self._store_value(source, _value)
+
+    def run_read_float_(self, source, **kwargs):
+        _value = self._read_float()
+        self._store_deref(source, _value)
 
     def run_read_char(self, source):
         global inputline
         self._get_input()
         v1 = inputline[0]
         inputline = inputline[1:]
-        self._alloc_reg(source)
         self._store_value(source, v1)
+
+    def run_read_char_(self, source, **kwargs):
+        global inputline
+        self._get_input()
+        v1 = inputline[0]
+        inputline = inputline[1:]
+        self._store_deref(source, v1)
 
     def run_return_int(self, target):
         self._pop(self.vars[target])
@@ -565,20 +578,3 @@ class Interpreter(object):
     def run_fptosi(self, source, target):
         self._alloc_reg(target)
         M[self.vars[target]] = int(self._get_value(source))
-
-if __name__ == '__main__':
-    # open source code file and read contents
-    filename = sys.argv[1]
-    code = open(filename).read()
-    # parse code and generate AST
-    p = Parser()
-    ast = p.parse(code)
-    # perform semantic checks
-    check = CheckProgramVisitor()
-    check.visit_Program(ast)
-    # generate IR
-    gencode = GenerateCode()
-    gencode.visit_Program(ast)
-    # interpretation
-    interp = Interpreter()
-    interp.run(gencode.code)
