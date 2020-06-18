@@ -28,7 +28,7 @@ def format_instruction(t):
     # Auxiliary method to pretty print the instructions
     op = t[0]
     if len(t) > 1:
-        if op == "define":
+        if op.split('_')[0] == "define":
             return f"\n{op} {t[1]}"
         else:
             _str = "" if op.startswith('global') else "  "
@@ -304,8 +304,8 @@ class CFG():
         op = instruction[0]
         op_without_type = op.split('_')[0]
         if (len(instruction) == 4) or \
-           (len(instruction) == 3 and op_without_type != 'global') or \
-           (len(instruction) == 2 and op_without_type not in ['alloc','fptosi','sitofp','define','param','read','print','return']):
+           (len(instruction) == 3 and op_without_type not in ['define','global']) or \
+           (len(instruction) == 2 and op_without_type not in ['alloc','fptosi','sitofp','param','read','print','return']):
             return instruction[-1]
         else:
             return None
@@ -773,14 +773,14 @@ class CFG_Program():
     def create_cfgs(self):
         function_code_dict = {}
 
-        self.gen_code.append(('define',''))
+        self.gen_code.append(('define_void','',[]))
 
         cur_function   = '__global'
         start_function = 0
         for instr_pos, instruction in enumerate(self.gen_code):
             if instruction[0].split('_')[0] == 'global':
                 self.global_vars.add(instruction[1])
-            if instruction[0] == 'define':
+            if instruction[0].split('_')[0] == 'define':
                 function_code = self.gen_code[start_function:instr_pos]
                 self.func_cfg_dict[cur_function] = CFG(function_code, cur_function, self.global_vars)
                 cur_function   = instruction[1]
@@ -954,7 +954,7 @@ if __name__ == "__main__":
     opt_filename = filename[:-3] + '.opt'
     cfg.output_optimized_code(open(opt_filename, 'w'))
 
-    cfg.view()
+    #cfg.view()
 
     interpreter = Interpreter()
     interpreter.run(cfg.opt_code)

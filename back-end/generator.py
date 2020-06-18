@@ -442,7 +442,12 @@ class GenerateCode(NodeVisitor):
             pass # do nothing for prototype
         else: # this is a function definition    
             if self.phase == Phase.START:
-                self.code.append(('define', '@'+node.name.name))
+                inst = 'define_' + getBasicType(node)
+                if node.type.args is not None:
+                    arguments = [(getBasicType(arg),arg.name.name) for arg in node.type.args.list]
+                else:
+                    arguments = []
+                self.code.append((inst, '@'+node.name.name, arguments))
                 # return_label = self.new_temp()
                 # exit_label = self.new_temp()
                 self.labels.pushLevel()
