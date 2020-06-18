@@ -201,15 +201,15 @@ class CFG():
         for label, block in self.label_block_dict.items():
             print()
             print('Block ', label)
-            print('    GEN : ', sorted(list(block.live_gen),  key=lambda x: int(x[1:]) if x[0] == '%' else 0))
-            print('    KILL: ', sorted(list(block.live_kill), key=lambda x: int(x[1:]) if x[0] == '%' else 0))
+            print('    GEN : ', list(block.live_gen))
+            print('    KILL: ', list(block.live_kill))
 
         print('============================ LIVENESS: IN and OUT ============================')
         for label, block in self.label_block_dict.items():
             print()
             print('Block ', label)
-            print('    IN : ', sorted(list(block.live_in),  key=lambda x: int(x[1:]) if x[0] == '%' else 0))
-            print('    OUT: ', sorted(list(block.live_out), key=lambda x: int(x[1:]) if x[0] == '%' else 0))
+            print('    IN : ', list(block.live_in))
+            print('    OUT: ', list(block.live_out))
 
     def print(self):
         for k, v in self.label_block_dict.items():
@@ -402,6 +402,13 @@ class CFG():
         op = instruction[0]
         fragments = op.split('_')
         op_without_type = fragments[0]
+        # define arguments
+        if op_without_type == 'define' and len(instruction)==3:
+            args = instruction[2]
+            defset = set()
+            for arg in args:
+                defset.add(arg[1])
+            return set(),defset
         # binary op
         if op_without_type in ['add','sub','mul','div','mod'] or op_without_type in ['ne','eq','lt','le','gt','ge','and','or']:
             return set([instruction[1], instruction[2]]), set([instruction[3]])

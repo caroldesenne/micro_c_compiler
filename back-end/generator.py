@@ -221,13 +221,11 @@ class GenerateCode(NodeVisitor):
 
     def FuncDefStoreParams(self,node):
         if node.param_list:
-            i = 0
             j = len(node.param_list.list)+1
             for p in node.param_list.list:
                 bt = getBasicType(p)
-                self.code.append(('store_'+bt,'%'+str(i),'%'+str(j)))
+                self.code.append(('store_'+bt,'%'+p.name.name,'%'+str(j)))
                 j += 1
-                i += 1
 
     def FuncDefInit(self,node):
         self.phase = Phase.INIT
@@ -444,7 +442,7 @@ class GenerateCode(NodeVisitor):
             if self.phase == Phase.START:
                 inst = 'define_' + getBasicType(node)
                 if node.type.args is not None:
-                    arguments = [(getBasicType(arg),arg.name.name) for arg in node.type.args.list]
+                    arguments = [(getBasicType(arg),'%'+arg.name.name) for arg in node.type.args.list]
                 else:
                     arguments = []
                 self.code.append((inst, '@'+node.name.name, arguments))
