@@ -432,7 +432,7 @@ class CFG():
             return set(), set([instruction[2]])
         # read(variable)
         if op_without_type == 'read':
-            return set(), set([instruction[1]])
+            return set([instruction[1]]), set()
         # print(variable)
         if op_without_type == 'print' and 'void' not in op:
             return set([instruction[1]]), set()
