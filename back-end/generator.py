@@ -122,7 +122,7 @@ class GenerateCode(NodeVisitor):
         super(GenerateCode, self).__init__()
         # version dictionary for temporaries
         self.fname = 'main'  # We use the function name as a key
-        self.versions = {self.fname:0}
+        self.versions = {self.fname:1}
         # The generated code (list of tuples)
         self.globals = []
         self.code = []
@@ -137,7 +137,7 @@ class GenerateCode(NodeVisitor):
         Create a new temporary variable of a given scope (function name).
         '''
         if self.fname not in self.versions:
-            self.versions[self.fname] = 0
+            self.versions[self.fname] = 1
         name = "%" + "%d" % (self.versions[self.fname])
         self.versions[self.fname] += 1
         return name
@@ -221,10 +221,12 @@ class GenerateCode(NodeVisitor):
 
     def FuncDefStoreParams(self,node):
         if node.param_list:
-            j = len(node.param_list.list)+1
+            i = 1
+            j = len(node.param_list.list)+2
             for p in node.param_list.list:
                 bt = getBasicType(p)
-                self.code.append(('store_'+bt,'%'+p.name.name,'%'+str(j)))
+                self.code.append(('store_'+bt,'%'+str(i),'%'+str(j)))
+                i += 1
                 j += 1
 
     def FuncDefInit(self,node):
@@ -442,7 +444,7 @@ class GenerateCode(NodeVisitor):
             if self.phase == Phase.START:
                 inst = 'define_' + getBasicType(node)
                 if node.type.args is not None:
-                    arguments = [(getBasicType(arg),'%'+arg.name.name) for arg in node.type.args.list]
+                    arguments = [(getBasicType(arg),'%'+str(i+1)) for i,arg in enumerate(node.type.args.list)]
                 else:
                     arguments = []
                 self.code.append((inst, '@'+node.name.name, arguments))
