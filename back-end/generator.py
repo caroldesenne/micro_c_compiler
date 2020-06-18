@@ -202,6 +202,9 @@ class GenerateCode(NodeVisitor):
                 aux = self.new_temp()
         # reserve temp for return
         return_label = self.new_temp()
+        tp = getBasicType(node)
+        if tp!='void':
+            self.code.append(('alloc_'+tp, return_label))
         self.labels.insert("return", return_label)
 
     def FuncDefAlloc(self,node):
