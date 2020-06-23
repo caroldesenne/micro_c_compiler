@@ -952,7 +952,7 @@ if __name__ == "__main__":
     opt_filename = filename[:-3] + '.raw'
     cfg.output_optimized_code(open(opt_filename, 'w'))
     # perform optimizations
-    speed_up = cfg.optimize()
+    # speed_up = cfg.optimize()
     #print(speed_up, file=sys.stderr)
     #cfg.output()
     # output result of CFG to file
@@ -963,5 +963,6 @@ if __name__ == "__main__":
 
     #cfg.view()
 
-    interpreter = Interpreter()
-    interpreter.run(cfg.opt_code)
+    # interpreter = Interpreter()
+    # interpreter.run(cfg.opt_code)
+
