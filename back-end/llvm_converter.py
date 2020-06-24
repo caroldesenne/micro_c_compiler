@@ -30,8 +30,6 @@ class LLVM_Converter(object):
         self.builder = None
         self.temp_ptr_dict = {}
 
-        self.convert()
-
 
     def convert(self):
         for _, fcfg in self.cfg.func_cfg_dict.items():
@@ -127,11 +125,12 @@ class LLVM_Converter(object):
         op_without_type = op.split('_')[0]
         op_type = op.split('_')[1]
 
-        fnty = ir.FunctionType(type_llvm_dict[op_type], [])
+        argTypes = [type_llvm_dict[arg[0]] for arg in instruction[2]]
+        fnty = ir.FunctionType(type_llvm_dict[op_type], argTypes)
 
         fn = ir.Function(self.module, fnty, instruction[1][1:])
-        #TODO args
-    #     fn.args[0].name= 'N'
+        for i,args in enumerate(instruction[2]):
+            fn.args[i].name = args[1][1:]
         return fn
 
 if __name__ == "__main__":
@@ -154,3 +153,5 @@ if __name__ == "__main__":
 
 
     llvm = LLVM_Converter(cfg)
+    llvm.convert()
+
