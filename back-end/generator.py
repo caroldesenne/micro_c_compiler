@@ -556,6 +556,7 @@ class GenerateCode(NodeVisitor):
         entry_label = self.new_temp()
         body_label = self.new_temp()
         exit_label = self.new_temp()
+        self.code.append(('jump', entry_label))
         # record this label for break
         self.labels.insertExitLoop(exit_label)
         # start of the while
