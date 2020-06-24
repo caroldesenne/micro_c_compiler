@@ -11,7 +11,11 @@ from llvmlite import ir
 from llvmlite import binding as llvm
 
 type_llvm_dict = {
-    'int': ir.IntType(32)
+    'int': ir.IntType(32),
+    'float': ir.FloatType(),
+    'bool': ir.IntType(8),
+    'char': ir.IntType(8),
+    'void': ir.VoidType(),
 }
 
 def isLabel(instruction):
