@@ -91,12 +91,11 @@ class LLVM_Converter(object):
         target  = instruction[2][1:]
 
         #TODO Store_*
-        if source not in self.temp_ptr_dict:
-            self.temp_ptr_dict[source] = self.builder.alloca(type_llvm_dict[op_type], name=source)
+        if target not in self.temp_ptr_dict:
+            self.temp_ptr_dict[target] = self.builder.alloca(type_llvm_dict[op_type], name=target)
         # self.builder.store_reg(self.builder.load(self.temp_ptr_dict[source]), type_llvm_dict[op_type], target)
         alloc = self.builder.store_reg(self.builder.load(self.temp_ptr_dict[source]), type_llvm_dict[op_type], target)
-        self.temp_ptr_dict[target] = alloc
-
+        # TODO should we do something with the alloc?
 
     def convert_load(self, instruction):
         op      = instruction[0]
@@ -104,12 +103,12 @@ class LLVM_Converter(object):
         source  = instruction[1][1:]
         target  = instruction[2][1:]
 
-        #TODO Store_*
-        if source not in self.temp_ptr_dict:
-            self.temp_ptr_dict[source] = self.builder.alloca(type_llvm_dict[op_type], name=source)
+        #TODO Load_*
+        if target not in self.temp_ptr_dict:
+            self.temp_ptr_dict[target] = self.builder.alloca(type_llvm_dict[op_type], name=target)
         # self.builder.store_reg(self.builder.load(self.temp_ptr_dict[source]), type_llvm_dict[op_type], target)
         alloc = self.builder.store_reg(self.builder.load(self.temp_ptr_dict[source]), type_llvm_dict[op_type], target)
-        self.temp_ptr_dict[target] = alloc
+        # TODO should we do something with the alloc?
 
     def convert_branch_condition(self, instruction, comp):
         op      = instruction[0]
