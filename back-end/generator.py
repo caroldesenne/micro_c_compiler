@@ -582,6 +582,7 @@ class GenerateCode(NodeVisitor):
         self.labels.insertExitLoop(exit_label)
         # start of the for loop
         self.visit(node.init)
+        self.code.append(('jump',entry_label))
         self.code.append((entry_label[1:],))
         # check condition
         self.visit(node.stop_cond)
