@@ -55,6 +55,11 @@ class LLVM_Converter(object):
         self._declare_printf_function()
         self._declare_scanf_function()
 
+    def get_ptr(self, label):
+        if label in self.label_ptr_dict:
+            return self.label_ptr_dict[label]
+        return None
+
     def convert(self):
         for _, fcfg in self.cfg.func_cfg_dict.items():
             for label, block in fcfg.label_block_dict.items():
@@ -99,11 +104,8 @@ class LLVM_Converter(object):
         llvmlite.view_dot_graph(dot, view=True)
         print('================================')
 
-    def alloc_if_required(self, target, op_type):
-        if target not in self.temp_ptr_dict:
-            self.temp_ptr_dict[target] = self.builder.alloca(type_llvm_dict[op_type], name=target)
-
     def convert_alloc(self, instruction):
+        # TODO maybe we need to fix this method
         op      = instruction[0]
         op_type = op.split('_')[1]
         name    = instruction[1][1:]
@@ -116,33 +118,67 @@ class LLVM_Converter(object):
         target  = instruction[2][1:]
         literal = instruction[1]
 
-        self.temp_ptr_dict[target] = self.builder.alloca(type_llvm_dict[op_type], name=target)
-        self.builder.store(self.temp_ptr_dict[target].type.pointee(0), self.temp_ptr_dict[target])
+        loc = self.get_ptr(target)
+        const = type_llvm_dict[op_type](literal)
+        if loc:
+            self.builder.store(const, loc)
+        else:
+            self.temp_ptr_dict[target] = const
 
     def convert_binary_op(self, instruction, func):
-        op      = instruction[0]
-        op_type = op.split('_')[1]
         left_op  = instruction[1][1:]
         right_op = instruction[2][1:]
         target   = instruction[3][1:]
 
-        self.alloc_if_required(target, op_type)
-        self.builder.store(func(self.builder.load(self.temp_ptr_dict[left_op]), self.builder.load(self.temp_ptr_dict[right_op])), self.temp_ptr_dict[target])
+        left = self.get_ptr(left_op)
+        right = self.get_ptr(right_op)
+        
+        self.temp_ptr_dict[target] = func(left, right)
 
     def convert_add(self, instruction):
-        self.convert_binary_op(instruction, self.builder.add)
+        op      = instruction[0]
+        op_type = op.split('_')[1]
+        if op_type == 'float':
+            func = self.builder.fadd
+        else:
+            func = self.builder.add
+        self.convert_binary_op(instruction, func)
 
     def convert_sub(self, instruction):
-        self.convert_binary_op(instruction, self.builder.sub)
+        op      = instruction[0]
+        op_type = op.split('_')[1]
+        if op_type == 'float':
+            func = self.builder.fsub
+        else:
+            func = self.builder.sub
+        self.convert_binary_op(instruction, func)
 
     def convert_mul(self, instruction):
-        self.convert_binary_op(instruction, self.builder.mul)
+        op      = instruction[0]
+        op_type = op.split('_')[1]
+        if op_type == 'float':
+            func = self.builder.fmul
+        else:
+            func = self.builder.mul
+        self.convert_binary_op(instruction, func)
 
     def convert_div(self, instruction):
-        self.convert_binary_op(instruction, self.builder.udiv)
+        op      = instruction[0]
+        op_type = op.split('_')[1]
+        if op_type == 'float':
+            func = self.builder.fdiv
+        else:
+            func = self.builder.sdiv
+        self.convert_binary_op(instruction, func)
 
     def convert_mod(self, instruction):
-        self.convert_binary_op(instruction, self.builder.urem)
+        op      = instruction[0]
+        op_type = op.split('_')[1]
+        if op_type == 'float':
+            func = self.builder.frem
+        else:
+            func = self.builder.srem
+        self.convert_binary_op(instruction, func)
 
     def convert_print(self, instruction):
         pass
@@ -191,34 +227,38 @@ class LLVM_Converter(object):
         a = self.builder.store(self.builder.load(self.temp_ptr_dict[source]), self.temp_ptr_dict[target])
         # TODO should we do something with the alloc? I dont think so
 
-    def convert_branch_condition(self, instruction, comp):
+    def convert_compare(self, instruction, comp):
+        left_op  = instruction[1][1:]
+        right_op = instruction[2][1:]
+        target   = instruction[3][1:]
+        left = self.get_ptr(left_op)
+        right = self.get_ptr(right_op)
         op      = instruction[0]
         op_type = op.split('_')[1]
-        op1     = instruction[1][1:]
-        op2     = instruction[2][1:]
-        target  = instruction[3][1:]
 
-        self.alloc_if_required(target, 'bool')
-        pred = self.builder.icmp_signed(comp, self.temp_ptr_dict[op1], self.temp_ptr_dict[op2], name=target)
-        self.last_cond = target
+        if op_type == 'float':
+            comp = self.builder.fcmp_ordered(comp, left, right, name=target)
+        else:
+            comp = self.builder.icmp_signed(comp, left, right, name=target)
+        self.temp_ptr_dict[target] = comp
 
     def convert_lt(self, instruction):
-        self.convert_branch_condition(instruction, '<')
+        self.convert_compare(instruction, '<')
 
     def convert_le(self, instruction):
-        self.convert_branch_condition(instruction, '<=')
+        self.convert_compare(instruction, '<=')
 
     def convert_ge(self, instruction):
-        self.convert_branch_condition(instruction, '>=')
+        self.convert_compare(instruction, '>=')
 
     def convert_gt(self, instruction):
-        self.convert_branch_condition(instruction, '>')
+        self.convert_compare(instruction, '>')
 
     def convert_eq(self, instruction):
-        self.convert_branch_condition(instruction, '==')
+        self.convert_compare(instruction, '==')
 
     def convert_ne(self, instruction):
-        self.convert_branch_condition(instruction, '!=')
+        self.convert_compare(instruction, '!=')
 
     def convert_define(self, instruction):
         op = instruction[0]
