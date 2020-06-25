@@ -119,47 +119,30 @@ class LLVM_Converter(object):
         self.temp_ptr_dict[target] = self.builder.alloca(type_llvm_dict[op_type], name=target)
         self.builder.store(self.temp_ptr_dict[target].type.pointee(0), self.temp_ptr_dict[target])
 
-        # print(self.temp_ptr_dict)
+    def convert_binary_op(self, instruction, func):
+        op      = instruction[0]
+        op_type = op.split('_')[1]
+        left_op  = instruction[1][1:]
+        right_op = instruction[2][1:]
+        target   = instruction[3][1:]
+
+        self.alloc_if_required(target, op_type)
+        self.builder.store(func(self.builder.load(self.temp_ptr_dict[left_op]), self.builder.load(self.temp_ptr_dict[right_op])), self.temp_ptr_dict[target])
 
     def convert_add(self, instruction):
-        op      = instruction[0]
-        op_type = op.split('_')[1]
-        left_op  = instruction[1][1:]
-        right_op = instruction[2][1:]
-        target   = instruction[3][1:]
+        self.convert_binary_op(instruction, self.builder.add)
 
-        self.alloc_if_required(target, op_type)
-        self.builder.store(self.builder.add(self.builder.load(self.temp_ptr_dict[left_op]), self.builder.load(self.temp_ptr_dict[right_op])), self.temp_ptr_dict[target])
+    def convert_sub(self, instruction):
+        self.convert_binary_op(instruction, self.builder.sub)
 
     def convert_mul(self, instruction):
-        op      = instruction[0]
-        op_type = op.split('_')[1]
-        left_op  = instruction[1][1:]
-        right_op = instruction[2][1:]
-        target   = instruction[3][1:]
-
-        self.alloc_if_required(target, op_type)
-        self.builder.store(self.builder.mul(self.builder.load(self.temp_ptr_dict[left_op]), self.builder.load(self.temp_ptr_dict[right_op])), self.temp_ptr_dict[target])
+        self.convert_binary_op(instruction, self.builder.mul)
 
     def convert_div(self, instruction):
-        op      = instruction[0]
-        op_type = op.split('_')[1]
-        left_op  = instruction[1][1:]
-        right_op = instruction[2][1:]
-        target   = instruction[3][1:]
-
-        self.alloc_if_required(target, op_type)
-        self.builder.store(self.builder.udiv(self.builder.load(self.temp_ptr_dict[left_op]), self.builder.load(self.temp_ptr_dict[right_op])), self.temp_ptr_dict[target])
+        self.convert_binary_op(instruction, self.builder.udiv)
 
     def convert_mod(self, instruction):
-        op      = instruction[0]
-        op_type = op.split('_')[1]
-        left_op  = instruction[1][1:]
-        right_op = instruction[2][1:]
-        target   = instruction[3][1:]
-
-        self.alloc_if_required(target, op_type)
-        self.builder.store(self.builder.srem(self.builder.load(self.temp_ptr_dict[left_op]), self.builder.load(self.temp_ptr_dict[right_op])), self.temp_ptr_dict[target])
+        self.convert_binary_op(instruction, self.builder.urem)
 
     def convert_print(self, instruction):
         pass
