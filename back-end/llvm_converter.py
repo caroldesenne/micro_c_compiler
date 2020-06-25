@@ -165,12 +165,18 @@ class LLVM_Converter(object):
 
     ####### Cast operations #######
     def convert_fptosi(self, instruction):
-        #TODO
-        pass
+        source  = instruction[1][1:]
+        target  = instruction[2][1:]
+
+        source_ptr = self.get_ptr(source)
+        self.temp_ptr_dict[target] = self.builder.fptosi(source_ptr, type_llvm_dict['int'])
 
     def convert_sitofp(self, instruction):
-        #TODO
-        pass
+        source  = instruction[1][1:]
+        target  = instruction[2][1:]
+
+        source_ptr = self.get_ptr(source)
+        self.temp_ptr_dict[target] = self.builder.fptosi(source_ptr, type_llvm_dict['float'])
 
     ####### Binary operations #######
     def convert_binary_op(self, instruction, func):
@@ -272,11 +278,11 @@ class LLVM_Converter(object):
         pass
 
     ####### Function operations #######
-    def convert_call(self, instruction):
+    def convert_param(self, instruction):
         # TODO
         pass
 
-    def convert_param(self, instruction):
+    def convert_call(self, instruction):
         # TODO
         pass
 
