@@ -105,6 +105,14 @@ class LLVM_Converter(object):
         print('================================')
 
     ####### Memory operations #######
+    def convert_global(self, instruction):
+        #TODO
+        pass
+
+    def convert_elem(self, instruction):
+        #TODO
+        pass
+
     def convert_alloc(self, instruction):
         op      = instruction[0]
         op_type = op.split('_')[1]
@@ -153,6 +161,16 @@ class LLVM_Converter(object):
             self.builder.store(const, loc)
         else:
             self.temp_ptr_dict[target] = const
+
+
+    ####### Cast operations #######
+    def convert_fptosi(self, instruction):
+        #TODO
+        pass
+
+    def convert_sitofp(self, instruction):
+        #TODO
+        pass
 
     ####### Binary operations #######
     def convert_binary_op(self, instruction, func):
@@ -246,9 +264,22 @@ class LLVM_Converter(object):
 
     ####### Print and Read #######
     def convert_print(self, instruction):
+        # TODO
+        pass
+
+    def convert_read(self, instruction):
+        # TODO
         pass
 
     ####### Function operations #######
+    def convert_call(self, instruction):
+        # TODO
+        pass
+
+    def convert_param(self, instruction):
+        # TODO
+        pass
+
     def convert_return(self, instruction):
         op      = instruction[0]
         op_type = op.split('_')[1]
@@ -281,7 +312,7 @@ class LLVM_Converter(object):
         cond_ptr = self.temp_ptr_dict[cond]
         true_ptr = self.temp_ptr_dict[true_branch]
         false_ptr = self.label_block_dict[false_branch]
-        
+
         self.builder.cbranch(cond_ptr, true_ptr, false_ptr)
 
     def convert_jump(self, instruction):
