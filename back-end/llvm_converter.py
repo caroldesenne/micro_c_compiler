@@ -144,19 +144,23 @@ class LLVM_Converter(object):
             self.temp_ptr_dict[target] = source_ptr
 
     def convert_load(self, instruction):
+        # TODO do we need to align?
         op      = instruction[0]
         op_type = op.split('_')[1]
         source  = instruction[1][1:]
         target  = instruction[2][1:]
 
-        # TODO Load_*
-        # TODO do we need to align?
         source_ptr = self.get_ptr(source)
         if isinstance(source_ptr, ir.Constant):
             self.temp_ptr_dict[target] = source_ptr
         else:
+            #### TODO do we need to specify load_*? how does this work? what does gep return for an elem?
+            load_pointer = len(op.split('_'))==3
+            if load_pointer: # convert to pointer if this is a load_*
+                source_ptr = source_ptr.type.as_pointer()
+            #### end of question
             self.temp_ptr_dict[target] = self.builder.load(source_ptr)
-
+            
     ####### Literal #######
     def convert_literal(self, instruction):
         op      = instruction[0]
