@@ -104,14 +104,43 @@ class LLVM_Converter(object):
         llvmlite.view_dot_graph(dot, view=True)
         print('================================')
 
+    ####### Memory operations #######
     def convert_alloc(self, instruction):
-        # TODO maybe we need to fix this method
         op      = instruction[0]
         op_type = op.split('_')[1]
         name    = instruction[1][1:]
-        alloc   = self.builder.alloca(type_llvm_dict[op_type], name=name)
-        self.temp_ptr_dict[name] = alloc
 
+        self.temp_ptr_dict[name] = self.builder.alloca(type_llvm_dict[op_type], name=name)
+
+    def convert_store(self, instruction):
+        op      = instruction[0]
+        op_type = op.split('_')[1]
+        source  = instruction[1][1:]
+        target  = instruction[2][1:]
+
+        # TODO Store_*
+        source_ptr = self.get_ptr(source)
+        target_prt = self.get_ptr(target)
+        if target:
+            self.builder.store(source_ptr,target_prt)
+        else:
+            self.temp_ptr_dict[target] = source_ptr
+
+    def convert_load(self, instruction):
+        op      = instruction[0]
+        op_type = op.split('_')[1]
+        source  = instruction[1][1:]
+        target  = instruction[2][1:]
+
+        # TODO Load_*
+        # TODO do we need to align?
+        source_ptr = self.get_ptr(source)
+        if isinstance(source_ptr, ir.Constant):
+            self.temp_ptr_dict[target] = source_ptr
+        else:
+            self.temp_ptr_dict[target] = self.builder.load(source_ptr)
+
+    ####### Literal #######
     def convert_literal(self, instruction):
         op      = instruction[0]
         op_type = op.split('_')[1]
@@ -125,6 +154,7 @@ class LLVM_Converter(object):
         else:
             self.temp_ptr_dict[target] = const
 
+    ####### Binary operations #######
     def convert_binary_op(self, instruction, func):
         left_op  = instruction[1][1:]
         right_op = instruction[2][1:]
@@ -180,53 +210,6 @@ class LLVM_Converter(object):
             func = self.builder.srem
         self.convert_binary_op(instruction, func)
 
-    def convert_print(self, instruction):
-        pass
-
-    def convert_return(self, instruction):
-        op      = instruction[0]
-        op_type = op.split('_')[1]
-        target  = instruction[1][1:]
-
-        self.alloc_if_required(target, op_type)
-        self.builder.ret(self.builder.load(self.temp_ptr_dict[target]))
-
-    def convert_cbranch(self, instruction):
-        op           = instruction[0]
-        true_branch  = instruction[2][1:]
-        false_branch = instruction[3][1:]
-
-        self.builder.cbranch(self.builder.load(self.temp_ptr_dict[self.last_cond]), self.label_block_dict[true_branch], self.label_block_dict[false_branch])
-
-    def convert_jump(self, instruction):
-        op     = instruction[0]
-        target = instruction[1][1:]
-
-        self.builder.branch(self.label_block_dict[target])
-
-    def convert_store(self, instruction):
-        op      = instruction[0]
-        op_type = op.split('_')[1]
-        source  = instruction[1][1:]
-        target  = instruction[2][1:]
-
-        #TODO Store_*
-        self.alloc_if_required(target, op_type)
-        self.builder.store(self.builder.load(self.temp_ptr_dict[source]), self.temp_ptr_dict[target])
-        # TODO should we do something with the alloc? I dont think so
-
-    def convert_load(self, instruction):
-        op      = instruction[0]
-        op_type = op.split('_')[1]
-        source  = instruction[1][1:]
-        target  = instruction[2][1:]
-
-        #TODO Load_*
-        self.alloc_if_required(target, op_type)
-        # self.builder.store_reg(self.builder.load(self.temp_ptr_dict[source]), type_llvm_dict[op_type], target)
-        a = self.builder.store(self.builder.load(self.temp_ptr_dict[source]), self.temp_ptr_dict[target])
-        # TODO should we do something with the alloc? I dont think so
-
     def convert_compare(self, instruction, comp):
         left_op  = instruction[1][1:]
         right_op = instruction[2][1:]
@@ -260,6 +243,20 @@ class LLVM_Converter(object):
     def convert_ne(self, instruction):
         self.convert_compare(instruction, '!=')
 
+
+    ####### Print and Read #######
+    def convert_print(self, instruction):
+        pass
+
+    ####### Function operations #######
+    def convert_return(self, instruction):
+        op      = instruction[0]
+        op_type = op.split('_')[1]
+        target  = instruction[1][1:]
+
+        self.alloc_if_required(target, op_type)
+        self.builder.ret(self.builder.load(self.temp_ptr_dict[target]))
+
     def convert_define(self, instruction):
         op = instruction[0]
         op_without_type = op.split('_')[0]
@@ -274,10 +271,19 @@ class LLVM_Converter(object):
         return fn
 
 
+    ####### Block related operations #######
+    def convert_cbranch(self, instruction):
+        op           = instruction[0]
+        true_branch  = instruction[2][1:]
+        false_branch = instruction[3][1:]
 
+        self.builder.cbranch(self.builder.load(self.temp_ptr_dict[self.last_cond]), self.label_block_dict[true_branch], self.label_block_dict[false_branch])
 
+    def convert_jump(self, instruction):
+        op     = instruction[0]
+        target = instruction[1][1:]
 
-
+        self.builder.branch(self.label_block_dict[target])
 
 
 
