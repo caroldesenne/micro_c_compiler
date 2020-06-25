@@ -34,6 +34,7 @@ class LLVM_Converter(object):
     def __init__(self, cfg):
         self.cfg                = cfg
         self.module             = ir.Module()
+        self.params             = [] # list to hold parameters to be passed to a function call
         self.builder            = None
         self.temp_ptr_dict      = {}
         self.label_block_dict   = {}
@@ -279,12 +280,16 @@ class LLVM_Converter(object):
 
     ####### Function operations #######
     def convert_param(self, instruction):
-        # TODO
-        pass
+        source = instruction[1][1:]
+        param = self.get_ptr(source)
+        self.params.append(param)
 
     def convert_call(self, instruction):
-        # TODO
-        pass
+        fname = instruction[1][1:]
+        target = instruction[2][1:]
+
+        self.temp_ptr_dict[target] = self.builder.call(fname,self.params)
+        params = [] # empty parameters list
 
     def convert_return(self, instruction):
         op      = instruction[0]
