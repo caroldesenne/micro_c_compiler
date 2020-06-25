@@ -156,15 +156,15 @@ class LLVM_Converter(object):
         self.builder.ret(self.builder.load(self.temp_ptr_dict[target]))
 
     def convert_cbranch(self, instruction):
-        op      = instruction[0]
+        op           = instruction[0]
         true_branch  = instruction[2][1:]
         false_branch = instruction[3][1:]
 
         self.builder.cbranch(self.builder.load(self.temp_ptr_dict[self.last_cond]), self.label_block_dict[true_branch], self.label_block_dict[false_branch])
 
     def convert_jump(self, instruction):
-        op      = instruction[0]
-        target  = instruction[1][1:]
+        op     = instruction[0]
+        target = instruction[1][1:]
 
         self.builder.branch(self.label_block_dict[target])
 
@@ -205,6 +205,9 @@ class LLVM_Converter(object):
     def convert_lt(self, instruction):
         self.convert_branch_condition(instruction, '<')
 
+    def convert_le(self, instruction):
+        self.convert_branch_condition(instruction, '<=')
+
     def convert_ge(self, instruction):
         self.convert_branch_condition(instruction, '>=')
 
@@ -213,6 +216,9 @@ class LLVM_Converter(object):
 
     def convert_eq(self, instruction):
         self.convert_branch_condition(instruction, '==')
+
+    def convert_ne(self, instruction):
+        self.convert_branch_condition(instruction, '!=')
 
     def convert_define(self, instruction):
         op = instruction[0]
