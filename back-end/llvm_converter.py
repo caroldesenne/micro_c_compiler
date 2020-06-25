@@ -111,8 +111,16 @@ class LLVM_Converter(object):
         pass
 
     def convert_elem(self, instruction):
-        #TODO
-        pass
+        op      = instruction[0]
+        op_type = op.split('_')[1]
+        base = instruction[1][1:]
+        index = instruction[2][1:]
+        target = instruction[3][1:]
+
+        base_ptr = self.get_ptr(base)
+        zero_index = type_llvm_dict['int'](0)
+        index_ptr = self.get_ptr(index)
+        self.temp_ptr_dict[target] = self.builder.gep(base_ptr,[zero_index,index_ptr])
 
     def convert_alloc(self, instruction):
         op      = instruction[0]
