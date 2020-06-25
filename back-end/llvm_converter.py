@@ -274,16 +274,22 @@ class LLVM_Converter(object):
     ####### Block related operations #######
     def convert_cbranch(self, instruction):
         op           = instruction[0]
+        cond         = instruction[1][1:]
         true_branch  = instruction[2][1:]
         false_branch = instruction[3][1:]
 
-        self.builder.cbranch(self.builder.load(self.temp_ptr_dict[self.last_cond]), self.label_block_dict[true_branch], self.label_block_dict[false_branch])
+        cond_ptr = self.temp_ptr_dict[cond]
+        true_ptr = self.temp_ptr_dict[true_branch]
+        false_ptr = self.label_block_dict[false_branch]
+        
+        self.builder.cbranch(cond_ptr, true_ptr, false_ptr)
 
     def convert_jump(self, instruction):
         op     = instruction[0]
         target = instruction[1][1:]
 
-        self.builder.branch(self.label_block_dict[target])
+        block = self.label_block_dict[target]
+        self.builder.branch(block)
 
 
 
