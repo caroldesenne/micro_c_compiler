@@ -285,8 +285,8 @@ class LLVM_Converter(object):
         op_type = op.split('_')[1]
         target  = instruction[1][1:]
 
-        self.alloc_if_required(target, op_type)
-        self.builder.ret(self.builder.load(self.temp_ptr_dict[target]))
+        ret = self.get_ptr(target)
+        self.builder.ret(ret)
 
     def convert_define(self, instruction):
         op = instruction[0]
