@@ -57,8 +57,8 @@ class LLVM_Converter(object):
         self._declare_scanf_function()
 
     def get_ptr(self, label):
-        if label in self.label_ptr_dict:
-            return self.label_ptr_dict[label]
+        if label in self.temp_ptr_dict:
+            return self.temp_ptr_dict[label]
         return None
 
     def convert(self):
