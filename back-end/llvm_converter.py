@@ -247,6 +247,34 @@ class LLVM_Converter(object):
             func = self.builder.srem
         self.convert_binary_op(instruction, func)
 
+    ####### Binary operations - boolean #######
+    def convert_and(self, instruction):
+        func = self.builder.and_
+        self.convert_binary_op(instruction, func)
+
+    def convert_xor(self, instruction):
+        func = self.builder.xor_
+        self.convert_binary_op(instruction, func)
+
+    def convert_or(self, instruction):
+        func = self.builder.or_
+        self.convert_binary_op(instruction, func)
+
+    ####### Unary operations - boolean #######
+    def convert_unary_op(self, instruction):
+        op     = instruction[1][1:]
+        target = instruction[2][1:]
+
+        op = self.get_ptr(op)
+
+        self.temp_ptr_dict[target] = func(op)
+
+    def convert_not(self, instruction):
+        op      = instruction[0]
+        op_type = op.split('_')[1]
+        func = self.builder.or_
+        self.convert_unary_op(instruction, func)
+
     def convert_compare(self, instruction, comp):
         left_op  = instruction[1][1:]
         right_op = instruction[2][1:]
