@@ -160,7 +160,7 @@ class LLVM_Converter(object):
                 source_ptr = source_ptr.type.as_pointer()
             #### end of question
             self.temp_ptr_dict[target] = self.builder.load(source_ptr)
-            
+
     ####### Literal #######
     def convert_literal(self, instruction):
         op      = instruction[0]
@@ -199,7 +199,7 @@ class LLVM_Converter(object):
 
         left = self.get_ptr(left_op)
         right = self.get_ptr(right_op)
-        
+
         self.temp_ptr_dict[target] = func(left, right)
 
     def convert_add(self, instruction):
@@ -332,8 +332,8 @@ class LLVM_Converter(object):
         true_branch  = instruction[2][1:]
         false_branch = instruction[3][1:]
 
-        cond_ptr = self.temp_ptr_dict[cond]
-        true_ptr = self.temp_ptr_dict[true_branch]
+        cond_ptr  = self.temp_ptr_dict[cond]
+        true_ptr  = self.label_block_dict[true_branch]
         false_ptr = self.label_block_dict[false_branch]
 
         self.builder.cbranch(cond_ptr, true_ptr, false_ptr)
