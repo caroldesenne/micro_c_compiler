@@ -36,9 +36,11 @@ class LLVM_Converter(object):
         self.module             = ir.Module()
         self.params             = [] # list to hold parameters to be passed to a function call
         self.builder            = None
+        self.cur_func           = None
         self.temp_ptr_dict      = {}
         self.label_block_dict   = {}
         self.label_builder_dict = {}
+        self.fname_fn_dict      = {}
 
 
 
@@ -57,8 +59,8 @@ class LLVM_Converter(object):
         self._declare_scanf_function()
 
     def get_ptr(self, label):
-        if label in self.temp_ptr_dict:
-            return self.temp_ptr_dict[label]
+        if (self.cur_func, label) in self.temp_ptr_dict:
+            return self.temp_ptr_dict[(self.cur_func, label)]
         return None
 
     def convert(self):
@@ -66,26 +68,26 @@ class LLVM_Converter(object):
             for label, block in fcfg.label_block_dict.items():
                 for inst in block.instructions:
                     if 'define' in inst[0]:
-                        print(inst)
-                        fn = self.convert_define(inst)
+                        self.cur_func = inst[1]
 
-                        self.builder = ir.IRBuilder(fn.append_basic_block('entry'))
+                        fn = self.convert_define(inst)
+                        self.fname_fn_dict[self.cur_func] = fn
+
+                        self.label_builder_dict[(self.cur_func, 'entry')] = self.builder
+
                     elif isLabel(inst):
                         print(label)
-                        self.label_block_dict[str(label)]   = fn.append_basic_block(str(label))
-                        self.label_builder_dict[str(label)] = ir.IRBuilder(self.label_block_dict[str(label)])
+                        self.label_block_dict[(self.cur_func, str(label))]   = fn.append_basic_block(str(label))
+                        self.label_builder_dict[(self.cur_func, str(label))] = ir.IRBuilder(self.label_block_dict[(self.cur_func, str(label))])
 
-        pprint(self.label_block_dict)
-        pprint(self.label_builder_dict)
         for _, fcfg in self.cfg.func_cfg_dict.items():
             for label, block in fcfg.label_block_dict.items():
                 for inst in block.instructions:
                     if 'define' in inst[0]:
-                        continue
+                        self.cur_func      = inst[1]
+                        self.builder       = self.label_builder_dict[(self.cur_func, 'entry')]
                     elif isLabel(inst):
-                        self.builder = self.label_builder_dict[str(label)]
-                        # continue
-
+                        self.builder = self.label_builder_dict[(self.cur_func, str(label))]
                     else:
                         op = inst[0]
                         op_without_type = op.split('_')[0]
@@ -101,8 +103,9 @@ class LLVM_Converter(object):
         print(self.module)
         print('================================')
 
-        dot = llvmlite.get_function_cfg(fn)
-        llvmlite.view_dot_graph(dot, view=True)
+        for fname, fn in self.fname_fn_dict.items():
+            print(fname)
+            llvmlite.view_dot_graph(llvmlite.get_function_cfg(fn), view=True, filename=fname)
         print('================================')
 
     ####### Memory operations #######
@@ -113,21 +116,21 @@ class LLVM_Converter(object):
     def convert_elem(self, instruction):
         op      = instruction[0]
         op_type = op.split('_')[1]
-        base = instruction[1][1:]
-        index = instruction[2][1:]
-        target = instruction[3][1:]
+        base    = instruction[1][1:]
+        index   = instruction[2][1:]
+        target  = instruction[3][1:]
 
-        base_ptr = self.get_ptr(base)
+        base_ptr   = self.get_ptr(base)
         zero_index = type_llvm_dict['int'](0)
-        index_ptr = self.get_ptr(index)
-        self.temp_ptr_dict[target] = self.builder.gep(base_ptr,[zero_index,index_ptr])
+        index_ptr  = self.get_ptr(index)
+        self.temp_ptr_dict[(self.cur_func, target)] = self.builder.gep(base_ptr,[zero_index,index_ptr])
 
     def convert_alloc(self, instruction):
         op      = instruction[0]
         op_type = op.split('_')[1]
         name    = instruction[1][1:]
 
-        self.temp_ptr_dict[name] = self.builder.alloca(type_llvm_dict[op_type], name=name)
+        self.temp_ptr_dict[(self.cur_func, name)] = self.builder.alloca(type_llvm_dict[op_type], name=name)
 
     def convert_store(self, instruction):
         op      = instruction[0]
@@ -139,9 +142,12 @@ class LLVM_Converter(object):
         source_ptr = self.get_ptr(source)
         target_prt = self.get_ptr(target)
         if target:
-            self.builder.store(source_ptr,target_prt)
+            if isinstance(source_ptr.type, llvmlite.ir.types.PointerType):
+                self.builder.store(self.builder.load(source_ptr), target_prt)
+            else:
+                self.builder.store(source_ptr, target_prt)
         else:
-            self.temp_ptr_dict[target] = source_ptr
+            self.temp_ptr_dict[(self.cur_func, target)] = source_ptr
 
     def convert_load(self, instruction):
         # TODO do we need to align?
@@ -152,14 +158,14 @@ class LLVM_Converter(object):
 
         source_ptr = self.get_ptr(source)
         if isinstance(source_ptr, ir.Constant):
-            self.temp_ptr_dict[target] = source_ptr
+            self.temp_ptr_dict[(self.cur_func, target)] = source_ptr
         else:
             #### TODO do we need to specify load_*? how does this work? what does gep return for an elem?
             load_pointer = len(op.split('_'))==3
             if load_pointer: # convert to pointer if this is a load_*
                 source_ptr = source_ptr.type.as_pointer()
             #### end of question
-            self.temp_ptr_dict[target] = self.builder.load(source_ptr)
+            self.temp_ptr_dict[(self.cur_func, target)] = self.builder.load(source_ptr)
 
     ####### Literal #######
     def convert_literal(self, instruction):
@@ -173,7 +179,7 @@ class LLVM_Converter(object):
         if loc:
             self.builder.store(const, loc)
         else:
-            self.temp_ptr_dict[target] = const
+            self.temp_ptr_dict[(self.cur_func, target)] = const
 
 
     ####### Cast operations #######
@@ -182,14 +188,14 @@ class LLVM_Converter(object):
         target  = instruction[2][1:]
 
         source_ptr = self.get_ptr(source)
-        self.temp_ptr_dict[target] = self.builder.fptosi(source_ptr, type_llvm_dict['int'])
+        self.temp_ptr_dict[(self.cur_func, target)] = self.builder.fptosi(source_ptr, type_llvm_dict['int'])
 
     def convert_sitofp(self, instruction):
         source  = instruction[1][1:]
         target  = instruction[2][1:]
 
         source_ptr = self.get_ptr(source)
-        self.temp_ptr_dict[target] = self.builder.fptosi(source_ptr, type_llvm_dict['float'])
+        self.temp_ptr_dict[(self.cur_func, target)] = self.builder.fptosi(source_ptr, type_llvm_dict['float'])
 
     ####### Binary operations #######
     def convert_binary_op(self, instruction, func):
@@ -200,7 +206,7 @@ class LLVM_Converter(object):
         left = self.get_ptr(left_op)
         right = self.get_ptr(right_op)
 
-        self.temp_ptr_dict[target] = func(left, right)
+        self.temp_ptr_dict[(self.cur_func, target)] = func(left, right)
 
     def convert_add(self, instruction):
         op      = instruction[0]
@@ -253,7 +259,7 @@ class LLVM_Converter(object):
         self.convert_binary_op(instruction, func)
 
     def convert_xor(self, instruction):
-        func = self.builder.xor_
+        func = self.builder.xor
         self.convert_binary_op(instruction, func)
 
     def convert_or(self, instruction):
@@ -267,12 +273,12 @@ class LLVM_Converter(object):
 
         op = self.get_ptr(op)
 
-        self.temp_ptr_dict[target] = func(op)
+        self.temp_ptr_dict[(self.cur_func, target)] = func(op)
 
     def convert_not(self, instruction):
         op      = instruction[0]
         op_type = op.split('_')[1]
-        func = self.builder.or_
+        func = self.builder.not_
         self.convert_unary_op(instruction, func)
 
     def convert_compare(self, instruction, comp):
@@ -288,7 +294,7 @@ class LLVM_Converter(object):
             comp = self.builder.fcmp_ordered(comp, left, right, name=target)
         else:
             comp = self.builder.icmp_signed(comp, left, right, name=target)
-        self.temp_ptr_dict[target] = comp
+        self.temp_ptr_dict[(self.cur_func, target)] = comp
 
     def convert_lt(self, instruction):
         self.convert_compare(instruction, '<')
@@ -321,35 +327,41 @@ class LLVM_Converter(object):
     ####### Function operations #######
     def convert_param(self, instruction):
         source = instruction[1][1:]
-        param = self.get_ptr(source)
+        param  = self.get_ptr(source)
         self.params.append(param)
 
     def convert_call(self, instruction):
-        fname = instruction[1][1:]
+        fname  = instruction[1]
         target = instruction[2][1:]
 
-        self.temp_ptr_dict[target] = self.builder.call(fname,self.params)
+        self.temp_ptr_dict[(self.cur_func, target)] = self.builder.call(self.fname_fn_dict[fname], self.params)
         params = [] # empty parameters list
 
     def convert_return(self, instruction):
         op      = instruction[0]
-        op_type = op.split('_')[1]
-        target  = instruction[1][1:]
+        if 'void' not in op:
+            target  = instruction[1][1:]
 
-        ret = self.get_ptr(target)
-        self.builder.ret(ret)
+            ret = self.get_ptr(target)
+            self.builder.ret(ret)
+        else:
+            self.builder.ret_void()
 
     def convert_define(self, instruction):
-        op = instruction[0]
+        op              = instruction[0]
         op_without_type = op.split('_')[0]
-        op_type = op.split('_')[1]
+        op_type         = op.split('_')[1]
 
         argTypes = [type_llvm_dict[arg[0]] for arg in instruction[2]]
-        fnty = ir.FunctionType(type_llvm_dict[op_type], argTypes)
+        fnty     = ir.FunctionType(type_llvm_dict[op_type], argTypes)
 
         fn = ir.Function(self.module, fnty, instruction[1][1:])
+
+        self.builder = ir.IRBuilder(fn.append_basic_block('entry'))
+
         for i,args in enumerate(instruction[2]):
             fn.args[i].name = args[1][1:]
+            self.temp_ptr_dict[(self.cur_func, args[1][1:])] = fn.args[i]
         return fn
 
 
@@ -360,9 +372,9 @@ class LLVM_Converter(object):
         true_branch  = instruction[2][1:]
         false_branch = instruction[3][1:]
 
-        cond_ptr  = self.temp_ptr_dict[cond]
-        true_ptr  = self.label_block_dict[true_branch]
-        false_ptr = self.label_block_dict[false_branch]
+        cond_ptr  = self.temp_ptr_dict[(self.cur_func, cond)]
+        true_ptr  = self.label_block_dict[(self.cur_func, true_branch)]
+        false_ptr = self.label_block_dict[(self.cur_func, false_branch)]
 
         self.builder.cbranch(cond_ptr, true_ptr, false_ptr)
 
@@ -370,7 +382,7 @@ class LLVM_Converter(object):
         op     = instruction[0]
         target = instruction[1][1:]
 
-        block = self.label_block_dict[target]
+        block = self.label_block_dict[(self.cur_func, target)]
         self.builder.branch(block)
 
 
