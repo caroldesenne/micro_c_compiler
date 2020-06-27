@@ -14,11 +14,11 @@ from llvmlite import ir, binding
 from ctypes import CFUNCTYPE, c_int
 
 type_llvm_dict = {
-    'int': ir.IntType(32),
+    'int':   ir.IntType(32),
     'float': ir.FloatType(),
-    'bool': ir.IntType(1),
-    'char': ir.IntType(8),
-    'void': ir.VoidType(),
+    'bool':  ir.IntType(1),
+    'char':  ir.IntType(8),
+    'void':  ir.VoidType(),
 }
 
 def isLabel(instruction):
@@ -61,6 +61,8 @@ class LLVM_Converter(object):
     def get_ptr(self, label):
         if (self.cur_func, label) in self.temp_ptr_dict:
             return self.temp_ptr_dict[(self.cur_func, label)]
+        if ('global', label) in self.temp_ptr_dict:
+            return self.temp_ptr_dict[('global', label)]
         return None
 
     def convert(self):
@@ -76,7 +78,6 @@ class LLVM_Converter(object):
                         self.label_builder_dict[(self.cur_func, 'entry')] = self.builder
 
                     elif isLabel(inst):
-                        print(label)
                         self.label_block_dict[(self.cur_func, str(label))]   = fn.append_basic_block(str(label))
                         self.label_builder_dict[(self.cur_func, str(label))] = ir.IRBuilder(self.label_block_dict[(self.cur_func, str(label))])
 
@@ -94,7 +95,6 @@ class LLVM_Converter(object):
 
                         method    = 'convert_' + op_without_type
                         converter = getattr(self, method, None)
-                        print(converter, op_without_type)
                         if converter:
                             converter(inst)
 
@@ -110,8 +110,16 @@ class LLVM_Converter(object):
 
     ####### Memory operations #######
     def convert_global(self, instruction):
-        #TODO
-        pass
+        op      = instruction[0]
+        op_type = op.split('_')[1]
+        target  = instruction[1][1:]
+        value   = instruction[2]
+
+        if op_type == 'string':
+            array_type = ir.ArrayType(type_llvm_dict['char'], len(value))
+        else:
+            array_type = ir.ArrayType(type_llvm_dict[op_type], len(value))
+        self.temp_ptr_dict[('global', target)] = llvmlite.ir.GlobalVariable(self.module, array_type, tuple(value))
 
     def convert_elem(self, instruction):
         op      = instruction[0]
@@ -161,9 +169,9 @@ class LLVM_Converter(object):
             self.temp_ptr_dict[(self.cur_func, target)] = source_ptr
         else:
             #### TODO do we need to specify load_*? how does this work? what does gep return for an elem?
-            load_pointer = len(op.split('_'))==3
-            if load_pointer: # convert to pointer if this is a load_*
-                source_ptr = source_ptr.type.as_pointer()
+            # load_pointer = len(op.split('_'))==3
+            # if load_pointer: # convert to pointer if this is a load_*
+                # source_ptr = source_ptr.type.as_pointer()
             #### end of question
             self.temp_ptr_dict[(self.cur_func, target)] = self.builder.load(source_ptr)
 
