@@ -335,7 +335,7 @@ class LLVM_Converter(object):
         target = instruction[2][1:]
 
         self.temp_ptr_dict[(self.cur_func, target)] = self.builder.call(self.fname_fn_dict[fname], self.params)
-        params = [] # empty parameters list
+        self.params = [] # empty parameters list
 
     def convert_return(self, instruction):
         op      = instruction[0]
