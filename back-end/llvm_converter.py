@@ -78,6 +78,11 @@ class LLVM_Converter(object):
                         self.label_builder_dict[(self.cur_func, 'entry')] = self.builder
 
                     elif isLabel(inst):
+                        # Workaround for adjacent labels
+                        if len(block.instructions) == 1:
+                            print(isLabel(inst), block.instructions)
+                            continue
+
                         self.label_block_dict[(self.cur_func, str(label))]   = fn.append_basic_block(str(label))
                         self.label_builder_dict[(self.cur_func, str(label))] = ir.IRBuilder(self.label_block_dict[(self.cur_func, str(label))])
 
@@ -85,10 +90,11 @@ class LLVM_Converter(object):
             for label, block in fcfg.label_block_dict.items():
                 for inst in block.instructions:
                     if 'define' in inst[0]:
-                        self.cur_func      = inst[1]
-                        self.builder       = self.label_builder_dict[(self.cur_func, 'entry')]
+                        self.cur_func = inst[1]
+                        self.builder  = self.label_builder_dict[(self.cur_func, 'entry')]
                     elif isLabel(inst):
-                        self.builder = self.label_builder_dict[(self.cur_func, str(label))]
+                        if (self.cur_func, str(label)) in self.label_builder_dict:
+                            self.builder = self.label_builder_dict[(self.cur_func, str(label))]
                     else:
                         op = inst[0]
                         op_without_type = op.split('_')[0]
@@ -390,8 +396,11 @@ class LLVM_Converter(object):
         op     = instruction[0]
         target = instruction[1][1:]
 
-        block = self.label_block_dict[(self.cur_func, target)]
-        self.builder.branch(block)
+        try:
+            block = self.label_block_dict[(self.cur_func, target)]
+            self.builder.branch(block)
+        except:
+            pass
 
 
 
@@ -477,4 +486,4 @@ if __name__ == "__main__":
     llvm = LLVM_Converter(cfg)
     llvm.convert()
 
-    llvm.execute_ir()
+    # llvm.execute_ir()
