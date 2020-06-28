@@ -430,7 +430,7 @@ class LLVM_Converter(object):
         The compiled module object is returned.
         """
         # Create a LLVM module object from the IR
-        self.builder.ret_void()
+        # self.builder.ret_void()
         llvm_ir = str(self.module)
         mod = self.binding.parse_assembly(llvm_ir)
         mod.verify()
@@ -447,7 +447,7 @@ class LLVM_Converter(object):
     def execute_ir(self):
         mod = self._compile_ir()
         # Obtain a pointer to the compiled 'main' - it's the address of its JITed code in memory.
-        main_ptr = self.engine.get_pointer_to_function(mod.get_function('main'))
+        main_ptr = self.engine.get_function_address('main')
         # To convert an address to an actual callable thing we have to use
         # CFUNCTYPE, and specify the arguments & return type.
         main_function = CFUNCTYPE(c_int)(main_ptr)
@@ -477,4 +477,4 @@ if __name__ == "__main__":
     llvm = LLVM_Converter(cfg)
     llvm.convert()
 
-    # llvm.execute_ir()
+    llvm.execute_ir()
