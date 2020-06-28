@@ -137,9 +137,9 @@ class LLVM_Converter(object):
 
         # TODO Store_*
         source_ptr = self.get_ptr(source)
-        target_prt = self.get_ptr(target)
-        if target:
-            self.builder.store(source_ptr,target_prt)
+        target_ptr = self.get_ptr(target)
+        if target_ptr:
+            self.builder.store(source_ptr,target_ptr)
         else:
             self.temp_ptr_dict[target] = source_ptr
 
