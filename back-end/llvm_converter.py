@@ -173,11 +173,6 @@ class LLVM_Converter(object):
         if isinstance(source_ptr, ir.Constant):
             self.temp_ptr_dict[(self.cur_func, target)] = source_ptr
         else:
-            #### TODO do we need to specify load_*? how does this work? what does gep return for an elem?
-            # load_pointer = len(op.split('_'))==3
-            # if load_pointer: # convert to pointer if this is a load_*
-                # source_ptr = source_ptr.type.as_pointer()
-            #### end of question
             self.temp_ptr_dict[(self.cur_func, target)] = self.builder.load(source_ptr)
 
     ####### Literal #######
