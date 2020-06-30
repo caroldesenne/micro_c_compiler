@@ -164,7 +164,6 @@ class LLVM_Converter(object):
             self.temp_ptr_dict[(self.cur_func, target)] = source_ptr
 
     def convert_load(self, instruction):
-        # TODO do we need to align?
         op      = instruction[0]
         op_type = op.split('_')[1]
         source  = instruction[1][1:]
