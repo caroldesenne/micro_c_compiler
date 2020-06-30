@@ -325,11 +325,11 @@ class LLVM_Converter(object):
 
     ####### Print and Read #######
     def convert_print(self, instruction):
-        # TODO
+        # TODO it's on the notebook
         pass
 
     def convert_read(self, instruction):
-        # TODO
+        # TODO just like print but simpler
         pass
 
     ####### Function operations #######
