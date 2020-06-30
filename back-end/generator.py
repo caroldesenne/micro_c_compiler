@@ -286,7 +286,7 @@ class GenerateCode(NodeVisitor):
             self.code.append(p)
         # call function
         result = self.new_temp()
-        self.code.append(('call', '@'+node.name.name, result))
+        self.code.append(('call_'+bt, '@'+node.name.name, result))
         # store result label from call
         node.temp_location = result
 
