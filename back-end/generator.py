@@ -548,8 +548,10 @@ class GenerateCode(NodeVisitor):
             self.code.append(('jump', exit_label))
             self.code.append((false_label[1:],))
             self.visit(node.else_st)
+            self.code.append(('jump', exit_label))
             self.code.append((exit_label[1:],))
         else:
+            self.code.append(('jump', false_label))
             self.code.append((false_label[1:],))
 
     def visit_While(self, node):
