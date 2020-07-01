@@ -92,7 +92,6 @@ class LLVM_Converter(object):
                     elif isLabel(inst):
                         # Workaround for adjacent labels
                         if len(block.instructions) == 1:
-                            print(isLabel(inst), block.instructions)
                             continue
 
                         self.label_block_dict[(self.cur_func, str(label))]   = fn.append_basic_block(str(label))
@@ -366,7 +365,7 @@ class LLVM_Converter(object):
             self._cio('printf', '\n')
         else:
             target   = instruction[1][1:]
-            target_ptr = self.temp_ptr_dict[(self.cur_func, target)]
+            target_ptr = self.get_ptr(target)
             if op_type == 'int':
                 self._cio('printf', '%d', target_ptr)
             elif op_type == 'float':
