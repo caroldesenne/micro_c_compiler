@@ -29,6 +29,12 @@ def isLabel(instruction):
         else:
             return None
 
+def make_bytearray(buf):
+    # Make a byte array constant from *buf*.
+    b = bytearray(buf)
+    n = len(b)
+    return ir.Constant(ir.ArrayType(ir.IntType(8), n), b)
+
 class LLVM_Converter(object):
 
     def __init__(self, cfg):
@@ -324,9 +330,45 @@ class LLVM_Converter(object):
 
 
     ####### Print and Read #######
+    def _global_constant(self, builder_or_module, name, value, linkage='internal'):
+        # Get or create a (LLVM module-)global constant with *name* or *value*.
+        if isinstance(builder_or_module, ir.Module):
+            mod = builder_or_module
+        else:
+            mod = builder_or_module.module
+        data = ir.GlobalVariable(mod, value.type, name=name)
+        data.linkage = linkage
+        data.global_constant = True
+        data.initializer = value
+        data.align = 1
+        return data
+
+    def _cio(self, fname, format, *target):
+        # Make global constant for string format
+        mod = self.builder.module
+        fmt_bytes = make_bytearray((format + '\00').encode('ascii'))
+        global_fmt = self._global_constant(mod, mod.get_unique_name('.fmt'), fmt_bytes)
+        fn = mod.get_global(fname)
+        ptr_fmt = self.builder.bitcast(global_fmt, ir.IntType(8).as_pointer())
+        return self.builder.call(fn, [ptr_fmt] + list(target))
+
     def convert_print(self, instruction):
-        # TODO it's on the notebook
-        pass
+        op      = instruction[0]
+        op_type = op.split('_')[1]
+
+        if op_type == 'void':
+            self._cio('printf', '\n')
+        else:
+            target   = instruction[1][1:]
+            target_ptr = self.temp_ptr_dict[(self.cur_func, target)]
+            if op_type == 'int':
+                self._cio('printf', '%d', target_ptr)
+            elif op_type == 'float':
+                self._cio('printf', '%.2f', target_ptr)
+            elif op_type == 'char':
+                self._cio('printf', '%c', target_ptr)
+            elif op_type == 'string':
+                self._cio('printf', '%s', target_ptr)
 
     def convert_read(self, instruction):
         # TODO just like print but simpler
