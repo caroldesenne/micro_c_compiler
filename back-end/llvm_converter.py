@@ -371,8 +371,19 @@ class LLVM_Converter(object):
                 self._cio('printf', '%s', target_ptr)
 
     def convert_read(self, instruction):
-        # TODO just like print but simpler
-        pass
+        op      = instruction[0]
+        op_type = op.split('_')[1]
+        target   = instruction[1][1:]
+
+        target_ptr = self.get_ptr(target)
+        if op_type == 'int':
+            self._cio('scanf', '%d', target_ptr)
+        elif op_type == 'float':
+            self._cio('scanf', '%.2f', target_ptr)
+        elif op_type == 'char':
+            self._cio('scanf', '%c', target_ptr)
+        elif op_type == 'string':
+            self._cio('scanf', '%s', target_ptr)
 
     ####### Function operations #######
     def convert_param(self, instruction):
