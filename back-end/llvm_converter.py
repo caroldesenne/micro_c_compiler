@@ -71,6 +71,12 @@ class LLVM_Converter(object):
             return self.temp_ptr_dict[('global', label)]
         return None
 
+    def set_ptr(self, label, ptr, is_global=False):
+        if is_global:
+            self.temp_ptr_dict[('global', label)] = ptr
+        else:
+            self.temp_ptr_dict[(self.cur_func, label)] = ptr
+
     def convert(self):
         for _, fcfg in self.cfg.func_cfg_dict.items():
             for label, block in fcfg.label_block_dict.items():
