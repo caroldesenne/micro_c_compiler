@@ -183,7 +183,7 @@ class LLVM_Converter(object):
             size = int(op.split('_')[2])
 
             if op_type == 'float':
-                size *= 8
+                size *= 4
             elif op_type == 'int':
                 size *= type_llvm_dict['int'].width//8
 
@@ -243,7 +243,7 @@ class LLVM_Converter(object):
         target  = instruction[2][1:]
 
         source_ptr = self.get_ptr(source)
-        self.temp_ptr_dict[(self.cur_func, target)] = self.builder.fptosi(source_ptr, type_llvm_dict['float'])
+        self.temp_ptr_dict[(self.cur_func, target)] = self.builder.sitofp(source_ptr, type_llvm_dict['float'])
 
     ####### Binary operations #######
     def convert_binary_op(self, instruction, func):
