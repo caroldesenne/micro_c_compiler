@@ -14,12 +14,13 @@ from llvmlite import ir, binding
 from ctypes import CFUNCTYPE, c_int
 
 type_llvm_dict = {
-    'int':    ir.IntType(32),
-    'float':  ir.FloatType(),
-    'bool':   ir.IntType(1),
-    'char':   ir.IntType(8),
-    'string': ir.IntType(8),
-    'void':   ir.VoidType(),
+    'int':      ir.IntType(32),
+    'float':    ir.FloatType(),
+    'bool':     ir.IntType(1),
+    'char':     ir.IntType(8),
+    'char_ptr': ir.IntType(8).as_pointer(),
+    'string':   ir.IntType(8),
+    'void':     ir.VoidType(),
 }
 
 def isLabel(instruction):
@@ -181,11 +182,16 @@ class LLVM_Converter(object):
         if len(op.split('_')) == 3 and op.split('_')[2] != '*':
             size = int(op.split('_')[2])
 
+            if op_type == 'float':
+                size *= 8
+            elif op_type == 'int':
+                size *= type_llvm_dict['int'].width//8
+
             if target_ptr:
-                memcpy = self.module.declare_intrinsic('llvm.memcpy', [ir.IntType(8).as_pointer(), ir.IntType(8).as_pointer(), ir.IntType(8)])
-                source_ptr = self.builder.bitcast(source_ptr, ir.IntType(8).as_pointer())
-                target_ptr = self.builder.bitcast(target_ptr, ir.IntType(8).as_pointer())
-                self.builder.call(memcpy, [target_ptr, source_ptr, ir.IntType(8)(size*8), ir.IntType(1)(0)])
+                memcpy = self.module.declare_intrinsic('llvm.memcpy', [type_llvm_dict['char_ptr'], type_llvm_dict['char_ptr'], type_llvm_dict['int']])
+                source_ptr = self.builder.bitcast(source_ptr, type_llvm_dict['char_ptr'])
+                target_ptr = self.builder.bitcast(target_ptr, type_llvm_dict['char_ptr'])
+                self.builder.call(memcpy, [target_ptr, source_ptr, type_llvm_dict['int'](size), type_llvm_dict['bool'](0)])
             else:
                 self.temp_ptr_dict[(self.cur_func, target)] = source_ptr
         else:
