@@ -14,11 +14,12 @@ from llvmlite import ir, binding
 from ctypes import CFUNCTYPE, c_int
 
 type_llvm_dict = {
-    'int':   ir.IntType(32),
-    'float': ir.FloatType(),
-    'bool':  ir.IntType(1),
-    'char':  ir.IntType(8),
-    'void':  ir.VoidType(),
+    'int':    ir.IntType(32),
+    'float':  ir.FloatType(),
+    'bool':   ir.IntType(1),
+    'char':   ir.IntType(8),
+    'string': ir.IntType(8),
+    'void':   ir.VoidType(),
 }
 
 def isLabel(instruction):
@@ -122,7 +123,7 @@ class LLVM_Converter(object):
 
         for fname, fn in self.fname_fn_dict.items():
             print(fname)
-            llvmlite.view_dot_graph(llvmlite.get_function_cfg(fn), view=True, filename=fname)
+            # llvmlite.view_dot_graph(llvmlite.get_function_cfg(fn), view=True, filename=fname)
         print('================================')
 
     ####### Memory operations #######
@@ -145,6 +146,7 @@ class LLVM_Converter(object):
         else:
             self.temp_ptr_dict[('global', target)] = llvmlite.ir.GlobalVariable(self.module, type_llvm_dict[op_type], target)
             self.temp_ptr_dict[('global', target)].initializer = type_llvm_dict[op_type](value)
+        self.temp_ptr_dict[('global', target)] = self.builder.bitcast(self.temp_ptr_dict[('global', target)], type_llvm_dict[op_type].as_pointer())
 
 
     def convert_elem(self, instruction):
@@ -157,7 +159,7 @@ class LLVM_Converter(object):
         base_ptr   = self.get_ptr(base)
         zero_index = type_llvm_dict['int'](0)
         index_ptr  = self.get_ptr(index)
-        self.temp_ptr_dict[(self.cur_func, target)] = self.builder.gep(base_ptr,[zero_index,index_ptr])
+        self.temp_ptr_dict[(self.cur_func, target)] = self.builder.gep(base_ptr, [index_ptr])
 
     def convert_alloc(self, instruction):
         op      = instruction[0]
@@ -175,13 +177,25 @@ class LLVM_Converter(object):
         # TODO Store_*
         source_ptr = self.get_ptr(source)
         target_ptr = self.get_ptr(target)
-        if target_ptr:
-            if isinstance(source_ptr.type, llvmlite.ir.types.PointerType):
-                self.builder.store(self.builder.load(source_ptr), target_ptr)
+
+        if len(op.split('_')) == 3 and op.split('_')[2] != '*':
+            size = int(op.split('_')[2])
+
+            if target_ptr:
+                memcpy = self.module.declare_intrinsic('llvm.memcpy', [ir.IntType(8).as_pointer(), ir.IntType(8).as_pointer(), ir.IntType(8)])
+                source_ptr = self.builder.bitcast(source_ptr, ir.IntType(8).as_pointer())
+                target_ptr = self.builder.bitcast(target_ptr, ir.IntType(8).as_pointer())
+                self.builder.call(memcpy, [target_ptr, source_ptr, ir.IntType(8)(size*8), ir.IntType(1)(0)])
             else:
-                self.builder.store(source_ptr, target_ptr)
+                self.temp_ptr_dict[(self.cur_func, target)] = source_ptr
         else:
-            self.temp_ptr_dict[(self.cur_func, target)] = source_ptr
+            if target_ptr:
+                if isinstance(source_ptr.type, llvmlite.ir.types.PointerType):
+                    self.builder.store(self.builder.load(source_ptr), target_ptr)
+                else:
+                    self.builder.store(source_ptr, target_ptr)
+            else:
+                self.temp_ptr_dict[(self.cur_func, target)] = source_ptr
 
     def convert_load(self, instruction):
         op      = instruction[0]
