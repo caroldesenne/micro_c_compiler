@@ -132,11 +132,20 @@ class LLVM_Converter(object):
         target  = instruction[1][1:]
         value   = instruction[2]
 
-        if op_type == 'string':
-            array_type = ir.ArrayType(type_llvm_dict['char'], len(value))
+        # ArrayType or string
+        if (len(op.split('_')) == 3) or (op_type == 'string'):
+            if op_type == 'string':
+                array_type = ir.ArrayType(type_llvm_dict['char'], len(value))
+                self.temp_ptr_dict[('global', target)] = llvmlite.ir.GlobalVariable(self.module, array_type, target)
+                self.temp_ptr_dict[('global', target)].initializer = ir.Constant.literal_array([type_llvm_dict['char'](ord(v)) for v in list(value)])
+            else:
+                array_type = ir.ArrayType(type_llvm_dict[op_type], len(value))
+                self.temp_ptr_dict[('global', target)] = llvmlite.ir.GlobalVariable(self.module, array_type, target)
+                self.temp_ptr_dict[('global', target)].initializer = ir.Constant.literal_array([type_llvm_dict[op_type](v) for v in value])
         else:
-            array_type = ir.ArrayType(type_llvm_dict[op_type], len(value))
-        self.temp_ptr_dict[('global', target)] = llvmlite.ir.GlobalVariable(self.module, array_type, tuple(value))
+            self.temp_ptr_dict[('global', target)] = llvmlite.ir.GlobalVariable(self.module, type_llvm_dict[op_type], target)
+            self.temp_ptr_dict[('global', target)].initializer = type_llvm_dict[op_type](value)
+
 
     def convert_elem(self, instruction):
         op      = instruction[0]
@@ -538,4 +547,4 @@ if __name__ == "__main__":
     llvm = LLVM_Converter(cfg)
     llvm.convert()
 
-    # llvm.execute_ir()
+    llvm.execute_ir()
