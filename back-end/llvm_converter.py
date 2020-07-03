@@ -137,6 +137,8 @@ class LLVM_Converter(object):
         # ArrayType or string
         if (len(op.split('_')) == 3) or (op_type == 'string'):
             if op_type == 'string':
+                value = list(value)
+                value.append('\00')
                 array_type = ir.ArrayType(type_llvm_dict['char'], len(value))
                 self.temp_ptr_dict[('global', target)] = llvmlite.ir.GlobalVariable(self.module, array_type, target)
                 self.temp_ptr_dict[('global', target)].initializer = ir.Constant.literal_array([type_llvm_dict['char'](ord(v)) for v in list(value)])
@@ -568,3 +570,5 @@ if __name__ == "__main__":
     llvm.convert()
 
     llvm.execute_ir()
+
+    llvm.save_ir('llvm.ir')
