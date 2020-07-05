@@ -165,11 +165,14 @@ class LLVM_Converter(object):
         self.temp_ptr_dict[(self.cur_func, target)] = self.builder.gep(base_ptr, [index_ptr])
 
     def convert_alloc(self, instruction):
-        op      = instruction[0]
-        op_type = op.split('_')[1]
+        op      = instruction[0].split('_')
+        op_type = op[1]
         name    = instruction[1][1:]
+        size = 1
+        if len(op) > 2:
+            size = int(op[2])
 
-        self.temp_ptr_dict[(self.cur_func, name)] = self.builder.alloca(type_llvm_dict[op_type], name=name)
+        self.temp_ptr_dict[(self.cur_func, name)] = self.builder.alloca(type_llvm_dict[op_type], size=size, name=name)
 
     def convert_store(self, instruction):
         op      = instruction[0]
