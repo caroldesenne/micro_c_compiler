@@ -171,6 +171,8 @@ class LLVM_Converter(object):
         size = 1
         if len(op) > 2:
             size = int(op[2])
+        if len(op) > 3:
+            size *= int(op[3])
 
         self.temp_ptr_dict[(self.cur_func, name)] = self.builder.alloca(type_llvm_dict[op_type], size=size, name=name)
 
