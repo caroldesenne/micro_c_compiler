@@ -15,7 +15,7 @@ from ctypes import CFUNCTYPE, c_int
 
 type_llvm_dict = {
     'int':      ir.IntType(32),
-    'float':    ir.FloatType(),
+    'float':    ir.DoubleType(),
     'bool':     ir.IntType(1),
     'char':     ir.IntType(8),
     'char_ptr': ir.IntType(8).as_pointer(),
@@ -193,8 +193,8 @@ class LLVM_Converter(object):
         self.temp_ptr_dict[(self.cur_func, name)] = self.builder.alloca(type_llvm_dict[op_type], size=size, name=name)
 
     def convert_store(self, instruction):
-        op      = instruction[0]
-        op_type = op.split('_')[1]
+        op      = instruction[0].split('_')
+        op_type = op[1]
         source  = instruction[1][1:]
         target  = instruction[2][1:]
 
@@ -202,14 +202,13 @@ class LLVM_Converter(object):
         source_ptr = self.get_ptr(source)
         target_ptr = self.get_ptr(target)
 
-        if len(op.split('_')) == 3 and op.split('_')[2] != '*':
-            size = int(op.split('_')[2])
-
+        if len(op) >= 3 and op[2] != '*':
+            size = int(op[2])
             if op_type == 'float':
-                size *= 4
-            elif op_type == 'int':
+                size *= 8
+            if op_type == 'int':
                 size *= type_llvm_dict['int'].width//8
-
+            
             if target_ptr:
                 memcpy = self.module.declare_intrinsic('llvm.memcpy', [type_llvm_dict['char_ptr'], type_llvm_dict['char_ptr'], type_llvm_dict['int']])
                 source_ptr = self.builder.bitcast(source_ptr, type_llvm_dict['char_ptr'])
@@ -217,6 +216,7 @@ class LLVM_Converter(object):
                 self.builder.call(memcpy, [target_ptr, source_ptr, type_llvm_dict['int'](size), type_llvm_dict['bool'](0)])
             else:
                 self.temp_ptr_dict[(self.cur_func, target)] = source_ptr
+
         else:
             if target_ptr:
                 if isinstance(source_ptr.type, llvmlite.ir.types.PointerType):
