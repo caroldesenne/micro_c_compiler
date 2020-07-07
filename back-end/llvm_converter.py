@@ -49,15 +49,16 @@ def makeInitList(dim,values):
 class LLVM_Converter(object):
 
     def __init__(self, cfg):
-        self.cfg                = cfg
-        self.module             = ir.Module()
-        self.params             = [] # list to hold parameters to be passed to a function call
-        self.builder            = None
-        self.cur_func           = None
-        self.temp_ptr_dict      = {}
-        self.label_block_dict   = {}
-        self.label_builder_dict = {}
-        self.fname_fn_dict      = {}
+        self.cfg                   = cfg
+        self.module                = ir.Module()
+        self.params                = [] # list to hold parameters to be passed to a function call
+        self.builder               = None
+        self.cur_func              = None
+        self.temp_ptr_dict         = {}
+        self.label_block_dict      = {}
+        self.label_builder_dict    = {}
+        self.fname_fn_dict         = {}
+        self.global_name_type_dict = {}
 
 
 
@@ -79,7 +80,8 @@ class LLVM_Converter(object):
         if (self.cur_func, label) in self.temp_ptr_dict:
             return self.temp_ptr_dict[(self.cur_func, label)]
         if ('global', label) in self.temp_ptr_dict:
-            return self.temp_ptr_dict[('global', label)]
+            global_fmt = self.builder.bitcast(self.temp_ptr_dict[('global', label)], self.global_name_type_dict[label])
+            return global_fmt
         return None
 
     def set_ptr(self, label, ptr, is_global=False):
@@ -168,7 +170,7 @@ class LLVM_Converter(object):
             global_fmt = llvmlite.ir.GlobalVariable(self.module, type_llvm_dict[op_type], target)
             global_fmt.initializer = type_llvm_dict[op_type](value)
 
-        global_fmt = self.builder.bitcast(global_fmt, type_llvm_dict[op_type].as_pointer())
+        self.global_name_type_dict[target] = type_llvm_dict[op_type].as_pointer()
         self.temp_ptr_dict[('global', target)] = global_fmt
 
 
@@ -404,11 +406,11 @@ class LLVM_Converter(object):
 
     def _cio(self, fname, format, *target):
         # Make global constant for string format
-        mod = self.builder.module
-        fmt_bytes = make_bytearray((format + '\00').encode('ascii'))
+        mod        = self.builder.module
+        fmt_bytes  = make_bytearray((format + '\00').encode('ascii'))
         global_fmt = self._global_constant(mod, mod.get_unique_name('.fmt'), fmt_bytes)
-        fn = mod.get_global(fname)
-        ptr_fmt = self.builder.bitcast(global_fmt, ir.IntType(8).as_pointer())
+        fn         = mod.get_global(fname)
+        ptr_fmt    = self.builder.bitcast(global_fmt, ir.IntType(8).as_pointer())
         return self.builder.call(fn, [ptr_fmt] + list(target))
 
     def convert_print(self, instruction):
@@ -420,6 +422,7 @@ class LLVM_Converter(object):
         else:
             target   = instruction[1][1:]
             target_ptr = self.get_ptr(target)
+            print('=====================================', target_ptr)
             if op_type == 'int':
                 self._cio('printf', '%d', target_ptr)
             elif op_type == 'float':
