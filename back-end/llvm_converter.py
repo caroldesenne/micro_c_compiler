@@ -438,7 +438,7 @@ class LLVM_Converter(object):
         if op_type == 'int':
             self._cio('scanf', '%d', target_ptr)
         elif op_type == 'float':
-            self._cio('scanf', '%.2f', target_ptr)
+            self._cio('scanf', '%lf', target_ptr)
         elif op_type == 'char':
             self._cio('scanf', '%c', target_ptr)
         elif op_type == 'string':
