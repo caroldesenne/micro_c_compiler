@@ -147,27 +147,29 @@ class LLVM_Converter(object):
 
         # string
         if op_type == 'string':
-            value = list(value)
-            value.append('\00')
-            array_type = ir.ArrayType(type_llvm_dict['char'], len(value))
-            self.temp_ptr_dict[('global', target)] = llvmlite.ir.GlobalVariable(self.module, array_type, target)
-            self.temp_ptr_dict[('global', target)].initializer = ir.Constant.literal_array([type_llvm_dict['char'](ord(v)) for v in list(value)])
+            value += '\00'
+            array_type = ir.Constant(ir.ArrayType(type_llvm_dict['char'], len(value)), bytearray(value.encode("utf8")))
+            global_fmt = llvmlite.ir.GlobalVariable(self.module, array_type.type, target)
+            global_fmt.global_constant = True
+            global_fmt.initializer = array_type
         # array
         elif len(op)==3 or len(op)==4:
             size = 1
             if len(op) > 2:
                 size *= int(op[2])
             array_type = ir.ArrayType(type_llvm_dict[op_type], size)
-            self.temp_ptr_dict[('global', target)] = llvmlite.ir.GlobalVariable(self.module, array_type, target)
+            global_fmt = llvmlite.ir.GlobalVariable(self.module, array_type, target)
             if value:
                 initList = makeInitList(len(op),value)
-                self.temp_ptr_dict[('global', target)].initializer = ir.Constant.literal_array([type_llvm_dict[op_type](v) for v in initList])
+                global_fmt.initializer = ir.Constant.literal_array([type_llvm_dict[op_type](v) for v in initList])
             else:
-                self.temp_ptr_dict[('global', target)].initializer = ir.Constant.literal_array([type_llvm_dict[op_type](0) for i in range(size)])
+                global_fmt.initializer = ir.Constant.literal_array([type_llvm_dict[op_type](0) for i in range(size)])
         else:
-            self.temp_ptr_dict[('global', target)] = llvmlite.ir.GlobalVariable(self.module, type_llvm_dict[op_type], target)
-            self.temp_ptr_dict[('global', target)].initializer = type_llvm_dict[op_type](value)
-        self.temp_ptr_dict[('global', target)] = self.builder.bitcast(self.temp_ptr_dict[('global', target)], type_llvm_dict[op_type].as_pointer())
+            global_fmt = llvmlite.ir.GlobalVariable(self.module, type_llvm_dict[op_type], target)
+            global_fmt.initializer = type_llvm_dict[op_type](value)
+
+        global_fmt = self.builder.bitcast(global_fmt, type_llvm_dict[op_type].as_pointer())
+        self.temp_ptr_dict[('global', target)] = global_fmt
 
 
     def convert_elem(self, instruction):
@@ -208,7 +210,7 @@ class LLVM_Converter(object):
                 size *= 8
             if op_type == 'int':
                 size *= type_llvm_dict['int'].width//8
-            
+
             if target_ptr:
                 memcpy = self.module.declare_intrinsic('llvm.memcpy', [type_llvm_dict['char_ptr'], type_llvm_dict['char_ptr'], type_llvm_dict['int']])
                 source_ptr = self.builder.bitcast(source_ptr, type_llvm_dict['char_ptr'])
