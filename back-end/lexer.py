@@ -82,7 +82,12 @@ class Lexer():
 
     # regex for constants
     t_FLOAT_CONST = r'([0-9]*\.[0-9]+)|([0-9]+\.)'
-    t_CHAR_CONST = r'\'.\''
+
+    def t_CHAR_CONST(self, t):
+        r'\'.\''
+        t.value = t.value[1:-1]
+        return t
+
     t_INT_CONST = r'[0-9]+'
 
     # regex for string literals
