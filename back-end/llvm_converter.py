@@ -37,6 +37,15 @@ def make_bytearray(buf):
     n = len(b)
     return ir.Constant(ir.ArrayType(ir.IntType(8), n), b)
 
+def makeInitList(dim,values):
+    if dim==3:
+        return values
+    L = []
+    for i in values:
+        for j in i:
+            L.append(j)
+    return L
+
 class LLVM_Converter(object):
 
     def __init__(self, cfg):
@@ -148,12 +157,11 @@ class LLVM_Converter(object):
             size = 1
             if len(op) > 2:
                 size *= int(op[2])
-            if len(op) > 3:
-                size *= int(op[3])
             array_type = ir.ArrayType(type_llvm_dict[op_type], size)
             self.temp_ptr_dict[('global', target)] = llvmlite.ir.GlobalVariable(self.module, array_type, target)
             if value:
-                self.temp_ptr_dict[('global', target)].initializer = ir.Constant.literal_array([type_llvm_dict[op_type](v) for v in value])
+                initList = makeInitList(len(op),value)
+                self.temp_ptr_dict[('global', target)].initializer = ir.Constant.literal_array([type_llvm_dict[op_type](v) for v in initList])
             else:
                 self.temp_ptr_dict[('global', target)].initializer = ir.Constant.literal_array([type_llvm_dict[op_type](0) for i in range(size)])
         else:
@@ -181,8 +189,6 @@ class LLVM_Converter(object):
         size = 1
         if len(op) > 2:
             size = int(op[2])
-        if len(op) > 3:
-            size *= int(op[3])
 
         self.temp_ptr_dict[(self.cur_func, name)] = self.builder.alloca(type_llvm_dict[op_type], size=size, name=name)
 
