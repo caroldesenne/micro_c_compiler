@@ -49,15 +49,16 @@ def makeInitList(dim,values):
 class LLVM_Converter(object):
 
     def __init__(self, cfg):
-        self.cfg                = cfg
-        self.module             = ir.Module()
-        self.params             = [] # list to hold parameters to be passed to a function call
-        self.builder            = None
-        self.cur_func           = None
-        self.temp_ptr_dict      = {}
-        self.label_block_dict   = {}
-        self.label_builder_dict = {}
-        self.fname_fn_dict      = {}
+        self.cfg                   = cfg
+        self.module                = ir.Module()
+        self.params                = [] # list to hold parameters to be passed to a function call
+        self.builder               = None
+        self.cur_func              = None
+        self.temp_ptr_dict         = {}
+        self.label_block_dict      = {}
+        self.label_builder_dict    = {}
+        self.fname_fn_dict         = {}
+        self.global_name_type_dict = {}
 
 
 
@@ -79,7 +80,8 @@ class LLVM_Converter(object):
         if (self.cur_func, label) in self.temp_ptr_dict:
             return self.temp_ptr_dict[(self.cur_func, label)]
         if ('global', label) in self.temp_ptr_dict:
-            return self.temp_ptr_dict[('global', label)]
+            global_fmt = self.builder.bitcast(self.temp_ptr_dict[('global', label)], self.global_name_type_dict[label])
+            return global_fmt
         return None
 
     def set_ptr(self, label, ptr, is_global=False):
@@ -147,27 +149,29 @@ class LLVM_Converter(object):
 
         # string
         if op_type == 'string':
-            value = list(value)
-            value.append('\00')
-            array_type = ir.ArrayType(type_llvm_dict['char'], len(value))
-            self.temp_ptr_dict[('global', target)] = llvmlite.ir.GlobalVariable(self.module, array_type, target)
-            self.temp_ptr_dict[('global', target)].initializer = ir.Constant.literal_array([type_llvm_dict['char'](ord(v)) for v in list(value)])
+            value += '\00'
+            array_type = ir.Constant(ir.ArrayType(type_llvm_dict['char'], len(value)), bytearray(value.encode("utf8")))
+            global_fmt = llvmlite.ir.GlobalVariable(self.module, array_type.type, target)
+            global_fmt.global_constant = True
+            global_fmt.initializer = array_type
         # array
         elif len(op)==3 or len(op)==4:
             size = 1
             if len(op) > 2:
                 size *= int(op[2])
             array_type = ir.ArrayType(type_llvm_dict[op_type], size)
-            self.temp_ptr_dict[('global', target)] = llvmlite.ir.GlobalVariable(self.module, array_type, target)
+            global_fmt = llvmlite.ir.GlobalVariable(self.module, array_type, target)
             if value:
                 initList = makeInitList(len(op),value)
-                self.temp_ptr_dict[('global', target)].initializer = ir.Constant.literal_array([type_llvm_dict[op_type](v) for v in initList])
+                global_fmt.initializer = ir.Constant.literal_array([type_llvm_dict[op_type](v) for v in initList])
             else:
-                self.temp_ptr_dict[('global', target)].initializer = ir.Constant.literal_array([type_llvm_dict[op_type](0) for i in range(size)])
+                global_fmt.initializer = ir.Constant.literal_array([type_llvm_dict[op_type](0) for i in range(size)])
         else:
-            self.temp_ptr_dict[('global', target)] = llvmlite.ir.GlobalVariable(self.module, type_llvm_dict[op_type], target)
-            self.temp_ptr_dict[('global', target)].initializer = type_llvm_dict[op_type](value)
-        self.temp_ptr_dict[('global', target)] = self.builder.bitcast(self.temp_ptr_dict[('global', target)], type_llvm_dict[op_type].as_pointer())
+            global_fmt = llvmlite.ir.GlobalVariable(self.module, type_llvm_dict[op_type], target)
+            global_fmt.initializer = type_llvm_dict[op_type](value)
+
+        self.global_name_type_dict[target] = type_llvm_dict[op_type].as_pointer()
+        self.temp_ptr_dict[('global', target)] = global_fmt
 
 
     def convert_elem(self, instruction):
@@ -208,7 +212,7 @@ class LLVM_Converter(object):
                 size *= 8
             if op_type == 'int':
                 size *= type_llvm_dict['int'].width//8
-            
+
             if target_ptr:
                 memcpy = self.module.declare_intrinsic('llvm.memcpy', [type_llvm_dict['char_ptr'], type_llvm_dict['char_ptr'], type_llvm_dict['int']])
                 source_ptr = self.builder.bitcast(source_ptr, type_llvm_dict['char_ptr'])
@@ -402,11 +406,11 @@ class LLVM_Converter(object):
 
     def _cio(self, fname, format, *target):
         # Make global constant for string format
-        mod = self.builder.module
-        fmt_bytes = make_bytearray((format + '\00').encode('ascii'))
+        mod        = self.builder.module
+        fmt_bytes  = make_bytearray((format + '\00').encode('ascii'))
         global_fmt = self._global_constant(mod, mod.get_unique_name('.fmt'), fmt_bytes)
-        fn = mod.get_global(fname)
-        ptr_fmt = self.builder.bitcast(global_fmt, ir.IntType(8).as_pointer())
+        fn         = mod.get_global(fname)
+        ptr_fmt    = self.builder.bitcast(global_fmt, ir.IntType(8).as_pointer())
         return self.builder.call(fn, [ptr_fmt] + list(target))
 
     def convert_print(self, instruction):
@@ -418,6 +422,7 @@ class LLVM_Converter(object):
         else:
             target   = instruction[1][1:]
             target_ptr = self.get_ptr(target)
+            print('=====================================', target_ptr)
             if op_type == 'int':
                 self._cio('printf', '%d', target_ptr)
             elif op_type == 'float':
@@ -436,7 +441,7 @@ class LLVM_Converter(object):
         if op_type == 'int':
             self._cio('scanf', '%d', target_ptr)
         elif op_type == 'float':
-            self._cio('scanf', '%.2f', target_ptr)
+            self._cio('scanf', '%lf', target_ptr)
         elif op_type == 'char':
             self._cio('scanf', '%c', target_ptr)
         elif op_type == 'string':
