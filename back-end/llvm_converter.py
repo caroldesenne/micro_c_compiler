@@ -129,14 +129,14 @@ class LLVM_Converter(object):
                             converter(inst)
 
 
-        print('================================')
-        print(self.module)
-        print('================================')
+        # print('================================')
+        # print(self.module)
+        # print('================================')
 
-        for fname, fn in self.fname_fn_dict.items():
-            print(fname)
-            # llvmlite.view_dot_graph(llvmlite.get_function_cfg(fn), view=True, filename=fname)
-        print('================================')
+        # for fname, fn in self.fname_fn_dict.items():
+        #     print(fname)
+        #     # llvmlite.view_dot_graph(llvmlite.get_function_cfg(fn), view=True, filename=fname)
+        # print('================================')
 
     ####### Memory operations #######
     def convert_global(self, instruction):
@@ -425,7 +425,6 @@ class LLVM_Converter(object):
         else:
             target   = instruction[1][1:]
             target_ptr = self.get_ptr(target)
-            print('=====================================', target_ptr)
             if op_type == 'int':
                 self._cio('printf', '%d', target_ptr)
             elif op_type == 'float':
@@ -514,12 +513,6 @@ class LLVM_Converter(object):
         except:
             pass
 
-
-
-
-
-
-
     def _create_execution_engine(self):
         """
         Create an ExecutionEngine suitable for JIT code generation on
@@ -591,7 +584,7 @@ if __name__ == "__main__":
     gencode.visit_Program(ast)
 
     cfg = CFG_Program(gencode.code)
-    pprint(gencode.code)
+    # pprint(gencode.code)
     # cfg.view()
 
 
