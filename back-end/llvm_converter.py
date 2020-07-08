@@ -249,6 +249,9 @@ class LLVM_Converter(object):
         target  = instruction[2][1:]
         literal = instruction[1]
 
+        if isinstance(literal, str) and len(literal) == 1:
+            literal = ord(literal)
+
         loc = self.get_ptr(target)
         const = type_llvm_dict[op_type](literal)
         if loc:
