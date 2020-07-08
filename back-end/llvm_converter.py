@@ -544,7 +544,6 @@ class LLVM_Converter(object):
         The compiled module object is returned.
         """
         # Create a LLVM module object from the IR
-        # self.builder.ret_void()
         llvm_ir = str(self.module)
         mod = self.binding.parse_assembly(llvm_ir)
         mod.verify()
@@ -554,12 +553,27 @@ class LLVM_Converter(object):
         self.engine.run_static_constructors()
         return mod
 
-    def save_ir(self, filename):
-        with open(filename, 'w') as output_file:
-            output_file.write(str(self.module))
+    def save_ir(self, outputfile):
+        outputfile.write(str(self.module))
 
-    def execute_ir(self):
+    def execute_ir(self, opt=False, opt_file=None):
         mod = self._compile_ir()
+
+        if opt:
+            # apply some optimization passes on module
+            pmb = self.binding.create_pass_manager_builder()
+            pm = self.binding.create_module_pass_manager()
+            pmb.opt_level = 0;
+            if opt == 'ctm' or opt == 'all':
+                pm.add_constant_merge_pass()
+            if opt == 'dce' or opt == 'all':
+                pm.add_dead_code_elimination_pass()
+            if opt == 'cfg' or opt  == 'all':
+                pm.add_cfg_simplification_pass()
+            pmb.populate(pm)
+            pm.run(mod)
+            opt_file.write(str(mod))
+
         # Obtain a pointer to the compiled 'main' - it's the address of its JITed code in memory.
         main_ptr = self.engine.get_function_address('main')
         # To convert an address to an actual callable thing we have to use
@@ -593,4 +607,4 @@ if __name__ == "__main__":
 
     llvm.execute_ir()
 
-    llvm.save_ir('llvm.ir')
+    # llvm.save_ir('llvm.ir')
