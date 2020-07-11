@@ -37,7 +37,7 @@ unary_ops = {
     '--': 'sub_int',
     'p++': 'add_int',
     'p--': 'sub_int',
-    '-' : 'sub_int', 
+    '-' : 'sub_int',
     '+' : 'whatever',
     '!' : 'not_bool',
 }
@@ -52,7 +52,7 @@ class Labels(object):
     '''
     Class representing all the labels in a program (both local and global).
     Each scope level is represented by a symbol table, and they are assembled in a list.
-    The first element of the list is the root scope (global variables) and we go into 
+    The first element of the list is the root scope (global variables) and we go into
     deeper scopes as we go through the array. Depth represents the maximal scope depth we are in
     at the moment.
     '''
@@ -122,7 +122,7 @@ class GenerateCode(NodeVisitor):
         super(GenerateCode, self).__init__()
         # version dictionary for temporaries
         self.fname = 'main'  # We use the function name as a key
-        self.versions = {self.fname:0}
+        self.versions = {self.fname:1}
         # The generated code (list of tuples)
         self.globals = []
         self.code = []
@@ -137,7 +137,7 @@ class GenerateCode(NodeVisitor):
         Create a new temporary variable of a given scope (function name).
         '''
         if self.fname not in self.versions:
-            self.versions[self.fname] = 0
+            self.versions[self.fname] = 1
         name = "%" + "%d" % (self.versions[self.fname])
         self.versions[self.fname] += 1
         return name
@@ -155,14 +155,13 @@ class GenerateCode(NodeVisitor):
         self.code.append((inst,exp.temp_location,tmp))
         return tmp
 
-    def output(self, ir_filename=None):
+    def output(self, buf=None):
         '''
         outputs generated IR code to given file. If no file is given, output to stdout
         '''
-        if ir_filename:
-            print("Outputting IR to %s." % ir_filename)
-            buf = open(ir_filename, 'w')
-        else:
+        if not buf:
+            # print("Outputting IR to %s." % ir_filename)
+            # buf = open(ir_filename, 'w')
             print("Printing IR:\n\n")
             buf = sys.stdout
         for i,line in enumerate(self.code or []):
@@ -202,6 +201,9 @@ class GenerateCode(NodeVisitor):
                 aux = self.new_temp()
         # reserve temp for return
         return_label = self.new_temp()
+        tp = getBasicType(node)
+        if tp!='void':
+            self.code.append(('alloc_'+tp, return_label))
         self.labels.insert("return", return_label)
 
     def FuncDefAlloc(self,node):
@@ -218,13 +220,13 @@ class GenerateCode(NodeVisitor):
 
     def FuncDefStoreParams(self,node):
         if node.param_list:
-            i = 0
-            j = len(node.param_list.list)+1
+            i = 1
+            j = len(node.param_list.list)+2
             for p in node.param_list.list:
                 bt = getBasicType(p)
                 self.code.append(('store_'+bt,'%'+str(i),'%'+str(j)))
-                j += 1
                 i += 1
+                j += 1
 
     def FuncDefInit(self,node):
         self.phase = Phase.INIT
@@ -283,7 +285,7 @@ class GenerateCode(NodeVisitor):
             self.code.append(p)
         # call function
         result = self.new_temp()
-        self.code.append(('call', '@'+node.name.name, result))
+        self.code.append(('call_'+bt, '@'+node.name.name, result))
         # store result label from call
         node.temp_location = result
 
@@ -389,7 +391,7 @@ class GenerateCode(NodeVisitor):
         # get to v[i][j]
         add_target = self.new_temp()
         self.code.append(('add_int',mul_target,acc2,add_target))
-        
+
         # get base array label
         base_array = self.getBaseArray(decl)
         target = self.new_temp()
@@ -437,9 +439,14 @@ class GenerateCode(NodeVisitor):
     def visit_DeclFuncDecl(self,node):
         if node.isPrototype:
             pass # do nothing for prototype
-        else: # this is a function definition    
+        else: # this is a function definition
             if self.phase == Phase.START:
-                self.code.append(('define', '@'+node.name.name))
+                inst = 'define_' + getBasicType(node)
+                if node.type.args is not None:
+                    arguments = [(getBasicType(arg),'%'+str(i+1)) for i,arg in enumerate(node.type.args.list)]
+                else:
+                    arguments = []
+                self.code.append((inst, '@'+node.name.name, arguments))
                 # return_label = self.new_temp()
                 # exit_label = self.new_temp()
                 self.labels.pushLevel()
@@ -540,14 +547,17 @@ class GenerateCode(NodeVisitor):
             self.code.append(('jump', exit_label))
             self.code.append((false_label[1:],))
             self.visit(node.else_st)
+            self.code.append(('jump', exit_label))
             self.code.append((exit_label[1:],))
         else:
+            self.code.append(('jump', false_label))
             self.code.append((false_label[1:],))
 
     def visit_While(self, node):
         entry_label = self.new_temp()
         body_label = self.new_temp()
         exit_label = self.new_temp()
+        self.code.append(('jump', entry_label))
         # record this label for break
         self.labels.insertExitLoop(exit_label)
         # start of the while
@@ -574,6 +584,7 @@ class GenerateCode(NodeVisitor):
         self.labels.insertExitLoop(exit_label)
         # start of the for loop
         self.visit(node.init)
+        self.code.append(('jump',entry_label))
         self.code.append((entry_label[1:],))
         # check condition
         self.visit(node.stop_cond)
@@ -765,14 +776,11 @@ class GenerateCode(NodeVisitor):
         for exp in node.expr.list:
             self.visit(exp)
             bt = getBasicType(exp)
-            # read in a temp
-            read_temp = self.new_temp()
-            self.code.append(('read_'+bt, read_temp))
-            # and store the value read in the exp location
-            inst = 'store_'+bt
+            # read in the exp location
+            inst = 'read_'+bt
             if isinstance(exp, ArrayRef):
                 inst += '_*'
-            self.code.append((inst, read_temp, exp.temp_location))
+            self.code.append((inst, exp.temp_location))
 
     def visit_Type(self, node):
         pass

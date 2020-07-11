@@ -28,7 +28,7 @@ def format_instruction(t):
     # Auxiliary method to pretty print the instructions
     op = t[0]
     if len(t) > 1:
-        if op == "define":
+        if op.split('_')[0] == "define":
             return f"\n{op} {t[1]}"
         else:
             _str = "" if op.startswith('global') else "  "
@@ -201,15 +201,15 @@ class CFG():
         for label, block in self.label_block_dict.items():
             print()
             print('Block ', label)
-            print('    GEN : ', sorted(list(block.live_gen),  key=lambda x: int(x[1:]) if x[0] == '%' else 0))
-            print('    KILL: ', sorted(list(block.live_kill), key=lambda x: int(x[1:]) if x[0] == '%' else 0))
+            print('    GEN : ', list(block.live_gen))
+            print('    KILL: ', list(block.live_kill))
 
         print('============================ LIVENESS: IN and OUT ============================')
         for label, block in self.label_block_dict.items():
             print()
             print('Block ', label)
-            print('    IN : ', sorted(list(block.live_in),  key=lambda x: int(x[1:]) if x[0] == '%' else 0))
-            print('    OUT: ', sorted(list(block.live_out), key=lambda x: int(x[1:]) if x[0] == '%' else 0))
+            print('    IN : ', list(block.live_in))
+            print('    OUT: ', list(block.live_out))
 
     def print(self):
         for k, v in self.label_block_dict.items():
@@ -304,8 +304,8 @@ class CFG():
         op = instruction[0]
         op_without_type = op.split('_')[0]
         if (len(instruction) == 4) or \
-           (len(instruction) == 3 and op_without_type != 'global') or \
-           (len(instruction) == 2 and op_without_type not in ['alloc','fptosi','sitofp','define','param','read','print','return']):
+           (len(instruction) == 3 and op_without_type not in ['define','global']) or \
+           (len(instruction) == 2 and op_without_type not in ['alloc','fptosi','sitofp','param','read','print','return']):
             return instruction[-1]
         else:
             return None
@@ -402,6 +402,13 @@ class CFG():
         op = instruction[0]
         fragments = op.split('_')
         op_without_type = fragments[0]
+        # define arguments
+        if op_without_type == 'define' and len(instruction)==3:
+            args = instruction[2]
+            defset = set()
+            for arg in args:
+                defset.add(arg[1])
+            return set(),defset
         # binary op
         if op_without_type in ['add','sub','mul','div','mod'] or op_without_type in ['ne','eq','lt','le','gt','ge','and','or']:
             return set([instruction[1], instruction[2]]), set([instruction[3]])
@@ -432,7 +439,7 @@ class CFG():
             return set(), set([instruction[2]])
         # read(variable)
         if op_without_type == 'read':
-            return set(), set([instruction[1]])
+            return set([instruction[1]]), set()
         # print(variable)
         if op_without_type == 'print' and 'void' not in op:
             return set([instruction[1]]), set()
@@ -773,41 +780,20 @@ class CFG_Program():
     def create_cfgs(self):
         function_code_dict = {}
 
-        self.gen_code.append(('define',''))
+        self.gen_code.append(('define_void','',[]))
 
         cur_function   = '__global'
         start_function = 0
         for instr_pos, instruction in enumerate(self.gen_code):
             if instruction[0].split('_')[0] == 'global':
                 self.global_vars.add(instruction[1])
-            if instruction[0] == 'define':
+            if instruction[0].split('_')[0] == 'define':
                 function_code = self.gen_code[start_function:instr_pos]
                 self.func_cfg_dict[cur_function] = CFG(function_code, cur_function, self.global_vars)
                 cur_function   = instruction[1]
                 start_function = instr_pos
 
         del self.gen_code[-1]
-
-    def output(self, ir_filename=None):
-        aux = sys.stdout
-        if ir_filename:
-            print("Outputting CFG to %s" % ir_filename)
-            sys.stdout = open(ir_filename, 'w')
-
-        for function, cfg in self.func_cfg_dict.items():
-            print('====================== ' + function + ' ======================')
-            cfg.output()
-
-        for function, cfg in self.func_cfg_dict.items():
-            print('====================== RD ANALYSIS for ' + function + ' ======================')
-            cfg.output_rd()
-            print('\n\n\n')
-
-        for function, cfg in self.func_cfg_dict.items():
-            print('====================== LIVENESS ANALYSIS for ' + function + ' ======================')
-            cfg.output_liveness()
-            print('\n\n\n')
-        sys.stdout = aux
 
     def output_optimized_code(self, ir_file=None):
         aux = sys.stdout
@@ -945,7 +931,7 @@ if __name__ == "__main__":
     opt_filename = filename[:-3] + '.raw'
     cfg.output_optimized_code(open(opt_filename, 'w'))
     # perform optimizations
-    speed_up = cfg.optimize()
+    # speed_up = cfg.optimize()
     #print(speed_up, file=sys.stderr)
     #cfg.output()
     # output result of CFG to file
@@ -954,7 +940,8 @@ if __name__ == "__main__":
     opt_filename = filename[:-3] + '.opt'
     cfg.output_optimized_code(open(opt_filename, 'w'))
 
-    cfg.view()
+    #cfg.view()
 
-    interpreter = Interpreter()
-    interpreter.run(cfg.opt_code)
+    # interpreter = Interpreter()
+    # interpreter.run(cfg.opt_code)
+

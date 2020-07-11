@@ -765,14 +765,11 @@ class GenerateCode(NodeVisitor):
         for exp in node.expr.list:
             self.visit(exp)
             bt = getBasicType(exp)
-            # read in a temp
-            read_temp = self.new_temp()
-            self.code.append(('read_'+bt, read_temp))
-            # and store the value read in the exp location
-            inst = 'store_'+bt
+            # read in the exp location
+            inst = 'read_'+bt
             if isinstance(exp, ArrayRef):
                 inst += '_*'
-            self.code.append((inst, read_temp, exp.temp_location))
+            self.code.append((inst, exp.temp_location))
 
     def visit_Type(self, node):
         pass
