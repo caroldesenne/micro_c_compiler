@@ -795,27 +795,6 @@ class CFG_Program():
 
         del self.gen_code[-1]
 
-    def output(self, ir_filename=None):
-        aux = sys.stdout
-        if ir_filename:
-            print("Outputting CFG to %s" % ir_filename)
-            sys.stdout = open(ir_filename, 'w')
-
-        for function, cfg in self.func_cfg_dict.items():
-            print('====================== ' + function + ' ======================')
-            cfg.output()
-
-        for function, cfg in self.func_cfg_dict.items():
-            print('====================== RD ANALYSIS for ' + function + ' ======================')
-            cfg.output_rd()
-            print('\n\n\n')
-
-        for function, cfg in self.func_cfg_dict.items():
-            print('====================== LIVENESS ANALYSIS for ' + function + ' ======================')
-            cfg.output_liveness()
-            print('\n\n\n')
-        sys.stdout = aux
-
     def output_optimized_code(self, ir_file=None):
         aux = sys.stdout
         if ir_file:

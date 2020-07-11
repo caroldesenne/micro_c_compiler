@@ -37,7 +37,7 @@ unary_ops = {
     '--': 'sub_int',
     'p++': 'add_int',
     'p--': 'sub_int',
-    '-' : 'sub_int', 
+    '-' : 'sub_int',
     '+' : 'whatever',
     '!' : 'not_bool',
 }
@@ -52,7 +52,7 @@ class Labels(object):
     '''
     Class representing all the labels in a program (both local and global).
     Each scope level is represented by a symbol table, and they are assembled in a list.
-    The first element of the list is the root scope (global variables) and we go into 
+    The first element of the list is the root scope (global variables) and we go into
     deeper scopes as we go through the array. Depth represents the maximal scope depth we are in
     at the moment.
     '''
@@ -155,14 +155,13 @@ class GenerateCode(NodeVisitor):
         self.code.append((inst,exp.temp_location,tmp))
         return tmp
 
-    def output(self, ir_filename=None):
+    def output(self, buf=None):
         '''
         outputs generated IR code to given file. If no file is given, output to stdout
         '''
-        if ir_filename:
-            print("Outputting IR to %s." % ir_filename)
-            buf = open(ir_filename, 'w')
-        else:
+        if not buf:
+            # print("Outputting IR to %s." % ir_filename)
+            # buf = open(ir_filename, 'w')
             print("Printing IR:\n\n")
             buf = sys.stdout
         for i,line in enumerate(self.code or []):
@@ -392,7 +391,7 @@ class GenerateCode(NodeVisitor):
         # get to v[i][j]
         add_target = self.new_temp()
         self.code.append(('add_int',mul_target,acc2,add_target))
-        
+
         # get base array label
         base_array = self.getBaseArray(decl)
         target = self.new_temp()
@@ -440,7 +439,7 @@ class GenerateCode(NodeVisitor):
     def visit_DeclFuncDecl(self,node):
         if node.isPrototype:
             pass # do nothing for prototype
-        else: # this is a function definition    
+        else: # this is a function definition
             if self.phase == Phase.START:
                 inst = 'define_' + getBasicType(node)
                 if node.type.args is not None:
